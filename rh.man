@@ -1,0 +1,572 @@
+.TH RH 1L
+.SH NAME
+rh - recursive file locater (rawhide) >> VERSION 2 <<
+.SH SYNOPSIS
+.B rh
+[
+.B \-vhlr
+] [
+.B \-f filename
+]
+.br
+.RS
+[
+.B \-e expression
+] [
+.B \-x command
+]
+.BR file ...
+.RE
+.SH DESCRIPTION
+.I Rh
+recursively searches the file system starting at each given
+.IR file
+for files that make a C expression true.  If no files
+are listed, the current working directory is used.
+.PP
+Expressions for
+.I rh
+can come from the command line (with the
+.I \-e
+option), a file (with the
+.I \-f
+option), or from the standard input (the default).
+The basic form of an
+.I rh
+expression is a C expression which may optionally define and or call
+user defined functions. These C expressions may contain
+constants, variables, and all the usual C operators.
+.PP
+.I Constants
+are either numeric or symbolic.  Symbolic constants are based
+on the constants defined in the file
+.IR /usr/include/sys/stat.h ;
+only the useful constants are implemented.
+The ``S_'' prefix from the symbol name is omitted.
+(eg. S_IFMT would used as IFMT).
+.PP
+.I Variables
+are symbols that specify a field in the
+stat structure (e.g., st_size, st_mode) or some other attribute of the file.
+For each file examined by
+.IR rh ,
+these internal variables are updated to match the current
+file.  For convenience, the ``st_'' prefix is dropped from variable
+names.
+.PP
+.I Functions
+are a means of associating a C expression with a function name.
+This allows complex expressions to be easily composed from simpler ones.
+The value
+of a function call is the value of the expression represented by the
+function. For example:
+.PP
+.RS 8
+foo(x)
+.br
+{
+.br
+return( x-1 );
+.br
+}
+.RE
+.PP
+If the above function were given to Rh, it would define a function that could be
+used later. If
+.I foo
+were called with 667, then the value of the call to
+.I foo
+would be equal to 666.
+.PP
+.SH OPTIONS
+.I Rh
+options can appear in any order; multiple options can
+be given within the same argument.
+.TP
+.I \-r
+Prevents
+.I rh
+from recursively searching for files.
+.TP
+.I \-l
+Normally
+.I rh
+prints each matching filename on a line by itself.  The
+.I \-l
+option causes the matching files' permission modes and sizes
+to be displayed as well, in a format similar to that of the
+.IR ls (1)
+command.
+.TP
+.I \-h
+Causes
+.I rh
+to display a help message.  The message
+explains the command line usage, a list of
+available constants and variables and a list
+of valid operators.
+.I Rh
+then continues as though the
+.I \-h
+option were not present.
+.TP
+.I \-f filename
+Uses
+.I filename
+as the name of a file containing a
+.I rh
+expression. Functions may also be defined in this file.
+.TP
+.I \-e expression
+Uses
+.I expression
+as the expression
+that will be used for the file search.
+Since many of the operators are also shell
+meta-characters and since rh expressions may contain
+spaces, it is strongly recommended that the
+.I expression
+be enclosed in single quotes, ''. If both the -e and -f options
+occur together then the -f option is processed FIRST, followed by the
+-e option. This means that an expression specified with the -e option
+may use functions defined from the 
+.I -f file.
+.TP
+.I \-v
+Verbose. Causes the -l option to output more information and
+the -x option to print out the command executed and the return value.
+.TP
+.I \-x command
+Execute
+.I command
+using system(3) for each matching file. The string
+.I command
+may contain a %s which will be substituted with the full path name. A
+%S (uppercase 'S') will be substituted with the base name. For example,
+given the file /etc/passwd the values for %s and %S would be:
+/etc/passwd and passwd, respectively.
+.SH USAGE
+.SS "Rh grammer"
+This is the grammer that rh will accept.
+.PP
+.TP
+<program> ::=
+.RS 6
+		<function list> <expression> EOF
+.br
+		| <function list> <expression> ;
+.RE
+.PP
+.TP
+<function list> ::=
+.RS 6
+		<function list> <function>
+.br
+		| <function>
+.br
+		| /* empty */
+.RE
+.PP
+.TP
+<function> ::=
+.RS 6
+		<function heading> { RETURN <expression> ; }
+.RE
+.PP
+.TP
+<function heading> ::=
+.RS 6
+		IDENTIFIER
+.br
+		| IDENTIFIER ( )
+.br
+		| IDENTIFIER ( <idlist> )
+.RE
+.PP
+.TP
+<idlist> ::=
+.RS 6
+		<idlist> , IDENTIFIER
+.br
+		| IDENTIFIER
+.RE
+.PP
+.TP
+<expression> ::=
+.RS 6
+		<expression> ? <expression> : <expression>
+.br
+		| <expression> || <expression>
+.br
+		| <expression> && <expression>
+.br
+		| <expression> | <expression>
+.br
+		| <expression> ^ <expression>
+.br
+		| <expression> & <expression>
+.br
+		| <expression> == <expression>
+.br
+		| <expression> != <expression>
+.br
+		| <expression> < <expression>
+.br
+		| <expression> > <expression>
+.br
+		| <expression> <= <expression>
+.br
+		| <expression> >= <expression>
+.br
+		| <expression> >> <expression>
+.br
+		| <expression> << <expression>
+.br
+		| <expression> + <expression>
+.br
+		| <expression> - <expression>
+.br
+		| <expression> * <expression>
+.br
+		| <expression> / <expression>
+.br
+		| <expression> % <expression>
+.br
+		| ~ <expression>
+.br
+		| ! <expression>
+.br
+		| - <expression>
+.br
+		| <factor>
+.RE
+.PP
+.TP
+<factor> ::=
+.RS 6
+		( <expression> )
+.br
+		|    NUMBER
+.br
+		|    <function call>
+.br
+		|    IDENTIFIER
+.br
+		|    [ <date spec> ]
+.br
+		|    STRING
+.RE
+.PP
+.TP
+<function call> ::=
+.RS 6
+		IDENTIFIER
+.br
+		| IDENTIFIER ( <exprlist> )
+.br
+		| IDENTIFIER ( )
+.RE
+.PP
+.TP
+<exprlist> ::=
+.RS 6
+		<exprlist> , <expression>
+.br
+		| <expression>
+.RE
+.PP
+.TP
+<datespec> ::=
+.RS 6
+		NUMBER / NUMBER / NUMBER
+.RE
+.PP
+.SS "Search order:"
+.I Rh
+initally looks for a
+.I $HOME/.rhrc
+and if it exists it will be read in. Next, any file specified by the
+.I \-f
+option is read followed by any expression specified with the
+.I \-e
+option. If after all that, an expression, defined outside of a function,
+has not been encountered then stdin will be read for such an expression.
+An error will result if no expression has been encountered.
+.PP
+A
+.I $HOME/.rhrc
+will usually contain function definitions that will be accessable
+for the user when they enter in a search expression.
+.PP
+.SS "The valid constants are:"
+.IP NOW
+This constant is set to the current time at the start of
+.I rh.
+It is used to make comparisons with atime, ctime and mtime.
+.IP days
+This is equal to the number of seconds in a day.
+.IP hours
+Number of seconds in an hour.
+.IP weeks
+Number of seconds in a week.
+.IP "IFBLK IFDIR IFLNK IFMT IFREG IFSOCK ISGID ISUID ISVTX"
+see
+.IR stat (2)
+for an explanation.
+.SS "The valid variables are:"
+.PP
+.IP depth
+This variable is set to the relative depth in the directory search
+that the current file is at.
+.IP strlen
+This is set to the length of the filename. For example strlen
+would be equal to 4 given the file: "/tmp/core" because "core" is
+4 characters long.
+.IP prune
+This varible always returns 0, but as a side-effect causes the
+search path to be "cut-short" when evaluated. This can be used to prune the
+directory search.
+.I prune
+is usually used with the ?: operator to conditionally evaluate the prune
+variable.
+.IP "atime,ctime,dev,gid,ino,mode,mtime,nlink,rdev,size,uid"
+see
+.IR stat (2)
+for an explanation.
+.SS "The valid C operators are:"
+.PP
+! ~ - * / % + < <= > >= == != & ^ | << >> && || ?:
+.PP
+Operator precedence, associativity and semantics are the same as
+in C.
+.SS "Special operators:"
+.IP $username
+This operator evaluates to the integer user id of
+.I username.
+As a special case the symbol $$ evaluates to the
+uid of the user currently running
+.I rh.
+.IP """*.c"""
+This operator evaluates to true if the current filename matches
+the quoted expression, which is a shell globbing pattern.
+The recognized metacharacters are:
+.RS
+.IP ``*''
+to match any number of characters, including zero (except that, as in
+the shell, it does not match a leading ``.'');
+.IP ``?''
+to match any single character (except for a leading ``.'');
+.IP ``[SET]''
+to match any character in the given set (ranges can be included);
+.IP ``[^SET]''
+to match any character not in the given set;
+.IP ``\e\e''
+to escape the special meaning of any of the above metacharacters.
+.RE
+.PP
+When doing comparisons, only the base name is examined, not
+leading paths.
+.IP [yyyy/mm/dd]
+The date enclosed in the brackets, ``[]'', will evaluate to a number of
+seconds past January 1, 1970, which is
+suitable for comparing with atime, mtime or ctime.
+The year cannot be abbreviated to its last two digits.
+.PP
+The special operators
+have higher precedence than the C operators.
+.SS "Lexical conventions:"
+.PP
+Numbers may be entered in octal by preceding them with
+a leading zero.  Otherwise numbers are taken to be in
+decimal.
+.PP
+Text enclosed in /* and */ will be ignored. This can be
+used for commenting
+.I rh
+expression files.
+.PP
+The start expression may be terminated by either
+a ``;'' or the end of the file or argument.
+.SH EXAMPLES
+The following are examples of
+.I rh
+expressions.
+.PP
+.RS 8
+(mode & 022) && (uid == $joe );
+.PP
+.RE
+Matches all files that have uid equal to username ``joe'' and
+are writable by other people.
+.PP
+.RS 8
+!uid && (mode & ISUID ) &&
+.br
+(mode & 02);
+.PP
+.RE
+Matches all files that are owned by root (uid==0) and that
+have set-uid on execution bit set, and are writable.
+.PP
+.RS 8
+(size > 10*1024) && (mode & 0111) &&
+.br
+(atime <= NOW-24*3600);
+.RE
+.PP
+Finds all executable files larger than 10K that
+have not been executed in the last 24 hours.
+.PP
+.RS 8
+size < ( ("*.c") ? 4096 : 32*1024 );
+.RE
+.PP
+Finds C source files smaller than 4K and
+other files smaller than 32K.  No other files will match.
+.PP
+.RS 8
+!(size % 1024);
+.RE
+.PP
+Matches files that are a multiple of 1K.
+.PP
+.RS 8
+mtime >= [1982/3/1] && mtime <= [1982/3/31];
+.RE
+.PP
+Finds files that were modified during March, 1982.
+.PP
+.RS 8
+strlen >= 4 && strlen <= 10;
+.RE
+.PP
+This expression will print files whose filenames are between
+4 and 10 characters in length.
+.PP
+.RS 8
+depth > 3;
+.RE
+.PP
+Matches files that are at a RELATIVE depth of 3 or more.
+.PP
+.RS 8
+( "tmp" || "bin" ) ? prune : "*.c";
+.RE
+.PP
+This expression does a search for all "*.c" files, however it will
+not look into any directories called "bin" or "tmp". This is because when
+such a filename is encountered the prune variable is evaluated, causing
+further searching with the current path to stop. The general form of this
+would be:
+.PP
+.RS 8
+("baddir1" || "baddir2" || ... || "baddirn") ?
+.br
+.RS 8
+prune : <search expr>;
+.RE
+.RE
+.PP
+.SH "ADVANCED EXAMPLES"
+The following examples show the use of function definitions and other
+advanced features of
+.I "Rh."
+ Consider:
+.PP
+.RS 8
+dir()
+.br
+{
+.br
+return ( (mode & IFMT) == IFDIR );
+.br
+}
+.br
+.RE
+.PP
+This declares a function that returns true if the current file is a directory
+and false otherwise. The function
+.PP
+.I dir
+now may be used in other expressions.
+.PP
+.RS 8
+dir() && !mine();
+.RE
+.PP
+This matches files that are directories and are not owned by
+the user. This assumes the user has written a mine() function. Since
+.I dir
+and
+.I mine
+take no arguments they may be called like:
+.PP
+.RS 8
+dir && !mine;
+.RE
+.PP
+Also when declaring a function that takes no arguments the parenthesis
+may be omitted. For example:
+.PP
+.RS 8
+mine
+.br
+{
+.br
+return uid == $joe;
+.br
+}
+.br
+.RE
+.PP
+This declares a function mine, that evaluates true when a file
+is owned by user name 'joe'. An alternate way to write mine would be:
+.PP
+.RS 8
+mine(who)
+.br
+{
+.br
+return uid == who;
+.br
+}
+.br
+.RE
+.PP
+This would allow mine to be called with an argument, for example:
+.PP
+.RS 8
+mine( $sue ) || mine( $joe );
+.RE
+.PP
+This expression is true of any file owned by user name 'sue' or 'joe'.
+Since the parenthesis are optional for functions that take no
+arguments, it would be possible to define functions that can be used
+exactly like constants, or handy macros. Suppose the above definition
+of 
+.I dir
+was placed in a users 
+.I $HOME/.rhrc
+Then the command:
+.PP
+.RS 8
+rh -e dir
+.RE
+.PP
+would execute the expression 'dir' which will print out all directories.
+Rh functions can be recursive.
+.SH "FILES"
+$HOME/.rhrc
+.PP
+.SH "SEE ALSO"
+chmod(1), find(1), ls(1), stat(2)
+.PP
+The C programming language.
+.SH AUTHOR
+Ken Stauffer (University of Calgary)
+.PP
+stauffer@sixk
+.SH BUGS
+The date operator should also allow for time to be entered.
+The date operator can be off by a day, if the
+time on the file is close to midnight.
