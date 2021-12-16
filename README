@@ -12,32 +12,24 @@ than find(1), rh expressions can be used to select
 the desired files.
 
 CREDITS:
+    Ken Stauffer
+	- Original author.
     Guy Harris 
 	- Corrected many portability problems.
     David MacKenzie 
-	- Manual revisions. Added getopt and regular expressions.
+	- Manual revisions. Added getopt and glob matching.
     Norm Hutchinson
 	- Fixed ungetit().
-	
-COMPILING:
-To make rh work on your system, you will need to change
-some -D options in the Makefile. Define ONE of the
-following in the definition of CFLAGS:
+    raf
+	- Restored from oblivion after 32 years in the wilderness.
+	- Updated to use ANSI/ISO C and POSIX.
+	- Fixed buffer overflow security bugs and usability problems.
 
-	-DBSD		- This would be used for most BSD systems.
-	-DSYSV		- System V systems.
+INSTALLING:
+To install rh on your system:
 
-Also define one of the following:
-
-	-DSUNOS_4	- SunOS 4.x (subclass of BSD)
-	-DSYSVR3	- System V Release 3.x (subclass of SYSV)
-
-In addition to the C source there is also a file called rh.man.
-This is a nroff file and can be created by a command like:
-
-		nroff -man rh.man > rh.cat
-
-The resultant file (rh.cat) is sutable for general viewing.
+    make
+    make install
 
 RUNNING:
 There is a file called rhrc. This file contains some
@@ -55,16 +47,27 @@ see if it is working is to do:
 
 	% rh -vle 1 /
 
-This will find all files that makes the constant expression '1' true.
-So if your root, all the files on the system will be found.
+This will find all files that make the constant expression '1' true.
+So if you're root, all the files on the system will be found.
 
 PORTABILITY:
-The file rhdir.c contains code that does directory reading.
-This is most likely where problems will occur. These differences
-have been taken into account for most versions of unix
-and will hopefully work on your system.
-So far 'rh' works on:
-	SCO XENIX, BSD 4.3, and SUNOS 4.0
+Rh is written in ANSI/ISO C and should work on any POSIX system.
+
+EXAMPLES:
+Here are some example functions that can be defined in your ~/.rhrc file:
+
+	dir() { return (mode & IFMT) == IFDIR; }
+	months { return days * 30; }
+	nlinks { return nlink; }
+	writable() { return mode & 022; }
+	mine { return uid == $$; }
+	freds { return uid == $fred; }
+	csrc() { return "*.c" || "*.h" || "[Mm]akefile"; }
+	ago(d) { return NOW - d; }
+	changed() { return mtime > ago(1 * hours); }
+	K() { return 1024; }
+	megs { return K << 10; }
+	recursion(n) { return (n > 0) ? recursion(n - 1) + 1 : 0; }
 
 GRAMMER:
 The following is the grammer that describes the input language

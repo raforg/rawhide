@@ -12,11 +12,35 @@
  * ---------------------------------------------------------------------- */
 
 #include "rh.h"
+#include "rhcmds.h"
+
+#include <unistd.h>
 #include <ctype.h>
 #include <pwd.h>
+#include <stdlib.h>
+#include <string.h>
 
 static int cpos;		/* current character position */
 static int lineno;		/* current line number */
+
+static void function(void);
+static int idlist(void);
+static void expression(void);
+static void expr0(void);
+static void expr1(void);
+static void expr2(void);
+static void expr3(void);
+static void expr4(void);
+static void expr5(void);
+static void expr6(void);
+static void expr7(void);
+static void expr8(void);
+static void expr9(void);
+static void expr10(void);
+static void factor(void);
+static int gettoken(void);
+static long sectime(int year, int month, int day);
+static long datespec(void);
 
 /* ----------------------------------------------------------------------
  * getit:
@@ -29,17 +53,24 @@ static int lineno;		/* current line number */
  *
  */
 
-getit()
+int getit(void)
 {
 	int c;
 
-	if( expstr ) c = (*expstr) ? *expstr++ : EOF;
-	else c = getc(expfile);
+	if (expstr)
+		c = (*expstr) ? *expstr++ : EOF;
+	else
+		c = getc(expfile);
 
-	if( c == '\n' ) { lineno++; cpos = 0; }
+	if (c == '\n')
+	{
+		lineno++;
+		cpos = 0;
+	}
+
 	cpos++;
 
-	return(c);
+	return c;
 }
 
 /* ----------------------------------------------------------------------
@@ -50,13 +81,20 @@ getit()
  *
  */
 
-ungetit(c)
-int c;
+void ungetit(int c)
 {
-	if( c == '\n' ) { lineno--; cpos = 1; }
-	else cpos--;
-	if( expstr ) expstr = (c > 0) ? expstr-1 : expstr;
-	else ungetc(c,expfile);
+	if (c == '\n')
+	{
+		lineno--;
+		cpos = 1;
+	}
+	else
+		cpos--;
+
+	if (expstr)
+		expstr = (c > 0) ? expstr - 1 : expstr;
+	else
+		ungetc(c,expfile);
 }
 
 /* ----------------------------------------------------------------------
@@ -64,15 +102,14 @@ int c;
  *	Print an error message and quit.
  */
  
-error(s)
-char *s;
+static void error(char *s)
 {
-	if( expstr )
-		fprintf(stderr,"Command line: ");
+	if (expstr)
+		fprintf(stderr, "Command line: ");
 	else
-		fprintf(stderr,"%s: ",expfname);
+		fprintf(stderr, "%s: ", expfname);
 
-	fprintf(stderr,"line: %d, char: %d, %s.\n",lineno,cpos,s);
+	fprintf(stderr, "line: %d, char: %d, %s.\n", lineno, cpos, s);
 	exit(1);
 }
 
@@ -85,27 +122,30 @@ char *s;
  *
  */
 
-struct symbol *insertname(s,t,val)
-char *s;
-int t;
-long val;
+struct symbol *insertname(char *s, int t, long val)
 {
-	char *p,*malloc();
+	char *p;
 	struct symbol *sym;
 
-	sym = (struct symbol *) malloc( sizeof(struct symbol) );
-	if( sym == NULL ) error("no more memory");
+	sym = (struct symbol *)malloc(sizeof(struct symbol));
+	if (sym == NULL)
+		error("no more memory");
 
-	p = sym->name = malloc( strlen(s)+1 );
-	if( sym->name == NULL ) error("no more memory");
-	while( *p++ = *s++ );
+	p = sym->name = malloc(strlen(s) + 1);
+
+	if (sym->name == NULL)
+		error("no more memory");
+
+	while ((*p++ = *s++))
+		;
+
 	sym->type = t;
 	sym->value = val;
 
 	sym->next = symbols;
 	symbols = sym;
 	
-	return( sym );
+	return sym;
 }
 
 /* ----------------------------------------------------------------------
@@ -114,15 +154,15 @@ long val;
  *
  */
 
-struct symbol *locatename(s)
-char *s;
+struct symbol *locatename(char *s)
 {
 	struct symbol *p;
 
-	for(p=symbols; p; p = p->next )
-		if( !strcmp(s,p->name) ) return(p);
+	for (p = symbols; p; p = p->next)
+		if (!strcmp(s, p->name))
+			return p;
 
-	return(NULL);
+	return NULL;
 }
 
 /* ----------------------------------------------------------------------
@@ -131,13 +171,13 @@ char *s;
  *
  */
 
-push(func,val)
-int (*func)();
-long val;
+static void push(void (*func)(long), long val)
 {
-	if( PC >= LENGTH ) error("program to big");
-	StackProgram[PC].func=func;
-	StackProgram[PC++].value=val;
+	if (PC >= MAX_PROGRAM_SIZE)
+		error("program to big");
+
+	StackProgram[PC].func = func;
+	StackProgram[PC++].value = val;
 }
 
 /* ----------------------------------------------------------------------
@@ -151,22 +191,29 @@ long val;
  *				| empty
  */
 
-program()
+void program(void)
 {
-	cpos = 0; lineno = 1;
-
+	cpos = 0;
+	lineno = 1;
 	token = gettoken();
-	for(;;) {
-		if( token != IDENTIFIER ) break;
+
+	for(;;)
+	{
+		if (token != IDENTIFIER)
+			break;
+
 		function();
 	}
 
-	if( token != EOF ) {
+	if (token != EOF)
+	{
 		startPC = PC;
 		expression();
-		push(NULL,0);
+		push(NULL, 0);
 	}
-	if( token != EOF && token != ';') error("EOF expected");
+
+	if (token != EOF && token != ';')
+		error("EOF expected");
 }
 
 /* ----------------------------------------------------------------------
@@ -185,7 +232,7 @@ program()
  *
  */
 
-function()
+static void function(void)
 {
 	struct symbol *s;
 
@@ -196,30 +243,40 @@ function()
 
 	token = gettoken();
 
-	push(NULL, idlist() );		/* save number of args for function */
+	push(NULL, idlist());		/* save number of args for function */
 
-	if( token != '{' ) error("expected '{'");
+	if (token != '{')
+		error("expected '{'");
+
 	token = gettoken();
 
-	if( token != RETURN ) error("expected keyword: return");
+	if (token != RETURN)
+		error("expected keyword: return");
+
 	token = gettoken();
 
 	expression();
 
-	if( token != ';' ) error("expected ';'");
+	if (token != ';')
+		error("expected ';'");
+
 	token = gettoken();
 
-	push(c_return,StackProgram[s->value].value);
+	push(c_return, StackProgram[s->value].value);
 
 	/* free up the parameter symbols */
-	while( symbols->type == PARAM ) {
+
+	while (symbols->type == PARAM)
+	{
 		s = symbols;
 		symbols = symbols->next;
 		free(s->name);
 		free(s);
 	}
 
-	if( token != '}' ) error("expected '}'");
+	if (token != '}')
+		error("expected '}'");
+
 	token = gettoken();
 }
 
@@ -235,32 +292,44 @@ function()
  *		| empty
  */
 
-idlist()
+static int idlist(void)
 {
 	int offset = 0;
 
-	if( token == '(' ) token = gettoken();
-	else if( token == '{' ) return(0);
-	else error("expected '(' or '{'");
-
-	if( token == ')' ) {
+	if (token == '(')
 		token = gettoken();
-		return(0);
+	else if (token == '{')
+		return 0;
+	else
+		error("expected '(' or '{'");
+
+	if (token == ')')
+	{
+		token = gettoken();
+		return 0;
 	}
 
-	for(;;) {
-		if( token != IDENTIFIER ) error("identifier expected");
+	for(;;)
+	{
+		if (token != IDENTIFIER)
+			error("identifier expected");
+
 		tokensym->type = PARAM;
 		tokensym->func = c_param;
 		tokensym->value = offset++;
 		token = gettoken();
-		if( token == ')' ) break;
-		if( token != ',' ) error("expected ')'");
+
+		if (token == ')')
+			break;
+
+		if (token != ',')
+			error("expected ')'");
+
 		token = gettoken();
 	}
 
 	token = gettoken();
-	return(offset);
+	return offset;
 }
 
 /* ----------------------------------------------------------------------
@@ -270,202 +339,306 @@ idlist()
  *
  */
 
-expression()
+static void expression(void)
 {
-	int qm,colon,nop;
+	int qm, colon;
 
 	expr0();
-	if( token == '?' ) {
+
+	if (token == '?')
+	{
 		token = gettoken();
 		qm = PC;
-		push(c_qm,0);
+		push(c_qm, 0);
 		expression();
-		if( token != ':' ) error("missing ':'");
+
+		if (token != ':')
+			error("missing ':'");
+
 		token = gettoken();
 		colon = PC;
-		push(c_colon,0);
+		push(c_colon, 0);
 		expression();
 
 		StackProgram[qm].value = colon;
-		StackProgram[colon].value = PC-1;
+		StackProgram[colon].value = PC - 1;
 	}
 }		
 
 /* OPERATOR || */ 
-expr0()
+
+static void expr0(void)
 {
 	expr1();
+
 	for(;;)
-		if( token == OR ) {
+	{
+		if (token == OR)
+		{
 			token = gettoken();
 			expr1();
-			push(c_or,0);
-	       } else break;
+			push(c_or, 0);
+		}
+		else
+			break;
+	}
 }
 
 /* OPERATOR && */ 
-expr1()
+
+static void expr1(void)
 {
 	expr2();
+
 	for(;;)
-		if( token == AND ) {
+	{
+		if (token == AND)
+		{
 			token = gettoken();
 			expr2();
-			push(c_and,0);
-		} else break;
+			push(c_and, 0);
+		}
+		else
+			break;
+	}
 }
 
 /* OPERATOR | */
-expr2()
+
+static void expr2(void)
 {
 	expr3();
+
 	for(;;)
-		if( token == '|' ) {
+	{
+		if (token == '|')
+		{
 			token = gettoken();
 			expr3();
-			push(c_bor,0);
-		} else break;
+			push(c_bor, 0);
+		}
+		else
+			break;
+	}
 }
 
 /* OPERATOR ^ */
-expr3()
+
+static void expr3(void)
 {
 	expr4();
+
 	for(;;)
-		if( token == '^' ) {
+	{
+		if (token == '^')
+		{
 			token = gettoken();
 			expr4();
-			push(c_bxor,0);
-		} else break;
+			push(c_bxor, 0);
+		}
+		else
+			break;
+	}
 }
 
 /* OPERATOR & */
-expr4()
+
+static void expr4(void)
 {
 	expr5();
+
 	for(;;)
-		if( token == '&' ) {
+	{
+		if (token == '&')
+		{
 			token = gettoken();
 			expr5();
-			push(c_band,0);
-		} else break;
+			push(c_band, 0);
+		}
+		else
+			break;
+	}
 }
 
 /* OPERATOR == != */
-expr5()
+
+static void expr5(void)
 {
 	int t;
+
 	expr6();
-	for(;t=token;)
-		if( t==EQ ) {
+
+	for(; (t = token);)
+	{
+		if (t == EQ)
+		{
 			token = gettoken();
 			expr6();
-			push(c_eq,0);
-		} else if( t==NE ) {
+			push(c_eq, 0);
+		}
+		else if (t == NE)
+		{
 			token = gettoken();
 			expr6();
-			push(c_ne,0);
-		} else break;
+			push(c_ne, 0);
+		}
+		else
+			break;
+	}
 }
 
 /* OPERATOR < <= > >= */
-expr6()
+
+static void expr6(void)
 {
 	int t;
+
 	expr7();
-	for(;t=token;)
-		if( t==LE ) {
+
+	for(; (t = token);)
+	{
+		if (t == LE)
+		{
 			token = gettoken();
 			expr7();
-			push(c_le,0);
-		} else if( t==GE ) {
+			push(c_le, 0);
+		}
+		else if (t == GE)
+		{
 			token = gettoken();
 			expr7();
-			push(c_ge,0);
-		} else if( t=='>' ) {
+			push(c_ge, 0);
+		}
+		else if (t == '>')
+		{
 			token = gettoken();
 			expr7();
-			push(c_gt,0);
-		} else if( t=='<' ) {
+			push(c_gt, 0);
+		}
+		else if (t == '<')
+		{
 			token = gettoken();
 			expr7();
-			push(c_lt,0);
-		} else break;
+			push(c_lt, 0);
+		}
+		else
+			break;
+	}
 }
 
 /* OPERATOR << >> */
-expr7()
+
+static void expr7(void)
 {
 	int t;
+
 	expr8();
-	for(;t=token;)
-		if( t==SHIFTL ) {
+
+	for(; (t = token);)
+		if (t == SHIFTL)
+		{
 			token = gettoken();
 			expr8();
-			push(c_lshift,0);
-		} else if( t==SHIFTR ) {
+			push(c_lshift, 0);
+		}
+		else if (t == SHIFTR)
+		{
 			token = gettoken();
 			expr8();
-			push(c_rshift,0);
-		} else break;
+			push(c_rshift, 0);
+		}
+		else
+			break;
 }
 
 /* OPERATOR + - */
-expr8()
+
+static void expr8(void)
 {
 	int t;
+
 	expr9();
-	for(;t=token;)
-		if( t=='+' ) {
+
+	for(; (t = token);)
+	{
+		if (t == '+')
+		{
 			token = gettoken();
 			expr9();
-			push(c_plus,0);
-		} else if( t=='-' ) {
+			push(c_plus, 0);
+		}
+		else if (t=='-')
+		{
 			token = gettoken();
 			expr9();
-			push(c_minus,0);
-		} else break;
+			push(c_minus, 0);
+		}
+		else
+			break;
+	}
 }
 
 /* OPERATOR * / % */
-expr9()
+
+static void expr9(void)
 {
 	int t;
+
 	expr10();
-	for(;t=token;)
-		if( t== '*' ) {
+
+	for(; (t = token);)
+	{
+		if (t == '*')
+		{
 			token = gettoken();
 			expr10();
-			push(c_mul,0);
-		} else if( t== '/' ) {
+			push(c_mul, 0);
+		}
+		else if (t == '/')
+		{
 			token = gettoken();
 			expr10();
-			push(c_div,0);
-		} else if( t== '%' ) {
+			push(c_div, 0);
+		}
+		else if (t == '%')
+		{
 			token = gettoken();
 			expr10();
-			push(c_mod,0);
-		} else break;
+			push(c_mod, 0);
+		}
+		else
+			break;
+	}
 }
 
 /* OPERATOR ~ ! - */ 
-expr10()
+
+static void expr10(void)
 {
 	int t;
+
 	t = token;	
-	if( t=='!' ){
+
+	if (t == '!')
+	{
 		token = gettoken();
 		expr10();
-		push(c_not,0);
-	} else if( t== '~' ) {
+		push(c_not, 0);
+	}
+	else if (t== '~')
+	{
 		token = gettoken();
 		expr10();
-		push(c_bnot,0);
-	} else if( t== '-' ) {
+		push(c_bnot, 0);
+	}
+	else if (t== '-')
+	{
 		token = gettoken();
 		expr10();
-		push(c_uniminus,0);
-	} else factor();
+		push(c_uniminus, 0);
+	}
+	else
+		factor();
 }
 
 /* ----------------------------------------------------------------------
@@ -481,28 +654,40 @@ expr10()
  *
  */
 
-explist( argc )
+static void explist(int argc)
 {
-	if( token != '(' && !argc ) return;
+	if (token != '(' && !argc)
+		return;
 
-	if( token != '(' ) error("missing '('");
+	if (token != '(')
+		error("missing '('");
+
 	token = gettoken();
 
-	if( !argc && token == ')' ) {
+	if (!argc && token == ')')
+	{
 		token = gettoken();
 		return;
 	}
 
-	for(;;) {
+	for (;;)
+	{
 		expression();
 		argc--;
-		if( token == ')' ) break;
-		if( token != ',' ) error("missing ','");
+
+		if (token == ')')
+			break;
+
+		if (token != ',')
+			error("missing ','");
+
 		token = gettoken();
 	}
 
 	token = gettoken();
-	if( argc ) error("wrong number of arguments");
+
+	if (argc)
+		error("wrong number of arguments");
 }	
 
 /* ----------------------------------------------------------------------
@@ -511,53 +696,83 @@ explist( argc )
  *	regular expression string.
  */
  
-factor()
+static void factor(void)
 {
-	long l,datespec();
+	long l;
 	int pc;
 
-	switch(token) {
+	switch (token)
+	{
 		case '(':
+		{
 			token = gettoken();
 			expression();
-			if( token != ')' )
+
+			if (token != ')')
 				error("missing ')'");
+
 			token = gettoken();
+
 			break;
+		}
 		case NUMBER:
-			push(c_number,tokenval);
+		{
+			push(c_number, tokenval);
 			token = gettoken();
+
 			break;
+		}
 		case FUNCTION:
+		{
 			pc = tokensym->value;
 			token = gettoken();
-			explist( StackProgram[ pc ].value );
-			push(c_func,pc);
+			explist(StackProgram[pc].value);
+			push(c_func, pc);
+
 			break;
+		}
 		case PARAM:
-			push(c_param,tokensym->value);
+		{
+			push(c_param, tokensym->value);
 			token = gettoken();
+
 			break;
+		}
 		case FIELD:
-			push(tokensym->func,tokenval);
+		{
+			push(tokensym->func, tokenval);
 			token = gettoken();
+
 			break;
+		}
 		case '[':
+		{
 			token = gettoken();
-			l=datespec();
-			if( token != ']' )
+			l = datespec();
+
+			if (token != ']')
 				error("missing ']'");
+
 			token = gettoken();
-			push(c_number,l);
+			push(c_number, l);
+
 			break;
+		}
 		case STR:
-			push(c_str,tokenval);
+		{
+			push(c_str, tokenval);
 			token = gettoken();
+
 			break;
+		}
 		case IDENTIFIER:
+		{
 			error("undefined identifier");
+		}
 		default:
+		{
 			error("syntax error");
+		}
 	}
 }
 
@@ -569,36 +784,34 @@ factor()
  */
 
 #define leap(d)	(((d % 4 == 0) && (d % 100 != 0)) || (d % 400 == 0))
-#define DAYSEC	(3600*24)
-#define YERSEC	(3600*24*365)
+#define DAYSEC	(3600 * 24)
+#define YERSEC	(3600 * 24 * 365)
 #define TIME0	1970
 
-long sectime(year,month,day)
-int year,month,day;
+static long sectime(int year, int month, int day)
 {
-
-        static int months[13]={0,31,28,31,30,31,30,31,31,30,31,30,31};
-	int yeardays,leapers,x;
+	static int months[13] = { 0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+	int yeardays, leapers, x;
 	long seconds;
 
-	if(month>12 || month<1 || year<TIME0 || day<1 || day>months[month]+
-		(month==2 && leap(year)) )
-			return(-1);
+	if (month > 12 || month < 1 || year < TIME0 || day < 1 || day > months[month] + (month == 2 && leap(year)))
+		return -1;
 
 	yeardays = leapers = 0;
 
-	for(x=1;x<month;x++)
+	for (x = 1; x < month; x++)
 		yeardays += months[x];
-	if ((month > 2) && leap(year)) yeardays++;
 
-	for(x=TIME0; x<year; x++)
-		if(leap(x)) leapers++;
+	if ((month > 2) && leap(year))
+		yeardays++;
+
+	for (x = TIME0; x < year; x++)
+		if (leap(x))
+			leapers++;
 	
-	seconds = yeardays*DAYSEC+(year-TIME0)*YERSEC+7*3600+
-			leapers*DAYSEC + day*DAYSEC;
+	seconds = yeardays * DAYSEC + (year - TIME0) * YERSEC + 7 * 3600 + leapers * DAYSEC + day * DAYSEC;
 
-	return(seconds);
-
+	return seconds;
 }
 
 /* ----------------------------------------------------------------------
@@ -607,30 +820,43 @@ int year,month,day;
  *	some date in 1970, until the specified date.
  */
 
-long datespec()
+static long datespec(void)
 {
-	int year,month,day,seconds;
+	int year, month, day, seconds;
 
-	if( token != NUMBER ) error("number expected");
+	if (token != NUMBER)
+		error("number expected");
+
 	year = tokenval;
 	token = gettoken();
-	if( token != '/' ) error("missing '/'");
+
+	if (token != '/')
+		error("missing '/'");
+
 	token = gettoken();
-	if( token != NUMBER ) error("number expected");
+
+	if (token != NUMBER)
+		error("number expected");
+
 	month = tokenval;
 	token = gettoken();
-	if( token != '/' ) error("missing '/'");
+
+	if (token != '/')
+		error("missing '/'");
+
 	token = gettoken();
-	if( token != NUMBER ) error("number expected");
+
+	if (token != NUMBER)
+		error("number expected");
+
 	day = tokenval;
 	token = gettoken();
 
-	if( (seconds = sectime(year,month,day)) < 0 ) 
+	if ((seconds = sectime(year, month, day)) < 0) 
 		error("invalid date");
 
-	return(seconds);
+	return seconds;
 }
-
 
 /* ----------------------------------------------------------------------
  * gettoken:
@@ -643,142 +869,230 @@ long datespec()
  *
  */
  
-gettoken()
+static int gettoken(void)
 {
-	char buf[IDLENGTH+1],*bufp=buf;
-	int c,incomment;
+	char buf[MAX_IDENT_LENGTH + 1], *bufp = buf;
+	int c, incomment;
 
 	incomment = 0;
 	c = getit();
-	while( c == ' ' || c == '\t' || c == '\n' || c == '/' || incomment) {
-	   if( c == '/' && !incomment) {
-		c = getit();
-		if( c != '*' ) {
-			ungetit(c);
-			c = '/';
-			break;
+
+	while (c == ' ' || c == '\t' || c == '\n' || c == '/' || incomment)
+	{
+		if (c == '/' && !incomment)
+		{
+			c = getit();
+
+			if (c != '*')
+			{
+				ungetit(c);
+				c = '/';
+
+				break;
+			}
+
+			incomment = 1;
 		}
-		incomment = 1;
-	   } else if( c == '*' ) {
+		else if (c == '*')
+		{
+			c = getit();
+
+			if (c == '/')
+				incomment = 0;
+		}
+
 		c = getit();
-		if( c == '/' ) incomment = 0;
-	   }
-	   c = getit();
 	}
 
-	if(c=='0') {
-		tokenval=0;
-		while( ( c=getit() ) >= '0' && c <= '7' ) {
+	if (c == '0')
+	{
+		tokenval = 0;
+
+		while ((c = getit()) >= '0' && c <= '7')
+		{
 			tokenval <<= 3;
-			tokenval += c-'0';
+			tokenval += c - '0';
 		}
-		if( isdigit(c) ) error("bad octal constant");
+
+		if (isdigit(c))
+			error("bad octal constant");
+
 		ungetit(c);
-		return(NUMBER);
+
+		return NUMBER;
 	}
  
-	if(isdigit(c)) {
-		tokenval=c-'0';
-		while(isdigit( (c=getit()) )) {
+	if (isdigit(c))
+	{
+		tokenval = c - '0';
+
+		while (isdigit((c = getit())))
+		{
 			tokenval *=10;
-			tokenval += c-'0';
+			tokenval += c - '0';
 		}
+
 		ungetit(c);
-		return(NUMBER);
+
+		return NUMBER;
 	}
 	
-	if(isalpha(c)) {
-	   int count=0;
-	   do {
-		if(count++ < IDLENGTH) *bufp++ = c;
-		c=getit();
-	   } while( isalnum(c) );
-	   ungetit(c);
-	   *bufp='\0';
-	   if( (tokensym=locatename(buf)) == NULL ) {
-			tokensym = insertname(buf,IDENTIFIER,0);
-	   }
-	   tokenval = tokensym->value;
-	   return( tokensym->type );
+	if (isalpha(c))
+	{
+		int count = 0;
+
+		do
+		{
+			if (count++ < MAX_IDENT_LENGTH)
+				*bufp++ = c;
+
+			c = getit();
+		} while (isalnum(c));
+
+		ungetit(c);
+		*bufp = '\0';
+
+		if ((tokensym = locatename(buf)) == NULL)
+		{
+			tokensym = insertname(buf, IDENTIFIER, 0);
+		}
+
+		tokenval = tokensym->value;
+
+		return tokensym->type;
 	}
 
-	if( c == '"' ) {
-		tokenval=strfree;
-		while( (c=getit()) != '"' ) {
-			if( strfree > STRLEN )
+	if (c == '"')
+	{
+		tokenval = strfree;
+
+		while ((c = getit()) != '"')
+		{
+			if (strfree > MAX_STRBUF_SIZE)
 				error("no more string space");
-			Strbuf[strfree++]= c;
+
+			Strbuf[strfree++] = c;
 		}
-		Strbuf[strfree++]='\0';
-		return(STR);
+
+		Strbuf[strfree++] = '\0';
+
+		return STR;
 	}
 
-	if( c == '=' ) {
-		c=getit();
-		if(c== '=') return(EQ);
-		else {
+	if (c == '=')
+	{
+		c = getit();
+
+		if (c == '=')
+			return EQ;
+		else
+		{
 			ungetit(c);
-			return('=');
+
+			return '=';
 		}
 	}
 
-	if( c== '$' ) {
-	   int count=0;
-	   struct passwd *info,*getpwnam();
-	   c=getit();
-	   if( c=='$' ) {
-		tokenval = getuid();
-		return( NUMBER );
-	   }
-	   do {
-		if (count++ < IDLENGTH) *bufp++ = c;
-		c=getit();
-	   } while( isalnum(c) );
-	   ungetit(c);
-	   *bufp='\0';
-	   if( (info=getpwnam(buf)) == NULL ) 
-		error("no such user");
-	   tokenval = info->pw_uid;
-	   return( NUMBER );
+	if (c == '$')
+	{
+		int count = 0;
+		struct passwd *info, *getpwnam();
+
+		c = getit();
+
+		if (c == '$')
+		{
+			tokenval = getuid();
+
+			return NUMBER;
+		}
+
+		do
+		{
+			if (count++ < MAX_IDENT_LENGTH)
+				*bufp++ = c;
+
+			c = getit();
+		} while (isalnum(c));
+
+		ungetit(c);
+		*bufp = '\0';
+
+		if ((info = getpwnam(buf)) == NULL) 
+			error("no such user");
+
+		tokenval = info->pw_uid;
+
+		return NUMBER;
 	}
 	
-	if( c == '!' ) {
-		c=getit();
-		if( c == '=' ) return(NE);
+	if (c == '!')
+	{
+		c = getit();
+
+		if (c == '=')
+			return NE;
+
 		ungetit(c);
-		return('!');
+
+		return '!';
 	}
  
-	if( c == '>' ) {
-		c=getit();
-		if( c == '=' ) return(GE);
-		if( c == '>' ) return(SHIFTR);
+	if (c == '>')
+	{
+		c = getit();
+
+		if (c == '=')
+			return GE;
+
+		if (c == '>')
+			return SHIFTR;
+
 		ungetit(c);
-		return('>');
+
+		return '>';
 	}
 
-	if( c == '<' ) {
-		c=getit();
-		if( c == '=' ) return(LE);
-		if( c == '<' ) return(SHIFTL);
+	if (c == '<')
+	{
+		c = getit();
+
+		if (c == '=')
+			return LE;
+
+		if (c == '<')
+			return SHIFTL;
+
 		ungetit(c);
-		return('<');
+
+		return '<';
 	}
 
-	if( c == '&' ) {
-		c=getit();
-		if( c == '&' ) return(AND);
+	if (c == '&')
+	{
+		c = getit();
+
+		if (c == '&')
+			return AND;
+
 		ungetit(c);
-		return('&');
+
+		return '&';
 	}
 
-	if( c == '|' ) {
-		c=getit();
-		if( c == '|' ) return(OR);
+	if (c == '|')
+	{
+		c = getit();
+
+		if (c == '|')
+			return OR;
+
 		ungetit(c);
-		return('|');
+
+		return '|';
 	}
 
-	return(c);
+	return c;
 }
 
+/* vi:set ts=4 sw=4: */

@@ -17,7 +17,7 @@
 
 dir()
 {
-	return( (mode & IFMT) == IFDIR );
+	return (mode & IFMT) == IFDIR;
 }
 
 /*
@@ -32,7 +32,7 @@ dir()
 
 months
 {
-	return days*30;
+	return days * 30;
 }
 
 /*
@@ -51,7 +51,7 @@ nlinks { return nlink; }
 
 ago(d)
 {
-	return( NOW - d );
+	return NOW - d;
 }
 
 /*
@@ -66,7 +66,7 @@ writable()
 
 MINE
 {
-	return( uid == $$ );
+	return uid == $$;
 }
 
 /*
@@ -82,8 +82,8 @@ MINE
 
 bad()
 {
-	return( "core" || ("a.out" && mtime <= ago(2*days) ) ||
-		"*.BAK" || "*.CKP" || writable);
+	return "core" || ("a.out" && mtime <= ago(2*days) ) ||
+		"*.BAK" || "*.CKP" || writable;
 }
 
 /*
@@ -93,7 +93,7 @@ bad()
 
 csrc()
 {
-	return("*.c" || "*.h" || "[Mm]akefile" );
+	return "*.c" || "*.h" || "[Mm]akefile";
 }
 
 /*
@@ -104,12 +104,12 @@ csrc()
 
 changed()
 {
-	return( mtime > NOW-1*hours );
+	return mtime > NOW - 1 * hours;
 
 	/* ALTERNATELY:
 	 * (using the ago() function)
 	 *
-	 * 	return( mtime > ago(1*hours) );
+	 * 	return mtime > ago(1 * hours);
 	 *
 	 */
 }
@@ -124,8 +124,8 @@ K()
 	return 1024;
 }
 
-/* megs { return K*K; }  or ...*/
-megs { return K<<10; }
+/* megs { return K * K; }  or ...*/
+megs { return K << 10; }
 
 /*
  * This function shows that recursion is quite possible.
@@ -139,7 +139,7 @@ megs { return K<<10; }
 
 recursion(n)
 {
-	return (n>0) ? recursion(n-1) : 0;
+	return (n > 0) ? recursion(n - 1) : 0;
 }
 
 /*
@@ -152,7 +152,8 @@ recursion(n)
  *
  */
 
-sqrt1(n,odd) { return( (n <= 0 ) ? 0 : sqrt1(n-odd,odd+2)+1 ); }
-sqrt(n) { return( sqrt1(n,1) ); }
+sqrt1(n, odd) { return (n <= 0 ) ? 0 : sqrt1(n - odd, odd + 2) + 1; }
+sqrt(n) { return sqrt1(n, 1); }
 
-fact(n) { return (n<=0) ? 1 : fact(n-1)*n; }
+fact(n) { return (n <= 0) ? 1 : fact(n - 1) * n; }
+

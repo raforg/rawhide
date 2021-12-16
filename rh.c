@@ -9,13 +9,16 @@
  *
  * ---------------------------------------------------------------------- */
 
-#include <sys/types.h>
-#include <sys/stat.h>
 #include "rh.h"
+#include "rhdata.h"
+#include "rhdir.h"
+#include "rhparse.h"
 
-static char usage[]={
-"Usage: %s [-vhlr] [ [-e expr] | [-f filename ] ] [-x command ] file ...\n"
-};
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+
+static char usage[] = "usage: %s [-hvlr] [-e expr | -f filename] [-x command] dir...\n";
 
 /* ----------------------------------------------------------------------
  * printhelp:
@@ -24,31 +27,30 @@ static char usage[]={
  *
  */
 
-printhelp(s)
-char *s;
+void printhelp(char *s)
 {
-	int i;
 	struct symbol *p;
+	int i;
 
-	printf(usage,s);
+	printf(usage, s);
 	printf("options:\n");
-	printf("\t-h       show this message\n");
-	printf("\t-l       long filename output\n");
-	printf("\t-r       makes %s non-recursive\n",s);
-	printf("\t-v       verbose output\n");
-	printf("\t-e       get expression from the command line\n");
-	printf("\t-f       get expression from file\n");
-	printf("\t-x       execute a unix command for matching files\n\n");
+	printf("  -h           - Show this message then exit\n");
+	printf("  -v           - Verbose output\n");
+	printf("  -l           - Long filename output\n");
+	printf("  -r           - Makes %s non-recursive\n", s);
+	printf("  -e 'expr'    - Get expression from the command line\n");
+	printf("  -f filename  - Get expression from a file\n");
+	printf("  -x 'command' - Execute a unix command for matching files\n");
 
-	printf("\tvalid symbols:\n");
-	for(i=1, p=symbols; p; p=p->next, i++)
-		printf("%12s%s", p->name,
-			((i-1)%5==4 || !p->next ) ? "\n" : " ");
+	printf("\nbuilt-in symbols:\n");
+	for (i = 1, p = symbols; p; p = p->next, i++)
+		printf("%12s%s", p->name, ((i - 1) % 5 == 4 || !p->next) ? "\n" : " ");
 
-	printf("\tC operators:\n");
-	printf("\t! ~ - * / %% + < <= > >= == != & ^ | << >> && || ?:\n");
-	printf("\tspecial operators:\n");
-	printf("\t$username , \"*.c\" , [yyyy/mm/dd]\n\n");
+	printf("\nC operators:\n");
+	printf("  ! ~ - * / %% + < <= > >= == != & ^ | << >> && || ?:\n");
+
+	printf("\nspecial operators:\n");
+	printf("  $username, $$, \"*.c\" , [yyyy/mm/dd]\n\n");
 }
 
 /* ----------------------------------------------------------------------
@@ -61,21 +63,26 @@ char *s;
  *
  */
 
-execute()
+long execute(void)
 {
 	register long eval;
-	register int (*efunc)();
+	register void (*efunc)(long);
 
-	SP=0;
-	for(PC=startPC; (efunc=StackProgram[PC].func) ; PC++) {
-		eval=StackProgram[PC].value;
+	SP = 0;
+
+	for (PC = startPC; (efunc = StackProgram[PC].func); PC++)
+	{
+		eval = StackProgram[PC].value;
 		(*efunc)(eval);
-		if( SP >= MEM ) {
-			fprintf(stderr,"stack overflow\n");
+
+		if (SP >= MAX_STACK_SIZE)
+		{
+			fprintf(stderr, "stack overflow\n");
 			exit(1);
 		}
 	}
-	return( Stack[0] );
+
+	return Stack[0];
 }
 
 /* ----------------------------------------------------------------------
@@ -88,55 +95,79 @@ execute()
  */
 
 /* print file out by itself */
-exam1()
+
+void exam1(void)
 {
-	if( execute() ) printf("%s\n",attr.fname);
+	if (execute())
+		printf("%s\n", attr.fname);
 }
 
 /* long output of file */
-exam2()
+
+void exam2(void)
 {
-	if( execute() ) printentry(attr.verbose,attr.buf,attr.fname);
+	if (execute())
+		printentry(attr.verbose, attr.buf, attr.fname);
 }
 
 /* do a system(3) call to desired command */
-exam3()
+
+void exam3(void)
 {
-	char command[ 2048 + 1 ];
-	char *p,*q,*r,*strrchr();
+	char command[2048 + 1];
+	char *p, *q, *r;
 	int rv;
 
-	if( execute() ) {
-		p=command;
-		q=attr.command;
-		while( *q ) {
-			if( *q != '%' ) *p++ = *q++;
-			else {
+	if (execute())
+	{
+		p = command;
+		q = attr.command;
+
+		while (*q)
+		{
+			if (*q != '%')
+				*p++ = *q++;
+			else
+			{
 				q += 1;
-				if( *q == 's' ) {
+
+				if (*q == 's')
+				{
 					r = attr.fname;
-					while( *p++ = *r++ );
+
+					while ((*p++ = *r++))
+						;
+
 					p -= 1;
-				} else if( *q == 'S' ) {
-					r = strrchr(attr.fname,'/');
-					r = (r) ? r+1 : attr.fname;
-					while( *p++ = *r++ );
+				}
+				else if (*q == 'S')
+				{
+					r = strrchr(attr.fname, '/');
+					r = (r) ? r + 1 : attr.fname;
+
+					while ((*p++ = *r++))
+						;
+
 					p -= 1;
-				} else *p++ = '%';
+				}
+				else
+					*p++ = '%';
+
 				q += 1;
 			}
 		}
+
 		*p = '\0';
 		rv = system(command);
-		if( attr.verbose ) printf("%s exit(%d)\n",command,rv);
+
+		if (attr.verbose)
+			printf("%s exit(%d)\n", command, rv);
 	}
 }
-
 
 /* ----------------------------------------------------------------------
  * main:
  *	parse arguments.
- *	gnu getopt() is used here.
  *	-l, -r, -h, -v options can occur as often as desired.
  *	-f,-x and -e can only occur once and MUST have an argument.
  *
@@ -149,119 +180,193 @@ exam3()
  *
  */
 
-main(argc,argv)
-int argc;
-char *argv[];
+int main(int argc, char *argv[])
 {
-	extern int optind;
-	extern char *optarg;
-	char *dashe,*dashf,*strcat(),*getenv(),initfile[ 1024+1 ];
-	int i,r;
-	int dashr,dashh,dashl;
-	int (*examptr)();
+	char *dashe, *dashf, initfile[1024 + 1];
+	int i, r;
+	int dashr, dashh, dashl;
+	void (*examptr)(void);
+	long max_depth;
 
 	/* defaults */
-	dashe = NULL;		/* -e option */
-	dashl = 0;		/* -l */
-	dashf = NULL;		/* -f */
-	dashr = 1;		/* -r */
-	dashh = 0;		/* -h */
-	attr.verbose = 0;	/* -v */
+	dashe = NULL;			/* -e option */
+	dashl = 0;				/* -l */
+	dashf = NULL;			/* -f */
+	dashr = 1;				/* -r */
+	dashh = 0;				/* -h */
+	attr.verbose = 0;		/* -v */
 	attr.command = NULL;	/* -x */
-	examptr = exam1;	/* default output function */
+	examptr = exam1;		/* default output function */
 
-	while ((i = getopt(argc, argv, "lrhvx:e:f:")) != EOF) {
-		switch( i ) {
-		case 'l': examptr = exam2; dashl = 1; break;
-		case 'r': dashr = 0; break;
-		case 'h': dashh = 1; break;
-		case 'v': attr.verbose = 1; break;
-		case 'x': 
-		   if( attr.command ) {
-			fprintf(stderr, "%s: too many -x options\n",argv[0]);
-			exit(1);
-		   }
-		   examptr = exam3;
-		   attr.command = optarg;
-		   break;
-		case 'e':
-		   if( dashe ) {
-			fprintf(stderr, "%s: too many -e options\n",argv[0]);
-			exit(1);
-		   }
-		   dashe = optarg;
-		   break;
-		case 'f':
-		   if( dashf ) {
-			fprintf(stderr, "%s: too many -f options\n",argv[0]);
-			exit(1);
-		   }
-		   dashf = optarg;
-		   break;
-		default:
-		   fprintf(stderr,"%s: use -h for help\n", argv[0],i);
-		   fprintf(stderr,usage, argv[0]);
-		   exit(1);
+	while ((i = getopt(argc, argv, "hvlre:f:x:")) != -1)
+	{
+		switch (i)
+		{
+			case 'h':
+			{
+				dashh = 1;
+
+				break;
+			}
+
+			case 'v':
+			{
+				attr.verbose = 1;
+
+				break;
+			}
+
+			case 'l':
+			{
+				examptr = exam2;
+				dashl = 1;
+
+				break;
+			}
+
+			case 'r':
+			{
+				dashr = 0;
+
+				break;
+			}
+
+			case 'e':
+			{
+				if (dashe)
+				{
+					fprintf(stderr, "%s: too many -e options\n", argv[0]);
+					exit(1);
+				}
+
+				dashe = optarg;
+
+				break;
+			}
+
+			case 'f':
+			{
+				if (dashf)
+				{
+					fprintf(stderr, "%s: too many -f options\n", argv[0]);
+					exit(1);
+				}
+
+				dashf = optarg;
+
+				break;
+			}
+
+			case 'x': 
+			{
+				if (attr.command)
+				{
+					fprintf(stderr, "%s: too many -x options\n", argv[0]);
+					exit(1);
+				}
+
+				examptr = exam3;
+				attr.command = optarg;
+
+				break;
+			}
+
+			default:
+			{
+				fprintf(stderr,"%s: unknown option -%c use -h for help\n", argv[0], (char)i);
+				fprintf(stderr, usage, argv[0]);
+				exit(1);
+			}
 		}
-		if( attr.command && dashl ) {
-			fprintf(stderr,
-				"%s: cannot have both -x and -l options\n",
-				argv[0]);
+
+		if (attr.command && dashl)
+		{
+			fprintf(stderr, "%s: cannot have both -x and -l options\n", argv[0]);
 			exit(1);
 		}
 	}
 
 	PC = 0;
 	startPC = -1;
-	rhinit();
-	if( dashh ) printhelp(argv[0]);
 
-	expfname = getenv( HOMEENV );
-	if( expfname ) {
-		strcpy(initfile,expfname);
-		expfname = strcat(initfile,RHRC);
-		if( (expfile = fopen(expfname,"r")) != NULL ) {
+	rhinit();
+
+	if (dashh)
+	{
+		printhelp(argv[0]);
+		exit(0);
+	}
+
+	expfname = getenv(HOMEENV);
+
+	if (expfname)
+	{
+		strncpy(initfile, expfname, 1024);
+		expfname = strncat(initfile, RHRC, 1024 - strlen(initfile));
+		initfile[1024] = '\0';
+
+		if ((expfile = fopen(expfname, "r")) != NULL )
+		{
 			expstr = NULL;
 			program();
 		}
 	}
 
-	if( dashf ) {
+	if (dashf)
+	{
 		expstr = NULL;
 		expfname = dashf;
-	        if( (expfile = fopen(expfname,"r")) == NULL ) {
+
+		if ((expfile = fopen(expfname,"r")) == NULL)
+		{
 			fprintf(stderr,"%s: ", argv[0]);
 			perror(expfname);
 			exit(1);
 		}
+
 		program();
 	}
-	if( dashe ) {
+
+	if (dashe)
+	{
 		expfile = NULL;
 		expstr = dashe;
 		program();
 	}
-	if( startPC == -1 ) {
+
+	if (startPC == -1)
+	{
 		expstr = NULL;
 		expfname = "stdin";
 		expfile = stdin;
 		program();
 	}
 
-	if( startPC == -1 ) {
-		fprintf(stderr,"%s: no start expression specified\n",
-			argv[0] );
+	if (startPC == -1)
+	{
+		fprintf(stderr, "%s: no start expression specified\n", argv[0]);
 		exit(1);
 	}
+
 	rhfinish();
 
-	if( optind >= argc ) {
-		r=ftrw(".",examptr,(dashr)? DEPTH :1);
-		if(r == -1) perror(".");
-	} else
-		for(; optind<argc; optind++) {
-			r=ftrw(argv[optind],examptr,(dashr)? DEPTH :1);
-			if( r == -1 ) perror(argv[optind]);
+	max_depth = sysconf(_SC_OPEN_MAX);
+
+	if (optind >= argc)
+	{
+		r = ftrw(".", examptr, (dashr) ? max_depth : 1);
+		if (r == -1)
+			perror(".");
+	}
+	else
+		for (; optind<argc; optind++)
+		{
+			r = ftrw(argv[optind], examptr, (dashr) ? max_depth : 1);
+			if (r == -1)
+				perror(argv[optind]);
 		}
+
     exit(0);
 }
+
+/* vi:set ts=4 sw=4: */

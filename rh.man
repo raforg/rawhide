@@ -1,6 +1,6 @@
 .TH RH 1L
 .SH NAME
-rh - recursive file locater (rawhide) >> VERSION 2 <<
+rh - recursive file locater (rawhide)
 .SH SYNOPSIS
 .B rh
 [
