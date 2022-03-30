@@ -1,0 +1,71 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+. tests/.common
+
+label="path buf size handling"
+
+mkdir $d/0123456789
+mkdir $d/0123456789/0123456789
+touch $d/0123456789/0123456789/0123456789
+
+test_pathbufsize()
+{
+	max="$1"
+	cmd="$2"
+	expected_stdout="$3"
+	expected_stderr="$4"
+	expected_rc="$5"
+	desc="$6"
+
+	max="`expr $max - 1`" # Convert buf size to max length
+	test_rawhide "RAWHIDE_TEST_PATHLEN_MAX=$max $cmd" "$expected_stdout" "$expected_stderr" "$expected_rc" "$desc"
+}
+
+# Where buf size checks are:
+# 1 - ftrw initial fpath
+# 2 - ftrw appending trailing /
+# 3 - ftw1 - appending d_name
+# 4 - ftw1 - appending trailing /
+
+# This requires a path buf size of at least 44 to succeed
+# tests/.t03/0123456789/0123456789/0123456789
+
+test_pathbufsize 10 "$rh $d" ""                                                                                                               "./rh: path is too long: tests/.$t\n"                                  1 "too big - initial path"
+test_pathbufsize 11 "$rh $d" "tests/.$t\n"                                                                                                    "./rh: path is too long: tests/.$t/\n"                                 1 "too big - appending / to initial path"
+test_pathbufsize 12 "$rh $d" "tests/.$t\n"                                                                                                    "./rh: path is too long: tests/.$t/0123456789\n"                       1 "too big - appending d_name to initial path"
+test_pathbufsize 21 "$rh $d" "tests/.$t\n"                                                                                                    "./rh: path is too long: tests/.$t/0123456789\n"                       1 "too big - appending d_name to initial path"
+test_pathbufsize 22 "$rh $d" "tests/.$t\ntests/.$t/0123456789\n"                                                                              "./rh: path is too long: tests/.$t/0123456789/\n"                      1 "too big - appending / to subpath"
+test_pathbufsize 23 "$rh $d" "tests/.$t\ntests/.$t/0123456789\n"                                                                              "./rh: path is too long: tests/.$t/0123456789/0123456789\n"            1 "too big - appending d_name to subpath"
+test_pathbufsize 32 "$rh $d" "tests/.$t\ntests/.$t/0123456789\n"                                                                              "./rh: path is too long: tests/.$t/0123456789/0123456789\n"            1 "too big - appending d_name to subpath"
+test_pathbufsize 33 "$rh $d" "tests/.$t\ntests/.$t/0123456789\ntests/.$t/0123456789/0123456789\n"                                             "./rh: path is too long: tests/.$t/0123456789/0123456789/\n"           1 "too big - appending / to subsubpath"
+test_pathbufsize 34 "$rh $d" "tests/.$t\ntests/.$t/0123456789\ntests/.$t/0123456789/0123456789\n"                                             "./rh: path is too long: tests/.$t/0123456789/0123456789/0123456789\n" 1 "too big - appending d_name to subsubpath"
+test_pathbufsize 43 "$rh $d" "tests/.$t\ntests/.$t/0123456789\ntests/.$t/0123456789/0123456789\n"                                             "./rh: path is too long: tests/.$t/0123456789/0123456789/0123456789\n" 1 "too big - appending d_name to subsubpath"
+test_pathbufsize 44 "$rh $d" "tests/.$t\ntests/.$t/0123456789\ntests/.$t/0123456789/0123456789\ntests/.$t/0123456789/0123456789/0123456789\n" ""                                                                     0 "max"
+test_pathbufsize 99 "$rh $d" "tests/.$t\ntests/.$t/0123456789\ntests/.$t/0123456789/0123456789\ntests/.$t/0123456789/0123456789/0123456789\n" ""                                                                     0 "small"
+
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:

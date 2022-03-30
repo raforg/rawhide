@@ -1,0 +1,92 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+. tests/.common
+
+label="glob"
+
+touch $d/a.a
+touch $d/a.b
+touch $d/a.c
+touch $d/b.a
+touch $d/b.b
+touch $d/b.c
+touch $d/c.a
+touch $d/c.b
+touch $d/c.c
+touch $d/ba
+touch $d/bana
+touch $d/banana
+touch $d/bananana
+touch $d/ale
+touch $d/aple
+touch $d/apple
+touch $d/appple
+touch $d/pear
+
+test_rawhide_pre_hook() { test_rh_find_pre_hook; }
+
+case "`uname`" in
+	SunOS)
+		# Note: Solaris find incorrectly excludes .* for *
+		test_rawhide_find "$rh -e '\"*\" && !\".*\"' $d" "find $d -name '*' -print"       "*"
+		;;
+	*)
+		test_rawhide_find "$rh -e '\"*\"' $d"         "find $d -name '*' -print"       "*"
+esac
+
+test_rawhide_find "$rh -e '\"*.c\"' $d"     "find $d -name '*.c' -print"     "*.c"
+test_rawhide_find "$rh -e '\"*.*\"' $d"     "find $d -name '*.*' -print"     "*.*"
+test_rawhide_find "$rh -e '\"?.*\"' $d"     "find $d -name '?.*' -print"     "?.*"
+test_rawhide_find "$rh -e '\"*.?\"' $d"     "find $d -name '*.?' -print"     "*.?"
+test_rawhide_find "$rh -e '\"*.[ab]\"' $d"  "find $d -name '*.[ab]' -print"  "*.[ab]"
+test_rawhide_find "$rh -e '\"*.[!ab]\"' $d" "find $d -name '*.[!ab]' -print" "*.[!ab]"
+test_rawhide_find "$rh -e '\"*.[a-c]\"' $d" "find $d -name '*.[a-c]' -print" "*.[a-c]"
+test_rawhide_find "$rh -e '\".*\"' $d"      "find $d -name '.*' -print"      ".*"
+
+# Test ksh extglob (GNU extension to fnmatch)
+# GNU find doesn't do this so we can't compare against it so we have to sort stdout
+
+# '?(pattern-list)' zero or one occurrences of any of the patterns matches
+# '*(pattern-list)' zero or more occurrences of any of the patterns match
+# '+(pattern-list)' one of more occurrences of any of the patterns match
+# '@(pattern-list)' exactly one occurrence of any of the patterns match
+# '!(pattern-list)' input string cannot be matched with any of the patterns
+
+if [ x"`uname`" = xLinux ] && $rh -h | grep -q 'Ksh extended glob patterns' # Not musl
+then
+	rh="$explicit_rh"
+	test_rawhide_pre_hook() { test_rh_cd_pre_hook; }
+	test_rawhide_post_hook() { test_rh_cd_post_hook; test_rh_sort_post_hook; }
+
+	test_rawhide "$rh -e '\"?(*.a|*.c)\"' ."         "./a.a\n./a.c\n./b.a\n./b.c\n./c.a\n./c.c\n"                                                             "" 0 "?(*.a|*.c)"
+	test_rawhide "$rh -e '\"?(a.c|def)\"' ."         "./a.c\n"                                                                                                "" 0 "?(a.c|def)"
+	test_rawhide "$rh -e '\"!(*.a|*.c)\"' ."         ".\n./a.b\n./ale\n./aple\n./apple\n./appple\n./b.b\n./ba\n./bana\n./banana\n./bananana\n./c.b\n./pear\n" "" 0 "!(*.a|*.c)"
+	test_rawhide "$rh -e '\"@(ba*(na)|a+(p)le)\"' ." "./aple\n./apple\n./appple\n./ba\n./bana\n./banana\n./bananana\n"                                        "" 0 "@(ba*(na)|a+(p)le)"
+fi
+
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:

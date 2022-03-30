@@ -1,0 +1,564 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+. tests/.common
+
+label="-ldiBsSgoaucv -QEbqptF -HIT# options"
+
+num="[0-9]+"
+dev=" *$num, *$num"
+ino=" *$num"
+blksize="$num"
+blksizeunits="$num([.][0-9])?[kKMGTPE]?"
+blocks=" *$num"
+space=" *$num"
+spaceunits=" *$num([.][0-9])?[kKMGTPE]?"
+type="[pcdblsDP-]"
+perm="[r-][w-][xsS-][r-][w-][xsS-][r-][w-][xtT-][+@*. ]"
+mode="$type$perm"
+nlink="$num"
+user="[a-zA-Z0-9._-]+"
+group="$user"
+size="$num"
+sizeunits="$num([.][0-9])?[kKMGTPE]?"
+rdev=" *$num, *$num"
+time="[A-Z][a-z][a-z]  ?[0-9][0-9]? [0-9][0-9]:[0-9][0-9]:[0-9][0-9] [0-9][0-9][0-9][0-9]"
+isotime="[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9] [+-][0-9][0-9][0-9][0-9]"
+name="$d.*"
+__=" +"
+
+test_rawhide_grep "$rh       $d" "^$name\$"                                                              "" 0 "without -l"
+test_rawhide_grep "$rh    -l $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"            "" 0 "-l"
+test_rawhide_grep "$rh    -d $d" "^$dev$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"     "" 0 "-d"
+test_rawhide_grep "$rh   -dl $d" "^$dev$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"     "" 0 "-dl"
+test_rawhide_grep "$rh    -i $d" "^$ino$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"     "" 0 "-i"
+test_rawhide_grep "$rh   -il $d" "^$ino$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"     "" 0 "-il"
+test_rawhide_grep "$rh    -B $d" "^$blksize$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$" "" 0 "-B"
+test_rawhide_grep "$rh   -Bl $d" "^$blksize$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$" "" 0 "-Bl"
+test_rawhide_grep "$rh    -s $d" "^$blocks$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"  "" 0 "-s"
+test_rawhide_grep "$rh   -sl $d" "^$blocks$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"  "" 0 "-sl"
+test_rawhide_grep "$rh    -S $d" "^$space$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"   "" 0 "-S"
+test_rawhide_grep "$rh   -Sl $d" "^$space$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"   "" 0 "-Sl"
+test_rawhide_grep "$rh    -g $d" "^$mode$__$nlink$__$group$__$size$__$time$__$name\$"                    "" 0 "-g"
+test_rawhide_grep "$rh   -gl $d" "^$mode$__$nlink$__$group$__$size$__$time$__$name\$"                    "" 0 "-gl"
+test_rawhide_grep "$rh    -o $d" "^$mode$__$nlink$__$user$__$size$__$time$__$name\$"                     "" 0 "-o"
+test_rawhide_grep "$rh   -ol $d" "^$mode$__$nlink$__$user$__$size$__$time$__$name\$"                     "" 0 "-ol"
+test_rawhide_grep "$rh    -a $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"            "" 0 "-a"
+test_rawhide_grep "$rh   -al $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"            "" 0 "-al"
+test_rawhide_grep "$rh    -u $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"            "" 0 "-u"
+test_rawhide_grep "$rh   -ul $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"            "" 0 "-ul"
+test_rawhide_grep "$rh    -c $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"            "" 0 "-c"
+test_rawhide_grep "$rh   -cl $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"            "" 0 "-cl"
+test_rawhide_grep "$rh   -au $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"            "" 0 "-au"
+test_rawhide_grep "$rh  -aul $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"            "" 0 "-aul"
+test_rawhide_grep "$rh   -ac $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$name\$"    "" 0 "-ac"
+test_rawhide_grep "$rh  -acl $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$name\$"    "" 0 "-acl"
+test_rawhide_grep "$rh   -uc $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$name\$"    "" 0 "-uc"
+test_rawhide_grep "$rh  -ucl $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$name\$"    "" 0 "-ucl"
+test_rawhide_grep "$rh  -auc $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$name\$"    "" 0 "-auc"
+test_rawhide_grep "$rh -aucl $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$name\$"    "" 0 "-aucl"
+test_rawhide_grep "$rh    -v $d" "^$dev$__$ino$__$blksize$__$blocks$__$space$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$time$__$name\$" "" 0 "-v"
+test_rawhide_grep "$rh   -vl $d" "^$dev$__$ino$__$blksize$__$blocks$__$space$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$time$__$name\$" "" 0 "-vl"
+test_rawhide_grep "RAWHIDE_TEST_TTY=1 $rh   -vl $d" "^$dev$__$ino$__$blksize$__$blocks$__$space$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$time$__$name\$" "" 0 "-vl (tty)"
+
+test_rawhide_grep "RAWHIDE_COLUMN_WIDTH_DEVICE=99 RAWHIDE_COLUMN_WIDTH_INODE=99 RAWHIDE_COLUMN_WIDTH_BLKSIZE=99 RAWHIDE_COLUMN_WIDTH_BLOCKS=99 RAWHIDE_COLUMN_WIDTH_SPACE_UNITS=99 RAWHIDE_COLUMN_WIDTH_SPACE=99 RAWHIDE_COLUMN_WIDTH_NLINK=99 RAWHIDE_COLUMN_WIDTH_USER=99 RAWHIDE_COLUMN_WIDTH_GROUP=99 RAWHIDE_COLUMN_WIDTH_SIZE_UNITS=99 RAWHIDE_COLUMN_WIDTH_SIZE=99 RAWHIDE_COLUMN_WIDTH_RDEV_MAJOR=99 RAWHIDE_COLUMN_WIDTH_RDEV_MINOR=99 $rh -vl $d" "^ *$dev$__$ino$__$blksize$__$blocks$__$space$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$time$__$name\$" "" 0 "-vl with explicit column widths"
+
+test_rawhide_grep "$rh -lr -e 'chr' /dev" "^c$perm$__$nlink$__$user$__$group$__$rdev$__$time$__/dev/.*\$" "" 0 "-l -e chr /dev (rdev column)"
+
+test_rawhide_grep "$rh    -Q $d" "^[\"]$name[\"]\$"                                                                                                               "" 0 "-Q"
+test_rawhide_grep "$rh   -lQ $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__[\"]$name[\"]\$"                                                             "" 0 "-lQ"
+test_rawhide_grep "$rh  -vlQ $d" "^$dev$__$ino$__$blksize$__$blocks$__$space$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$time$__[\"]$name[\"]\$" "" 0 "-vl"
+
+touch "$d/`printf 'abc\a\b\t\n\v\f\rd%se\"f\\\\ghi\001\006\016\037jkl' \"'\"`" 2>/dev/null
+if [ $? = 0 ] # This touch doesn't succeed on Cygwin
+then
+	test_rawhide                    "$rh     $d/abc*" "$d/abc\\a\\b\\t\\n\\v\\f\\rd'e\"f\\\\ghi\\001\\006\\016\\037jkl\n"                                   "" 0 "nasty name (no tty)"
+	test_rawhide "RAWHIDE_TEST_TTY=1 $rh     $d/abc*" "$d/abc???????d'e\"f\\\\ghi????jkl\n"                                                                 "" 0 "nasty name (tty)"
+	test_rawhide                    "$rh  -E $d/abc*" "$d/abc\\\\a\\\\b\\\\t\\\\n\\\\v\\\\f\\\\rd'e\"f\\\\\\\\ghi\\\\001\\\\006\\\\016\\\\037jkl\n"         "" 0 "nasty name with -E"
+	test_rawhide                    "$rh  -b $d/abc*" "$d/abc\\\\a\\\\b\\\\t\\\\n\\\\v\\\\f\\\\rd'e\"f\\\\\\\\ghi\\\\001\\\\006\\\\016\\\\037jkl\n"         "" 0 "nasty name with -b"
+	test_rawhide                    "$rh  -q $d/abc*" "$d/abc???????d'e\"f\\\\ghi????jkl\n"                                                                 "" 0 "nasty name with -q"
+	test_rawhide                    "$rh  -Q $d/abc*" "\"$d/abc\\a\\b\\t\\n\\v\\f\\rd'e\\\\\"f\\\\\\\\ghi\\001\\006\\016\\037jkl\"\n"                           "" 0 "nasty name with -Q (no tty)"
+	test_rawhide "RAWHIDE_TEST_TTY=1 $rh  -Q $d/abc*" "\"$d/abc???????d'e\\\\\"f\\\\\\\\ghi????jkl\"\n"                                                         "" 0 "nasty name with -Q (tty)"
+	test_rawhide                    "$rh -QE $d/abc*" "\"$d/abc\\\\a\\\\b\\\\t\\\\n\\\\v\\\\f\\\\rd'e\\\\\"f\\\\\\\\ghi\\\\001\\\\006\\\\016\\\\037jkl\"\n" "" 0 "nasty name with -QE"
+	test_rawhide                    "$rh -Qb $d/abc*" "\"$d/abc\\\\a\\\\b\\\\t\\\\n\\\\v\\\\f\\\\rd'e\\\\\"f\\\\\\\\ghi\\\\001\\\\006\\\\016\\\\037jkl\"\n" "" 0 "nasty name with -Qb"
+	test_rawhide                    "$rh -Qq $d/abc*" "\"$d/abc???????d'e\\\\\"f\\\\\\\\ghi????jkl\"\n"                                                         "" 0 "nasty name with -Qq"
+	rm $d/abc*
+fi
+
+touch $d/exe
+chmod 700 $d/exe
+
+test_rawhide "$rh  -p $d" "$d/\n$d/exe\n"           "" 0 "-p with executable"
+test_rawhide "$rh  -t $d" "$d/\n$d/exe\n"           "" 0 "-t with executable"
+test_rawhide "$rh  -F $d" "$d/\n$d/exe*\n"          "" 0 "-F with executable"
+test_rawhide "$rh  -pQ $d" "\"$d\"/\n\"$d/exe\"\n"  "" 0 "-pQ with executable"
+test_rawhide "$rh  -tQ $d" "\"$d\"/\n\"$d/exe\"\n"  "" 0 "-tQ with executable"
+test_rawhide "$rh  -FQ $d" "\"$d\"/\n\"$d/exe\"*\n" "" 0 "-FQ with executable"
+
+rm $d/exe
+ln -s /etc/passwd $d/sym
+
+test_rawhide "$rh  -p $d" "$d/\n$d/sym\n"           "" 0 "-p with symlink"
+test_rawhide "$rh  -t $d" "$d/\n$d/sym@\n"          "" 0 "-t with symlink"
+test_rawhide "$rh  -F $d" "$d/\n$d/sym@\n"          "" 0 "-F with symlink"
+test_rawhide "$rh  -pQ $d" "\"$d\"/\n\"$d/sym\"\n"  "" 0 "-pQ with symlink"
+test_rawhide "$rh  -tQ $d" "\"$d\"/\n\"$d/sym\"@\n" "" 0 "-tQ with symlink"
+test_rawhide "$rh  -FQ $d" "\"$d\"/\n\"$d/sym\"@\n" "" 0 "-FQ with symlink"
+
+test_rawhide_post_hook()
+{
+	case "`uname`" in
+		SunOS) # Solaris doesn't seem to have sed with POSIX.2 regex anywhere! But it has perl. :-)
+			perl -pi -e "s,^$mode$__$nlink$__$user$__$group$__$size$__$time$__,," $stdout
+			;;
+		*)
+			sed -E "s,^$mode$__$nlink$__$user$__$group$__$size$__$time$__,," $stdout > $stdout.tmp && mv $stdout.tmp $stdout
+			;;
+	esac
+}
+
+test_rawhide "$rh  -l   $d" "$d\n$d/sym -> /etc/passwd\n"           "" 0 "-l with symlink"
+test_rawhide "$rh  -lp  $d" "$d/\n$d/sym -> /etc/passwd\n"          "" 0 "-l -p with symlink"
+test_rawhide "$rh  -lt  $d" "$d/\n$d/sym@ -> /etc/passwd\n"         "" 0 "-l -t with symlink"
+test_rawhide "$rh  -lF  $d" "$d/\n$d/sym@ -> /etc/passwd\n"         "" 0 "-l -F with symlink"
+test_rawhide "$rh  -lQ  $d" "\"$d\"\n\"$d/sym\" -> /etc/passwd\n"   "" 0 "-l -Q with symlink"
+test_rawhide "$rh  -lQp $d" "\"$d\"/\n\"$d/sym\" -> /etc/passwd\n"  "" 0 "-l -Q -p with symlink"
+test_rawhide "$rh  -lQt $d" "\"$d\"/\n\"$d/sym\"@ -> /etc/passwd\n" "" 0 "-l -Q -t with symlink"
+test_rawhide "$rh  -lQF $d" "\"$d\"/\n\"$d/sym\"@ -> /etc/passwd\n" "" 0 "-l -Q -F with symlink"
+
+test_rawhide_post_hook() { true; }
+
+rm $d/sym
+
+test_rawhide_grep "$rh -l'#'  $d" "^$mode$__$nlink$__$num$__$num$__$size$__$time$__$name\$"                                                                         "" 0 "-l -#"
+test_rawhide_grep "$rh -lT    $d" "^$mode$__$nlink$__$user$__$group$__$size$__$isotime$__$name\$"                                                                   "" 0 "-lT"
+test_rawhide_grep "$rh -lacT  $d" "^$mode$__$nlink$__$user$__$group$__$size$__$isotime$__$isotime$__$name\$"                                                        "" 0 "-lacT"
+test_rawhide_grep "$rh -lacTv $d" "^$dev$__$ino$__$blksize$__$blocks$__$space$__$mode$__$nlink$__$user$__$group$__$size$__$isotime$__$isotime$__$isotime$__$name\$" "" 0 "-lacTv"
+
+test_rawhide_grep "$rh  -H  $d" "^$mode$__$nlink$__$user$__$group$__$sizeunits$__$time $name\$"                 "" 0 "-H"
+test_rawhide_grep "$rh -Hl  $d" "^$mode$__$nlink$__$user$__$group$__$sizeunits$__$time $name\$"                 "" 0 "-Hl"
+test_rawhide_grep "$rh -HB  $d" "^$blksizeunits$__$mode$__$nlink$__$user$__$group$__$sizeunits$__$time $name\$" "" 0 "-HB"
+test_rawhide_grep "$rh -HS  $d" "^$spaceunits$__$mode$__$nlink$__$user$__$group$__$sizeunits$__$time $name\$"   "" 0 "-HS"
+test_rawhide_grep "$rh  -HH $d" "^$mode$__$nlink$__$user$__$group$__$sizeunits$__$time $name\$"                 "" 0 "-H"
+test_rawhide_grep "$rh -HHl $d" "^$mode$__$nlink$__$user$__$group$__$sizeunits$__$time $name\$"                 "" 0 "-Hl"
+test_rawhide_grep "$rh -HHB $d" "^$blksizeunits$__$mode$__$nlink$__$user$__$group$__$sizeunits$__$time $name\$" "" 0 "-HB"
+test_rawhide_grep "$rh -HHS $d" "^$spaceunits$__$mode$__$nlink$__$user$__$group$__$sizeunits$__$time $name\$"   "" 0 "-HS"
+test_rawhide_grep "$rh  -I  $d" "^$mode$__$nlink$__$user$__$group$__$sizeunits$__$time $name\$"                 "" 0 "-I"
+test_rawhide_grep "$rh -Il  $d" "^$mode$__$nlink$__$user$__$group$__$sizeunits$__$time $name\$"                 "" 0 "-Il"
+test_rawhide_grep "$rh -IB  $d" "^$blksizeunits$__$mode$__$nlink$__$user$__$group$__$sizeunits$__$time $name\$" "" 0 "-IB"
+test_rawhide_grep "$rh -IS  $d" "^$spaceunits$__$mode$__$nlink$__$user$__$group$__$sizeunits$__$time $name\$"   "" 0 "-IS"
+test_rawhide_grep "$rh  -II $d" "^$mode$__$nlink$__$user$__$group$__$sizeunits$__$time $name\$"                 "" 0 "-I"
+test_rawhide_grep "$rh -IIl $d" "^$mode$__$nlink$__$user$__$group$__$sizeunits$__$time $name\$"                 "" 0 "-Il"
+test_rawhide_grep "$rh -IIB $d" "^$blksizeunits$__$mode$__$nlink$__$user$__$group$__$sizeunits$__$time $name\$" "" 0 "-IB"
+test_rawhide_grep "$rh -IIS $d" "^$spaceunits$__$mode$__$nlink$__$user$__$group$__$sizeunits$__$time $name\$"   "" 0 "-IS"
+test_rawhide_grep "$rh  -T  $d" "^$mode$__$nlink$__$user$__$group$__$size$__$isotime $name\$"                   "" 0 "-T"
+test_rawhide_grep "$rh -Tl  $d" "^$mode$__$nlink$__$user$__$group$__$size$__$isotime $name\$"                   "" 0 "-Tl"
+test_rawhide_grep "$rh  -#  $d" "^$mode$__$nlink$__$num$__$num$__$size$__$time $name\$"                         "" 0 "-T"
+test_rawhide_grep "$rh -#l  $d" "^$mode$__$nlink$__$num$__$num$__$size$__$time $name\$"                         "" 0 "-Tl"
+
+# Test that -H and -I match ls behaviour (not essential but probably expected)
+
+space="`df -k . | tail -1 | awk '{ print $4 }'`"
+
+mksized()
+{
+	if [ "$tsz" = 0 ] # Avoid dd bs=0, it fails in interesting ways
+	then
+		[ -f $d/f ] && rm $d/f
+		touch $d/f
+	else
+		dd if=/dev/zero of="$d/f" bs="$tsz" count=1 2>/dev/null
+	fi
+
+	return $?
+}
+
+test_units()
+{
+	topt="$1"
+	tsz="$2"
+	tunit="$3"
+	mksized $d/f $tsz && test_rawhide_grep "$rh -l $topt $d/f" "^$mode$__$nlink$__$user$__$group$__$tunit$__$time$__$name\$" "" 0 "$topt size $tsz $tunit"
+	rm $d/f
+}
+
+test_units -H 0 0
+test_units -H 1 1
+test_units -H 2 2
+test_units -H 3 3
+test_units -H 4 4
+test_units -H 5 5
+test_units -H 6 6
+test_units -H 7 7
+test_units -H 8 8
+test_units -H 9 9
+test_units -H 10 10
+test_units -H 1023 1023
+test_units -H 1024 1.0K
+test_units -H 1025 1.1K
+test_units -H 1126 1.1K
+test_units -H 1127 1.2K
+test_units -H 1228 1.2K
+test_units -H 1229 1.3K
+test_units -H 1330 1.3K
+test_units -H 1331 1.3K
+test_units -H 1332 1.4K
+test_units -H 1432 1.4K
+test_units -H 1433 1.4K
+test_units -H 1434 1.5K
+test_units -H 1534 1.5K
+test_units -H 1535 1.5K
+test_units -H 1536 1.5K
+test_units -H 1537 1.6K
+test_units -H 1636 1.6K
+test_units -H 1637 1.6K
+test_units -H 1638 1.6K
+test_units -H 1639 1.7K
+test_units -H 1738 1.7K
+test_units -H 1739 1.7K
+test_units -H 1740 1.7K
+test_units -H 1741 1.8K
+test_units -H 1841 1.8K
+test_units -H 1842 1.8K
+test_units -H 1843 1.8K
+test_units -H 1844 1.9K
+test_units -H 1943 1.9K
+test_units -H 1944 1.9K
+test_units -H 1945 1.9K
+test_units -H 1946 2.0K
+test_units -H 10135 9.9K
+test_units -H 10136 9.9K
+test_units -H 10137 9.9K
+test_units -H 10138 10K
+test_units -H 10239 10K
+test_units -H 10240 10K
+test_units -H 10241 11K
+test_units -H 11263 11K
+test_units -H 11264 11K
+test_units -H 11265 12K
+test_units -H 101376 99K
+test_units -H 101377 100K
+test_units -H 102399 100K
+test_units -H 102400 100K
+test_units -H 102401 101K
+test_units -H 204800 200K
+test_units -H 204801 201K
+test_units -H 1024000 1000K
+test_units -H 1024001 1001K
+test_units -H 1047552 1023K
+test_units -H 1047553 1.0M
+test_units -H 1048575 1.0M
+test_units -H 1048576 1.0M
+test_units -H 1048577 1.1M
+test_units -H 10380900 9.9M
+test_units -H 10380901 9.9M
+test_units -H 10380902 9.9M
+test_units -H 10380903 10M
+test_units -H 10485760 10M
+test_units -H 10485761 11M
+
+if [ "$space" -gt 2000000 -a "x$RAWHIDE_TEST_LARGE" = x1 ]
+then
+	test_units -H 103809024 99M
+	test_units -H 103809025 100M
+	test_units -H 104857600 100M
+	test_units -H 104857601 101M
+	test_units -H 115343360 110M
+	test_units -H 115343361 111M
+	test_units -H 1038090240 990M
+	test_units -H 1038090241 991M
+	test_units -H 1047527424 999M
+	test_units -H 1047527425 1000M
+	test_units -H 1073741824 1.0G
+	test_units -H 1073741825 1.1G
+	test_units -H 1181116006 1.1G
+	test_units -H 1181116007 1.2G
+fi
+
+test_units -I 0 0
+test_units -I 1 1
+test_units -I 2 2
+test_units -I 3 3
+test_units -I 4 4
+test_units -I 5 5
+test_units -I 6 6
+test_units -I 7 7
+test_units -I 8 8
+test_units -I 9 9
+test_units -I 10 10
+test_units -I 999 999
+test_units -I 1000 1.0k
+test_units -I 1001 1.1k
+test_units -I 1099 1.1k
+test_units -I 1100 1.1k
+test_units -I 1101 1.2k
+test_units -I 1199 1.2k
+test_units -I 1200 1.2k
+test_units -I 1201 1.3k
+test_units -I 1299 1.3k
+test_units -I 1300 1.3k
+test_units -I 1301 1.4k
+test_units -I 1399 1.4k
+test_units -I 1400 1.4k
+test_units -I 1401 1.5k
+test_units -I 1499 1.5k
+test_units -I 1500 1.5k
+test_units -I 1501 1.6k
+test_units -I 1599 1.6k
+test_units -I 1600 1.6k
+test_units -I 1601 1.7k
+test_units -I 1699 1.7k
+test_units -I 1700 1.7k
+test_units -I 1701 1.8k
+test_units -I 1799 1.8k
+test_units -I 1800 1.8k
+test_units -I 1801 1.9k
+test_units -I 1899 1.9k
+test_units -I 1900 1.9k
+test_units -I 1901 2.0k
+test_units -I 1999 2.0k
+test_units -I 2000 2.0k
+test_units -I 2001 2.1k
+test_units -I 9899 9.9k
+test_units -I 9900 9.9k
+test_units -I 9901 10k
+test_units -I 9999 10k
+test_units -I 10000 10k
+test_units -I 10001 11k
+test_units -I 99999 100k
+test_units -I 100000 100k
+test_units -I 100001 101k
+test_units -I 199999 200k
+test_units -I 200000 200k
+test_units -I 200001 201k
+test_units -I 899999 900k
+test_units -I 900000 900k
+test_units -I 900001 901k
+test_units -I 998999 999k
+test_units -I 999000 999k
+test_units -I 999001 1.0m
+test_units -I 999999 1.0m
+test_units -I 1000000 1.0m
+test_units -I 1000001 1.1m
+test_units -I 9900000 9.9m
+test_units -I 9900001 10m
+test_units -I 10000000 10m
+test_units -I 10000001 11m
+test_units -I 11000000 11m
+test_units -I 11000001 12m
+
+if [ "$space" -gt 2000000 -a "x$RAWHIDE_TEST_LARGE" = x1 ]
+then
+	test_units -I 99000000 99m
+	test_units -I 99000001 100m
+	test_units -I 100000000 100m
+	test_units -I 100000001 101m
+	test_units -I 110000000 110m
+	test_units -I 110000001 111m
+	test_units -I 990000000 990m
+	test_units -I 990000001 991m
+	test_units -I 1000000000 1.0g
+	test_units -I 1000000001 1.1g
+	test_units -I 1100000000 1.1g
+	test_units -I 1100000001 1.2g
+fi
+
+test_units -HH 0 0
+test_units -HH 1 1
+test_units -HH 2 2
+test_units -HH 3 3
+test_units -HH 4 4
+test_units -HH 5 5
+test_units -HH 6 6
+test_units -HH 7 7
+test_units -HH 8 8
+test_units -HH 9 9
+test_units -HH 10 10
+test_units -HH 1023 1023
+test_units -HH 1024 1.0K
+test_units -HH 1025 1.0K
+test_units -HH 1075 1.0K
+test_units -HH 1076 1.1K
+test_units -HH 1177 1.1K
+test_units -HH 1178 1.2K
+test_units -HH 1279 1.2K
+test_units -HH 1280 1.3K
+test_units -HH 1382 1.3K
+test_units -HH 1383 1.4K
+test_units -HH 1484 1.4K
+test_units -HH 1485 1.5K
+test_units -HH 1587 1.5K
+test_units -HH 1588 1.6K
+test_units -HH 1689 1.6K
+test_units -HH 1690 1.7K
+test_units -HH 1791 1.7K
+test_units -HH 1792 1.8K
+test_units -HH 1894 1.8K
+test_units -HH 1895 1.9K
+test_units -HH 1996 1.9K
+test_units -HH 1997 2.0K
+test_units -HH 10137 9.9K
+test_units -HH 10138 9.9K
+test_units -HH 10139 9.9K
+test_units -HH 10188 9.9K
+test_units -HH 10189 10K
+test_units -HH 10190 10K
+test_units -HH 10751 10K
+test_units -HH 10752 11K
+test_units -HH 10753 11K
+test_units -HH 11775 11K
+test_units -HH 11776 12K
+test_units -HH 101376 99K
+test_units -HH 101887 99K
+test_units -HH 101888 100K
+test_units -HH 102911 100K
+test_units -HH 102912 101K
+test_units -HH 204800 200K
+test_units -HH 204801 200K
+test_units -HH 1024000 1000K
+test_units -HH 1024001 1000K
+test_units -HH 1047552 1023K
+test_units -HH 1048063 1023K
+test_units -HH 1048064 1.0M
+test_units -HH 1048576 1.0M
+test_units -HH 1048577 1.0M
+test_units -HH 1520435 1.4M
+test_units -HH 1520436 1.5M
+test_units -HH 10380900 9.9M
+test_units -HH 10380903 9.9M
+test_units -HH 10433331 9.9M
+test_units -HH 10433332 10M
+
+if [ "$space" -gt 2000000 -a "x$RAWHIDE_TEST_LARGE" = x1 ]
+then
+	test_units -HH 103809024 99M
+	test_units -HH 103809025 99M
+	test_units -HH 104857600 100M
+	test_units -HH 104857601 100M
+	test_units -HH 115343360 110M
+	test_units -HH 115343361 110M
+	test_units -HH 1038090240 990M
+	test_units -HH 1038090241 990M
+	test_units -HH 1047527424 999M
+	test_units -HH 1047527425 999M
+	test_units -HH 1073217535 1023M
+	test_units -HH 1073217536 1.0G
+	test_units -HH 1073741824 1.0G
+	test_units -HH 1127428915 1.0G
+	test_units -HH 1127428916 1.1G
+	test_units -HH 1288490188 1.2G
+fi
+
+test_units -II 0 0
+test_units -II 1 1
+test_units -II 2 2
+test_units -II 3 3
+test_units -II 4 4
+test_units -II 5 5
+test_units -II 6 6
+test_units -II 7 7
+test_units -II 8 8
+test_units -II 9 9
+test_units -II 10 10
+test_units -II 999 999
+test_units -II 1000 1.0k
+test_units -II 1001 1.0k
+test_units -II 1002 1.0k
+test_units -II 1049 1.0k
+test_units -II 1050 1.1k
+test_units -II 1149 1.1k
+test_units -II 1150 1.2k
+test_units -II 1249 1.2k
+test_units -II 1250 1.3k
+test_units -II 1349 1.3k
+test_units -II 1350 1.4k
+test_units -II 1449 1.4k
+test_units -II 1450 1.5k
+test_units -II 1549 1.5k
+test_units -II 1550 1.6k
+test_units -II 1649 1.6k
+test_units -II 1650 1.7k
+test_units -II 1749 1.7k
+test_units -II 1750 1.8k
+test_units -II 1849 1.8k
+test_units -II 1850 1.9k
+test_units -II 1949 1.9k
+test_units -II 1950 2.0k
+test_units -II 2029 2.0k
+test_units -II 2050 2.1k
+test_units -II 9949 9.9k
+test_units -II 9950 10k
+test_units -II 9999 10k
+test_units -II 10000 10k
+test_units -II 10001 10k
+test_units -II 99499 99k
+test_units -II 99500 100k
+test_units -II 100000 100k
+test_units -II 100001 100k
+test_units -II 199999 200k
+test_units -II 200000 200k
+test_units -II 200001 200k
+test_units -II 899999 900k
+test_units -II 900000 900k
+test_units -II 900001 900k
+test_units -II 998999 999k
+test_units -II 999001 999k
+test_units -II 999499 999k
+test_units -II 999500 1.0m
+test_units -II 1000000 1.0m
+test_units -II 1000001 1.0m
+test_units -II 9900000 9.9m
+test_units -II 9900001 9.9m
+test_units -II 9949999 9.9m
+test_units -II 9950000 10m
+test_units -II 10000000 10m
+test_units -II 10000001 10m
+test_units -II 11000000 11m
+test_units -II 11000001 11m
+
+if [ "$space" -gt 2000000 -a "x$RAWHIDE_TEST_LARGE" = x1 ]
+then
+	test_units -II 99499999 99m
+	test_units -II 99500000 100m
+	test_units -II 100000000 100m
+	test_units -II 100000001 100m
+	test_units -II 110000000 110m
+	test_units -II 110000001 110m
+	test_units -II 990000000 990m
+	test_units -II 990000001 990m
+	test_units -II 999499999 999m
+	test_units -II 999500000 1.0g
+	test_units -II 1000000000 1.0g
+	test_units -II 1000000001 1.0g
+fi
+
+if [ "$space" -gt 2000000 -a "x$RAWHIDE_TEST_LARGE" = x ]
+then
+	echo "$t: Set RAWHIDE_TEST_LARGE=1 to allow tests that create large files (1.2G)"
+fi
+
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:

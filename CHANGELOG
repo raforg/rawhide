@@ -1,0 +1,140 @@
+3.0 (20220330)
+
+    - Update (after 32 years!) to compile and work again (ISO/IEC C, POSIX)
+    - Remove internal getopt/glob_match, replacing with standard getopt/fnmatch
+    - Remove MANIFEST (empty)
+    - Remove META (only relevant for the original comp.source.unix release)
+    - Add LICENSE COPYING CHANGELOG CODE_OF_CONDUCT.md
+    - Change -h option so it terminates (was documented behaviour but still wrong)
+    - Fix insecure multiple potential buffer overruns
+    - Fix insecure -x shell command injection
+    - Improve syntax error messages (more informative)
+    - Increase static code/data/stack space by three orders of magnitude
+    - Increase identifier length limit to 200
+    - Add @groupname and @@ expression notation
+    - Add support for underscore in function/parameter names
+    - Add support for dot, dash, and underscore in user/group names
+    - Add support for ~/.rhrc.d/*, /etc/rawhide.conf, and /etc/rawhide.conf.d/*
+    - Add -N and -n options to suppress system-wide config and user-specific config
+    - Add // and # single-line comment styles
+    - Add built-in stat field symbols: blksize blocks
+    - Change built-in symbols: hours/days/weeks to hour/day/week
+    - Add built-in number symbols: second minute month year
+    - Change to default "-e 1" expression to match everything (rather than stdin)
+    - Add "-f -" convention to read from stdin (now that it's no longer the default)
+    - Add error reporting during directory traversal (stderr and exit status)
+    - Interpret two-digit years as being in the current century
+    - Add built-in number symbols: IRWXU IRUSR IWUSR IXUSR
+    - Add built-in number symbols: IRWXG IRGRP IWGRP IXGRP
+    - Add built-in number symbols: IRWXO IROTH IWOTH IXOTH
+    - Add /etc/rawhide.conf "standard" library (nice names for things, handy functions)
+    - Remove example rhrc (subsumed by /etc/rawhide.conf)
+    - Change built-in symbol NOW to now (not backwards compatible!) NOW { now }
+    - Make "return" and ";" optional in functions (always redundant, more compact)
+    - Make rh exit with failure status if any -x command exits with failure status
+    - Add many ruthless tests
+    - Add -V (version) option
+    - Add --help and --version options
+    - Add -0 option (nul-separated output) for use with xargs -0
+    - Make "-e" optional for lean flexible cmdline (expr can appear among dir args)
+    - Fix built-in prune over-pruning (wasn't reset until after siblings done)
+    - Add built-in symbol: exit (terminate immediately - usage: 'expr ? exit : 0')
+    - Make "return" a keyword token rather than a built-in symbol
+    - Fix "glob" string tokeniser to handle "\""
+    - Fix inaccurate [yyyy/mm/dd] to time_t conversion (use standard mktime)
+    - Add support for datetimes: [yyyy/mm/dd hh:mm:ss] (ss and mm:ss are optional)
+    - Make "*" match leading dot (POSIX/GNU find compatible, but not Solaris find) 
+    - Test on Debian, Ubuntu, Fedora, FreeBSD, OpenBSD, NetBSD, macOS, Solaris, Cygwin
+    - Move some functions from rh.c/rhparse.c to more appropriate modules
+    - Fix crash on attempt to divide by zero (and modulo)
+    - Add support for doors (IFDOOR) on Solaris
+    - Add hexadecimal number literals (0xff)
+    - Add options -m # (minimum depth) and -M # (maximum depth)
+    - Fix/Add short-circuit semantics for || and && operators (for "expr && exit")
+    - Add built-in symbols: nouser nogroup
+    - Minimize the number of race conditions during traversal (fstatat/openat/fdopendir)
+    - Add built-in symbols: readable writable executable (faccessat/access)
+    - Add -X 'cmd' option (like -x with safe cd for minimal race conditions)
+    - Automatically remove cwd and other non-absolute dirs from $PATH when -X is used
+    - Add configure script to adjust binary/config/manpage installation locations
+    - Gzip manual entries when installing on systems that prefer it
+    - Add -? 'spec' option (debug: cmdline parser traversal exec all extra)
+    - Add "/path".mtime syntax for comparison against reference files
+    - Add -D option (depth-first traversal)
+    - Add -U option (unlink)
+    - Add heuristic to better identify expr/path when no -e and path doesn't exist
+    - Make -l (without -v) more like ls -l (add nlink username groupname mtime)
+    - Add output column options: -d -i -B -s -g -o -a -u -c (mostly ls-compatible)
+    - Make -v option include all the output columns
+    - Add other output format options: -H -I -T -#
+    - Add name output format options: -Q -E -b -q -p -t -F (mostly ls-compatible)
+    - Change -H and -I to round up (ls-compatible output)
+    - Add -HH and -II to round half up (more accurate)
+    - Remove rh.man (troff) in favour of POD format (for html and troff output)
+    - Re-document everything: README.md rh.1.pod rawhide.conf.5.pod
+    - Add built-in symbol: today (last midnight local time)
+    - Add "pattern".modifier syntax for glob modifiers: .i .path .ipath .link .ilink
+    - Add -1 option (single filesystem - don't cross filesystem boundaries)
+    - Add built-ins for symlink targets: texists tdev tino tmode tnlink tuid tgid ...
+    - Add -y option (follow symlinks on the cmdline and in reference files)
+    - Add -Y option (follow symlinks encountered while searching as well)
+    - Add $RAWHIDE_REPORT_BROKEN_SYMLINKS to treat broken symlinks as an error
+    - Add -S option (space column: blocks * 512)
+    - Add -L 'format' option (output details in user-supplied printf-like format)
+    - Add defense against terminal escape injection for stdout/stderr (but not debug)
+    - Add pcre2 pattern modifiers: .re .repath .relink .rei .reipath .reilink
+    - Add access control list (ACL) pattern modifiers: .acl .iacl .reacl .reiacl
+    - Add -L %z format (access control list)
+    - Add extended attribute (EA) pattern modifiers: .ea .iea .reea .reiea
+    - Add -L %x format (extended attributes)
+    - Add -L %Z format (selinux context - via ea (not via libselinux))
+    - Add "cmd".sh "pattern" modifier syntax to execute shell commands via system()
+    - Add empty string "".mtime syntax to concisely refer to the last reference file path
+    - Change size of (readable) directories to num of entries (excluding . and ..) (so empty() works)
+    - Add decimal token size/scale units suffixes: K M G T P E k m g t p e
+    - Replace "long" with "long long" everywhere (sorry 1990s!) to get 64-bit numbers on 32-bit systems
+    - Add memory/file descriptor checking (valgrind): make test with VALGRIND=1 or vg=1 (30s -> 40m)
+    - Change size of readable directories for -l and -L %s to the number of entries (excluding . and ..)
+    - Add ACL/EA indicator to -l type/perm column: acl='+' ea='@' both='*' neither=' '
+    - Change prune to return 1 not 0 (but make expr 0 overall) so (bad && prune || good) is now possible
+    - "Fix" %S (for -x/-X/"cmd".sh) so it's "/" for / (was empty)
+    - Add configure --enable-ndebug --disable-ndebug (stripped binary 10% (12K) smaller with NDEBUG)
+    - Add RAWHIDE_COLUMN_WIDTH_* env vars for people who don't like columns that widen on demand
+    - Add configure --static=SIZE ("large" is default, "small" is 10%, "tiny" is 1%, all fine choices)
+    - Add -L %X format (ACL/EA indicator like in rh -l)
+    - Add built-in field symbols: major minor rmajor rminor tmajor tminor trmajor trminor
+    - Add reference file fields: .major .minor .rmajor .rminor
+    - Add -L %B (blksize) %E (rdev) %r (rdev minor) %R (rdev major) %v (dev minor) %V (dev major)
+    - Add configure --disable-major (just for preparing the source distribution)
+    - Add $RAWHIDE_CONFIG and $RAWHIDE_RC (not just for testing, and/but not for root)
+    - Add configure --enable-mangz --disable-mangz (just so distribution can default to non-gzipped)
+    - Add to ACL/EA indicator '.' for selinux (if nothing more interesting) (-l and -L %X)
+    - Add LICENSES/* and .reuse/dep5 (REUSE 3.0 compliant)
+    - Add built-in symbol: trim (like prune but doesn't prevent the current candidate from matching)
+    - Change -r to mean -m1 -M1 (was originally just -M1, this is much better)
+    - Fix -U combined with -y/-Y and symlinks to directories (was attempting rmdir for symlink)
+    - Add $RAWHIDE_DONT_REPORT_CYCLES to suppress reporting filesystem cycles
+    - Add gcov test coverage measurement (96.20% overall - remainder manually scrutinized)
+    - Add configure --enable-gcov --disable-gcov
+    - Add gcov_summary
+    - Fix defense against terminal escape injection for stderr when stdout piped to a non-terminal
+    - Treat "" that contains / as implicit "".path (so that "/" just works)
+    - Add support for non-ASCII characters (UTF-8/ISO-8859-*) in function/parameter/user/group names
+    - Don't \ quote non-ASCII characters (UTF-8/ISO-8859-*) in shell command %s %S interpolation
+    - Add -L %j format (JSON)
+    - Fix handling of SIGINT/SIGQUIT in -x/-X/"cmd".sh sub-processes (didn't terminate rh as well)
+    - Add configure --disable-cc-other (just for preparing the source distribution)
+    - Add make help
+    - Add make gcov
+    - Add samples/{README,.rh.sh,brevity.rh,rawhide.conf-tiny}
+    - Add /etc/rawhide.conf.d/attributes to reserve some identifiers for the next version
+
+2.0 (19900218)
+
+    - Initial commit (from comp.sources.unix by Ken Stauffer)
+    CREDITS
+    Ken Stauffer - Original author.
+    Guy Harris - Corrected many portability problems.
+    David MacKenzie - Manual revisions. Added getopt and glob matching.
+    Norm Hutchinson - Fixed ungetit().
+

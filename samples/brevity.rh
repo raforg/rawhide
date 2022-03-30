@@ -1,0 +1,50 @@
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+// Brevity (aliases)
+
+i { ino }
+n { nlink }
+u { uid }
+g { gid }
+a { atime }
+m { mtime }
+
+su { suid }
+sg { sgid }
+
+nu { nouser }
+ng { nogroup }
+
+r { readable }
+w { writable }
+x { executable }
+
+q { exit }
+
+sec { second }
+mn  { minute }
+hr  { hour }
+dy  { day }
+wk  { week }
+mth { month }
+yr  { year }
+

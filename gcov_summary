@@ -1,0 +1,60 @@
+#!/usr/bin/env perl
+use warnings;
+use strict;
+
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+# gcov_summary - Summarise the contents of *.c.gcov (first run gcov *.c) 
+
+my $lines;
+my $covered;
+my $total_lines = 0;
+my $total_covered = 0;
+
+for my $fname(<*.c.gcov>)
+{
+	$lines = 0;
+	$covered = 0;
+
+	open my $fh, '<', $fname or die "$0: failed to open $fname for reading: $!\n";
+
+	while (<$fh>)
+	{
+		next if /^\s+-:/;
+		++$lines;
+		++$covered if /^\s*\d+\*?:/;
+		++$total_lines;
+		++$total_covered if /^\s*\d+\*?:/;
+	}
+
+	close $fh;
+
+	printf "%-10s %4d lines, %4d covered, %-3.2f%%\n",
+		substr($fname, 0, -5), $lines, $covered, ($covered / $lines) * 100.0
+		if $lines;
+}
+
+printf "%-10s %4d lines, %4d covered, %-3.2f%%\n",
+	'Total', $total_lines, $total_covered, ($total_covered / $total_lines) * 100.0
+	if $lines;
+
+# vi:set ts=4 sw=4:

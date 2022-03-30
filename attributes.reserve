@@ -1,0 +1,268 @@
+# /etc/rawhide.conf.d/attributes
+# See rh(1) and rawhide.conf(5) for more information.
+
+/*
+This file defines some dummy functions just to reserve
+the identifiers for the next minor version of rawhide.
+Don't modify this file. It will be replaced.
+*/
+
+// Future built-ins for Linux (canonical, aliases)
+
+attr       { 0 }
+attrs      { 0 }
+attribute  { 0 }
+attributes { 0 }
+project    { 0 }
+generation { 0 }
+
+tattr       { 0 }
+tattrs      { 0 }
+tattribute  { 0 }
+tattributes { 0 }
+tproject    { 0 }
+tgeneration { 0 }
+
+target_attr       { 0 }
+target_attrs      { 0 }
+target_attribute  { 0 }
+target_attributes { 0 }
+target_project    { 0 }
+target_generation { 0 }
+
+// Attribute constants from <ext2fs/ext2_fs.h>
+
+ATTR_SECRM            { 0 }
+ATTR_UNRM             { 0 }
+ATTR_COMPR            { 0 }
+ATTR_SYNC             { 0 }
+ATTR_IMMUTABLE        { 0 }
+ATTR_APPEND           { 0 }
+ATTR_NODUMP           { 0 }
+ATTR_NOATIME          { 0 }
+ATTR_DIRTY            { 0 }
+ATTR_COMPRBLK         { 0 }
+ATTR_NOCOMPR          { 0 }
+ATTR_ENCRYPT          { 0 }
+ATTR_BTREE            { 0 }
+ATTR_INDEX            { 0 }
+ATTR_IMAGIC           { 0 }
+ATTR_JOURNAL_DATA     { 0 }
+ATTR_NOTAIL           { 0 }
+ATTR_DIRSYNC          { 0 }
+ATTR_TOPDIR           { 0 }
+ATTR_HUGE_FILE        { 0 }
+ATTR_EXTENTS          { 0 }
+ATTR_VERITY           { 0 }
+ATTR_EA_INODE         { 0 }
+ATTR_NOCOW            { 0 }
+ATTR_SNAPFILE         { 0 }
+ATTR_DAX              { 0 }
+ATTR_SNAPFILE_DELETED { 0 }
+ATTR_SNAPFILE_SHRUNK  { 0 }
+ATTR_INLINE_DATA      { 0 }
+ATTR_PROJINHERIT      { 0 }
+ATTR_CASEFOLD         { 0 }
+
+// Attribute predicates (canonical, aliases)
+
+secrm            { 0 }
+unrm             { 0 }
+compr            { 0 }
+sync             { 0 }
+immutable        { 0 }
+append           { 0 }
+nodump           { 0 }
+noatime          { 0 }
+dirty            { 0 }
+comprblk         { 0 }
+nocompr          { 0 }
+encrypt          { 0 }
+btree            { 0 }
+index            { 0 }
+imagic           { 0 }
+journal_data     { 0 }
+notail           { 0 }
+dirsync          { 0 }
+topdir           { 0 }
+huge_file        { 0 }
+extents          { 0 }
+verity           { 0 }
+ea_inode         { 0 }
+nocow            { 0 }
+snapfile         { 0 }
+dax              { 0 }
+snapfile_deleted { 0 }
+snapfile_shrunk  { 0 }
+inline_data      { 0 }
+projinherit      { 0 }
+casefold         { 0 }
+
+secure_deletion  { 0 }
+undelete         { 0 }
+compressed       { 0 }
+synchronous      { 0 }
+append_only      { 0 }
+nocompression    { 0 }
+encrypted        { 0 }
+indexed          { 0 }
+direct_access    { 0 }
+inherit_project  { 0 }
+
+attr_s { 0 }
+attr_u { 0 }
+attr_c { 0 }
+attr_S { 0 }
+attr_i { 0 }
+attr_a { 0 }
+attr_d { 0 }
+attr_A { 0 }
+attr_m { 0 }
+attr_E { 0 }
+attr_I { 0 }
+attr_j { 0 }
+attr_t { 0 }
+attr_D { 0 }
+attr_T { 0 }
+attr_e { 0 }
+attr_V { 0 }
+attr_C { 0 }
+attr_x { 0 }
+attr_N { 0 }
+attr_P { 0 }
+attr_F { 0 }
+
+// Attribute predicates for symlink targets (canonical, aliases)
+
+tsecrm            { 0 }
+tunrm             { 0 }
+tcompr            { 0 }
+tsync             { 0 }
+timmutable        { 0 }
+tappend           { 0 }
+tnodump           { 0 }
+tnoatime          { 0 }
+tdirty            { 0 }
+tcomprblk         { 0 }
+tnocompr          { 0 }
+tencrypt          { 0 }
+tbtree            { 0 }
+tindex            { 0 }
+timagic           { 0 }
+tjournal_data     { 0 }
+tnotail           { 0 }
+tdirsync          { 0 }
+ttopdir           { 0 }
+thuge_file        { 0 }
+textents          { 0 }
+tverity           { 0 }
+tea_inode         { 0 }
+tnocow            { 0 }
+tsnapfile         { 0 }
+tdax              { 0 }
+tsnapfile_deleted { 0 }
+tsnapfile_shrunk  { 0 }
+tinline_data      { 0 }
+tprojinherit      { 0 }
+tcasefold         { 0 }
+
+tsecure_deletion  { 0 }
+tundelete         { 0 }
+tcompressed       { 0 }
+tsynchronous      { 0 }
+tappend_only      { 0 }
+tnocompression    { 0 }
+tencrypted        { 0 }
+tindexed          { 0 }
+tdirect_access    { 0 }
+tinherit_project  { 0 }
+
+tattr_s { 0 }
+tattr_u { 0 }
+tattr_c { 0 }
+tattr_S { 0 }
+tattr_i { 0 }
+tattr_a { 0 }
+tattr_d { 0 }
+tattr_A { 0 }
+tattr_m { 0 }
+tattr_E { 0 }
+tattr_I { 0 }
+tattr_j { 0 }
+tattr_t { 0 }
+tattr_D { 0 }
+tattr_T { 0 }
+tattr_e { 0 }
+tattr_V { 0 }
+tattr_C { 0 }
+tattr_x { 0 }
+tattr_N { 0 }
+tattr_P { 0 }
+tattr_F { 0 }
+
+target_secrm            { 0 }
+target_unrm             { 0 }
+target_compr            { 0 }
+target_sync             { 0 }
+target_immutable        { 0 }
+target_append           { 0 }
+target_nodump           { 0 }
+target_noatime          { 0 }
+target_dirty            { 0 }
+target_comprblk         { 0 }
+target_nocompr          { 0 }
+target_encrypt          { 0 }
+target_btree            { 0 }
+target_index            { 0 }
+target_imagic           { 0 }
+target_journal_data     { 0 }
+target_notail           { 0 }
+target_dirsync          { 0 }
+target_topdir           { 0 }
+target_huge_file        { 0 }
+target_extents          { 0 }
+target_verity           { 0 }
+target_ea_inode         { 0 }
+target_nocow            { 0 }
+target_snapfile         { 0 }
+target_dax              { 0 }
+target_snapfile_deleted { 0 }
+target_snapfile_shrunk  { 0 }
+target_inline_data      { 0 }
+target_projinherit      { 0 }
+target_casefold         { 0 }
+
+target_secure_deletion  { 0 }
+target_undelete         { 0 }
+target_compressed       { 0 }
+target_synchronous      { 0 }
+target_append_only      { 0 }
+target_nocompression    { 0 }
+target_encrypted        { 0 }
+target_indexed          { 0 }
+target_direct_access    { 0 }
+target_inherit_project  { 0 }
+
+target_attr_s { 0 }
+target_attr_u { 0 }
+target_attr_c { 0 }
+target_attr_S { 0 }
+target_attr_i { 0 }
+target_attr_a { 0 }
+target_attr_d { 0 }
+target_attr_A { 0 }
+target_attr_m { 0 }
+target_attr_E { 0 }
+target_attr_I { 0 }
+target_attr_j { 0 }
+target_attr_t { 0 }
+target_attr_D { 0 }
+target_attr_T { 0 }
+target_attr_e { 0 }
+target_attr_V { 0 }
+target_attr_C { 0 }
+target_attr_x { 0 }
+target_attr_N { 0 }
+target_attr_P { 0 }
+target_attr_F { 0 }
+

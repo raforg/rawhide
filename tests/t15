@@ -1,0 +1,394 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+. tests/.common
+
+label="language parsing"
+
+# Comments
+
+cat > $d/code <<"END" # (test old/even length # comments because there was a bug)
+/*
+comment
+*/
+a1 { 1 }  # comment
+a2 { a1 } # comments
+a3 { a2 } // comment
+a4 { a3 } // comments
+a5 { a4 }
+END
+test_rawhide "$builtin_rh -f $d/code -e a5 $d" "$d\n$d/code\n" "" 0 "comments"
+rm $d/code
+
+# Operators
+
+test_rawhide "$rh -e '(0 ? 3 : 4) == 4' $d" "$d\n" "" 0 "0 ? 3 : 4"
+test_rawhide "$rh -e '(1 ? 3 : 4) == 3' $d" "$d\n" "" 0 "1 ? 3 : 4"
+
+test_rawhide "$rh -e '(0 || 0) == 0' $d" "$d\n" "" 0 "0 || 0"
+test_rawhide "$rh -e '(0 || 1) == 1' $d" "$d\n" "" 0 "0 || 1"
+test_rawhide "$rh -e '(1 || 0) == 1' $d" "$d\n" "" 0 "1 || 0"
+test_rawhide "$rh -e '(1 || 1) == 1' $d" "$d\n" "" 0 "1 || 1"
+
+test_rawhide "$rh -e '(3 || 0) == 1' $d" "$d\n" "" 0 "3 || 0"
+test_rawhide "$rh -e '(0 || 3) == 1' $d" "$d\n" "" 0 "0 || 3"
+
+test_rawhide "$rh -e '(0 && 0) == 0' $d" "$d\n" "" 0 "0 && 0"
+test_rawhide "$rh -e '(0 && 1) == 0' $d" "$d\n" "" 0 "0 && 1"
+test_rawhide "$rh -e '(1 && 0) == 0' $d" "$d\n" "" 0 "1 && 0"
+test_rawhide "$rh -e '(1 && 1) == 1' $d" "$d\n" "" 0 "1 && 1"
+
+test_rawhide "$rh -e '(2 && 2) == 1' $d" "$d\n" "" 0 "2 && 2"
+test_rawhide "$rh -e '(2 && 3) == 1' $d" "$d\n" "" 0 "2 && 3"
+test_rawhide "$rh -e '(3 && 2) == 1' $d" "$d\n" "" 0 "3 && 2"
+
+test_rawhide "$rh -e '(0 && 0 && 0) == 0' $d" "$d\n" "" 0 "0 && 0 && 0"
+test_rawhide "$rh -e '(0 && 0 && 1) == 0' $d" "$d\n" "" 0 "0 && 0 && 1"
+test_rawhide "$rh -e '(0 && 1 && 0) == 0' $d" "$d\n" "" 0 "0 && 1 && 0"
+test_rawhide "$rh -e '(0 && 1 && 1) == 0' $d" "$d\n" "" 0 "0 && 1 && 1"
+test_rawhide "$rh -e '(1 && 0 && 0) == 0' $d" "$d\n" "" 0 "1 && 0 && 0"
+test_rawhide "$rh -e '(1 && 0 && 1) == 0' $d" "$d\n" "" 0 "1 && 0 && 1"
+test_rawhide "$rh -e '(1 && 1 && 0) == 0' $d" "$d\n" "" 0 "1 && 1 && 0"
+test_rawhide "$rh -e '(1 && 1 && 1) == 1' $d" "$d\n" "" 0 "1 && 1 && 1"
+
+test_rawhide "$rh -e '(0 || 0 || 0) == 0' $d" "$d\n" "" 0 "0 || 0 || 0"
+test_rawhide "$rh -e '(0 || 0 || 1) == 1' $d" "$d\n" "" 0 "0 || 0 || 1"
+test_rawhide "$rh -e '(0 || 1 || 0) == 1' $d" "$d\n" "" 0 "0 || 1 || 0"
+test_rawhide "$rh -e '(0 || 1 || 1) == 1' $d" "$d\n" "" 0 "0 || 1 || 1"
+test_rawhide "$rh -e '(1 || 0 || 0) == 1' $d" "$d\n" "" 0 "1 || 0 || 0"
+test_rawhide "$rh -e '(1 || 0 || 1) == 1' $d" "$d\n" "" 0 "1 || 0 || 1"
+test_rawhide "$rh -e '(1 || 1 || 0) == 1' $d" "$d\n" "" 0 "1 || 1 || 0"
+test_rawhide "$rh -e '(1 || 1 || 1) == 1' $d" "$d\n" "" 0 "1 || 1 || 1"
+
+test_rawhide "$rh -e '(0 && 0 || 0) == 0' $d" "$d\n" "" 0 "0 && 0 || 0"
+test_rawhide "$rh -e '(0 && 0 || 1) == 1' $d" "$d\n" "" 0 "0 && 0 || 1"
+test_rawhide "$rh -e '(0 && 1 || 0) == 0' $d" "$d\n" "" 0 "0 && 1 || 0"
+test_rawhide "$rh -e '(0 && 1 || 1) == 1' $d" "$d\n" "" 0 "0 && 1 || 1"
+test_rawhide "$rh -e '(1 && 0 || 0) == 0' $d" "$d\n" "" 0 "1 && 0 || 0"
+test_rawhide "$rh -e '(1 && 0 || 1) == 1' $d" "$d\n" "" 0 "1 && 0 || 1"
+test_rawhide "$rh -e '(1 && 1 || 0) == 1' $d" "$d\n" "" 0 "1 && 1 || 0"
+test_rawhide "$rh -e '(1 && 1 || 1) == 1' $d" "$d\n" "" 0 "1 && 1 || 1"
+
+test_rawhide "$rh -e '(0 || 0 && 0) == 0' $d" "$d\n" "" 0 "0 || 0 && 0"
+test_rawhide "$rh -e '(0 || 0 && 1) == 0' $d" "$d\n" "" 0 "0 || 0 && 1"
+test_rawhide "$rh -e '(0 || 1 && 0) == 0' $d" "$d\n" "" 0 "0 || 1 && 0"
+test_rawhide "$rh -e '(0 || 1 && 1) == 1' $d" "$d\n" "" 0 "0 || 1 && 1"
+test_rawhide "$rh -e '(1 || 0 && 0) == 1' $d" "$d\n" "" 0 "1 || 0 && 0"
+test_rawhide "$rh -e '(1 || 0 && 1) == 1' $d" "$d\n" "" 0 "1 || 0 && 1"
+test_rawhide "$rh -e '(1 || 1 && 0) == 1' $d" "$d\n" "" 0 "1 || 1 && 0"
+test_rawhide "$rh -e '(1 || 1 && 1) == 1' $d" "$d\n" "" 0 "1 || 1 && 1"
+
+# For short-circuiting semantics of && and ||, see tests/t08 (prune) and tests/t09 (exit)
+# (Nothing else has side effects)
+
+test_rawhide "$rh -e '(1 << 1) == 2' $d" "$d\n" "" 0 "1 << 1"
+test_rawhide "$rh -e '(1 << 2) == 4' $d" "$d\n" "" 0 "1 << 2"
+test_rawhide "$rh -e '(1 << 3) == 8' $d" "$d\n" "" 0 "1 << 3"
+
+test_rawhide "$rh -e '(8 >> 1) == 4' $d" "$d\n" "" 0 "8 >> 1"
+test_rawhide "$rh -e '(8 >> 2) == 2' $d" "$d\n" "" 0 "8 >> 2"
+test_rawhide "$rh -e '(8 >> 3) == 1' $d" "$d\n" "" 0 "8 >> 3"
+
+test_rawhide "$rh -e '(3 & 1) == 1' $d" "$d\n" "" 0 "3 & 1"
+test_rawhide "$rh -e '(3 & 2) == 2' $d" "$d\n" "" 0 "3 & 2"
+test_rawhide "$rh -e '(3 & 3) == 3' $d" "$d\n" "" 0 "3 & 3"
+test_rawhide "$rh -e '(3 & 4) == 0' $d" "$d\n" "" 0 "3 & 4"
+test_rawhide "$rh -e '(3 & 5) == 1' $d" "$d\n" "" 0 "3 & 5"
+test_rawhide "$rh -e '(3 & 6) == 2' $d" "$d\n" "" 0 "3 & 6"
+test_rawhide "$rh -e '(3 & 7) == 3' $d" "$d\n" "" 0 "3 & 7"
+
+test_rawhide "$rh -e '(3 ^ 1) == 2' $d" "$d\n" "" 0 "3 ^ 1"
+test_rawhide "$rh -e '(3 ^ 2) == 1' $d" "$d\n" "" 0 "3 ^ 2"
+test_rawhide "$rh -e '(3 ^ 3) == 0' $d" "$d\n" "" 0 "3 ^ 3"
+test_rawhide "$rh -e '(3 ^ 4) == 7' $d" "$d\n" "" 0 "3 ^ 4"
+test_rawhide "$rh -e '(3 ^ 5) == 6' $d" "$d\n" "" 0 "3 ^ 5"
+test_rawhide "$rh -e '(3 ^ 6) == 5' $d" "$d\n" "" 0 "3 ^ 6"
+test_rawhide "$rh -e '(3 ^ 7) == 4' $d" "$d\n" "" 0 "3 ^ 7"
+
+test_rawhide "$rh -e '(3 | 1) == 3' $d" "$d\n" "" 0 "3 | 1"
+test_rawhide "$rh -e '(3 | 2) == 3' $d" "$d\n" "" 0 "3 | 2"
+test_rawhide "$rh -e '(3 | 3) == 3' $d" "$d\n" "" 0 "3 | 3"
+test_rawhide "$rh -e '(3 | 4) == 7' $d" "$d\n" "" 0 "3 | 4"
+test_rawhide "$rh -e '(3 | 5) == 7' $d" "$d\n" "" 0 "3 | 5"
+test_rawhide "$rh -e '(3 | 6) == 7' $d" "$d\n" "" 0 "3 | 6"
+test_rawhide "$rh -e '(3 | 7) == 7' $d" "$d\n" "" 0 "3 | 7"
+
+test_rawhide "$rh -e '1 == 1' $d" "$d\n" "" 0 "1 == 1"
+test_rawhide "$rh -e '1 == 0' $d" ""     "" 0 "1 == 0"
+
+test_rawhide "$rh -e '1 != 1' $d" ""     "" 0 "1 != 1"
+test_rawhide "$rh -e '1 != 0' $d" "$d\n" "" 0 "1 != 0"
+
+test_rawhide "$rh -e '(1 < 0) == 0' $d" "$d\n" "" 0 "1 < 0"
+test_rawhide "$rh -e '(1 < 1) == 0' $d" "$d\n" "" 0 "1 < 1"
+test_rawhide "$rh -e '(1 < 2) == 1' $d" "$d\n" "" 0 "1 < 2"
+
+test_rawhide "$rh -e '(1 > 0) == 1' $d" "$d\n" "" 0 "1 > 0"
+test_rawhide "$rh -e '(1 > 1) == 0' $d" "$d\n" "" 0 "1 > 1"
+test_rawhide "$rh -e '(1 > 2) == 0' $d" "$d\n" "" 0 "1 > 2"
+
+test_rawhide "$rh -e '(1 <= 0) == 0' $d" "$d\n" "" 0 "1 <= 0"
+test_rawhide "$rh -e '(1 <= 1) == 1' $d" "$d\n" "" 0 "1 <= 1"
+test_rawhide "$rh -e '(1 <= 2) == 1' $d" "$d\n" "" 0 "1 <= 2"
+
+test_rawhide "$rh -e '(1 >= 0) == 1' $d" "$d\n" "" 0 "1 >= 0"
+test_rawhide "$rh -e '(1 >= 1) == 1' $d" "$d\n" "" 0 "1 >= 1"
+test_rawhide "$rh -e '(1 >= 2) == 0' $d" "$d\n" "" 0 "1 >= 2"
+
+test_rawhide "$rh -e '2 * 3 == 6' $d" "$d\n" "" 0 "2 * 3"
+test_rawhide "$rh -e '2 * 4 == 8' $d" "$d\n" "" 0 "2 * 4"
+
+test_rawhide "$rh -e '6 / 2 == 3' $d" "$d\n" "" 0 "6 / 2"
+test_rawhide "$rh -e '8 / 2 == 4' $d" "$d\n" "" 0 "8 / 2"
+
+test_rawhide "$rh -e '6 % 2 == 0' $d" "$d\n" "" 0 "6 % 2"
+test_rawhide "$rh -e '7 % 2 == 1' $d" "$d\n" "" 0 "7 % 2"
+test_rawhide "$rh -e '8 % 2 == 0' $d" "$d\n" "" 0 "8 % 2"
+test_rawhide "$rh -e '9 % 2 == 1' $d" "$d\n" "" 0 "9 % 2"
+
+test_rawhide "$rh -e '2 * 4 + 1 == 9'    $d" "$d\n" "" 0 "2 * 4 + 1 == 9"
+test_rawhide "$rh -e '2 * (4 + 1) == 10' $d" "$d\n" "" 0 "2 * (4 + 1) == 10"
+test_rawhide "$rh -e '4 / 2 - 1 == 1'    $d" "$d\n" "" 0 "4 / 2 - 1 == 1"
+test_rawhide "$rh -e '4 / (2 - 1) == 4'  $d" "$d\n" "" 0 "4 / (2 - 1) == 4"
+test_rawhide "$rh -e '6 % 2 - 1 == -1'   $d" "$d\n" "" 0 "6 % 2 - 1 == -1"
+test_rawhide "$rh -e '6 % (2 - 1) == 0'  $d" "$d\n" "" 0 "6 % (2 - 1) == 0"
+
+test_rawhide "$rh -e '4 / 0'             $d" "" "./rh: attempt to divide by zero\n" 1 "4 / 0"
+test_rawhide "$rh -e '4 % 0'             $d" "" "./rh: attempt to divide by zero\n" 1 "4 % 0"
+
+test_rawhide "$rh -e '1 + 1 == 2' $d" "$d\n" "" 0 "1 + 1"
+test_rawhide "$rh -e '2 + 2 == 4' $d" "$d\n" "" 0 "2 + 2"
+
+test_rawhide "$rh -e '3 - 2 == 1' $d" "$d\n" "" 0 "3 - 2"
+test_rawhide "$rh -e '4 - 1 == 3' $d" "$d\n" "" 0 "4 - 1"
+
+test_rawhide "$rh -e '2 - 3 == -1' $d" "$d\n" "" 0 "2 - 3 == -1"
+test_rawhide "$rh -e '1 - 4 == -3' $d" "$d\n" "" 0 "1 - 4 == -3"
+
+test_rawhide "$rh -e '~-1 == 0' $d" "$d\n" "" 0 "~-1 == 0"
+test_rawhide "$rh -e '~-0 == -1' $d" "$d\n" "" 0 "~-0 == -1"
+
+test_rawhide "$rh -e '!0 == 1' $d" "$d\n" "" 0 "!0 == 1"
+test_rawhide "$rh -e '!1 == 0' $d" "$d\n" "" 0 "!1 == 0"
+
+# Decimal, Octal and Hexadecimal numbers
+
+test_rawhide "$rh -e '0xaa == 0252' $d" "$d\n" "" 0 "0xaa == 0252"
+test_rawhide "$rh -e '0252 == 170'  $d" "$d\n" "" 0 "0252 == 170"
+test_rawhide "$rh -e '0x55 == 0125' $d" "$d\n" "" 0 "0x55 == 0125"
+test_rawhide "$rh -e '0125 == 85'   $d" "$d\n" "" 0 "0125 == 85"
+
+test_rawhide "$rh -e '1K == 1024' $d" "$d\n"                                    "" 0 "1K == 1024"
+test_rawhide "$rh -e '1M == 1024 * 1024' $d" "$d\n"                             "" 0 "1M == 1024 * 1024"
+test_rawhide "$rh -e '1G == 1024 * 1024 * 1024' $d" "$d\n"                      "" 0 "1G == 1024 * 1024 * 1024"
+test_rawhide "$rh -e '1T == 1024 * 1024 * 1024 * 1024' $d" "$d\n"               "" 0 "1T == 1024 * 1024 * 1024 * 1024"
+test_rawhide "$rh -e '1P == 1024 * 1024 * 1024 * 1024 * 1024' $d" "$d\n"        "" 0 "1P == 1024 * 1024 * 1024 * 1024 * 1024"
+test_rawhide "$rh -e '1E == 1024 * 1024 * 1024 * 1024 * 1024 * 1024' $d" "$d\n" "" 0 "1E == 1024 * 1024 * 1024 * 1024 * 1024 * 1024"
+
+test_rawhide "$rh -e '1k == 1000' $d" "$d\n"                "" 0 "1k == 1000"
+test_rawhide "$rh -e '1m == 1000000' $d" "$d\n"             "" 0 "1m == 1000000"
+test_rawhide "$rh -e '1g == 1000000000' $d" "$d\n"          "" 0 "1g == 1000000000"
+test_rawhide "$rh -e '1t == 1000000000000' $d" "$d\n"       "" 0 "1t == 1000000000000"
+test_rawhide "$rh -e '1p == 1000000000000000' $d" "$d\n"    "" 0 "1p == 1000000000000000"
+test_rawhide "$rh -e '1e == 1000000000000000000' $d" "$d\n" "" 0 "1e == 1000000000000000000"
+
+test_rawhide "$rh -e '3K == 3 * 1024' $d" "$d\n"                                    "" 0 "3K == 3 * 1024"
+test_rawhide "$rh -e '3M == 3 * 1024 * 1024' $d" "$d\n"                             "" 0 "3M == 3 * 1024 * 1024"
+test_rawhide "$rh -e '3G == 3 * 1024 * 1024 * 1024' $d" "$d\n"                      "" 0 "3G == 3 * 1024 * 1024 * 1024"
+test_rawhide "$rh -e '3T == 3 * 1024 * 1024 * 1024 * 1024' $d" "$d\n"               "" 0 "3T == 3 * 1024 * 1024 * 1024 * 1024"
+test_rawhide "$rh -e '3P == 3 * 1024 * 1024 * 1024 * 1024 * 1024' $d" "$d\n"        "" 0 "3P == 3 * 1024 * 1024 * 1024 * 1024 * 1024"
+test_rawhide "$rh -e '3E == 3 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024' $d" "$d\n" "" 0 "3E == 3 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024"
+
+test_rawhide "$rh -e '3k == 3000' $d" "$d\n"                "" 0 "3k == 3000"
+test_rawhide "$rh -e '3m == 3000000' $d" "$d\n"             "" 0 "3m == 3000000"
+test_rawhide "$rh -e '3g == 3000000000' $d" "$d\n"          "" 0 "3g == 3000000000"
+test_rawhide "$rh -e '3t == 3000000000000' $d" "$d\n"       "" 0 "3t == 3000000000000"
+test_rawhide "$rh -e '3p == 3000000000000000' $d" "$d\n"    "" 0 "3p == 3000000000000000"
+test_rawhide "$rh -e '3e == 3000000000000000000' $d" "$d\n" "" 0 "3e == 3000000000000000000"
+
+# User and group names
+
+myuser="`whoami 2>/dev/null`"
+
+if [ -n "$myuser" ]
+then
+	test_rawhide "$rh -e 'uid == \$\$'      $d" "$d\n" "" 0 "same as \$\$"
+	test_rawhide "$rh -e 'uid == \$$myuser' $d" "$d\n" "" 0 "same as \$$myuser"
+	test_rawhide "$rh -e 'uid != \$\$'      $d" ""     "" 0 "not same as \$\$"
+	test_rawhide "$rh -e 'uid != \$$myuser' $d" ""     "" 0 "not same as \$$myuser"
+
+	mygroup="`groups $myuser 2>/dev/null | sed 's/ .*$//'`"
+
+	if [ -n "$mygroup" ] && grep -q "^$mygroup:" /etc/group 2>/dev/null
+	then
+		# On macOS, root's primary group is wheel but it gets group staff instead
+		if [ "`whoami`" != root -o "`uname`" != Darwin -a "`uname`" != FreeBSD -a "`uname`" != OpenBSD -a "`uname`" != NetBSD ]
+		then
+			test_rawhide "$rh -e 'gid == @@'        $d" "$d\n" "" 0 "same as @@"
+			test_rawhide "$rh -e 'gid == @$mygroup' $d" "$d\n" "" 0 "same as @$mygroup"
+			test_rawhide "$rh -e 'gid != @@'        $d" ""     "" 0 "not same as @@"
+			test_rawhide "$rh -e 'gid != @$mygroup' $d" ""     "" 0 "not same as @$mygroup"
+		fi
+	fi
+
+	case "$LANG" in
+		*.UTF-8)
+			test_rawhide "$rh -e 'uid == \$áêìöç-notauser'  $d" "" "./rh: command line: -e 'uid == \$áêìöç-notauser': line 1 byte 27: no such user: áêìöç-notauser\n" 1 "username with multibyte utf-8 characters"
+			test_rawhide "$rh -e 'gid == @áêìöç-notagroup'  $d" "" "./rh: command line: -e 'gid == @áêìöç-notagroup': line 1 byte 28: no such group: áêìöç-notagroup\n" 1 "groupname with multibyte utf-8 characters"
+			test_rawhide "$rh -e 'uid == \$🙂-notauser'     $d" "" "./rh: command line: -e 'uid == \$🙂-notauser': line 1 byte 21: no such user: 🙂-notauser\n" 1 "username with multibyte utf-8 emoji"
+			test_rawhide "$rh -e 'gid == @🙂-notagroup'     $d" "" "./rh: command line: -e 'gid == @🙂-notagroup': line 1 byte 22: no such group: 🙂-notagroup\n" 1 "groupname with multibyte utf-8 emoji"
+			;;
+	esac
+fi
+
+# Function, parameter, field, undefined identifiers
+
+touch $d/e
+
+test_rawhide "$rh -e 'explicit() { return 1; } explicit()'      $d" "$d\n$d/e\n"   "" 0 "function with explicit return and ;"
+
+test_rawhide "$rh -e '_fn() { 1 } _fn()'                        $d" "$d\n$d/e\n"   "" 0 "identifiers: func() - _fn() _fn()"
+test_rawhide "$rh -e 'f_9() { 1 } f_9()'                        $d" "$d\n$d/e\n"   "" 0 "identifiers: func() - f_9() f_9()"
+test_rawhide "$rh -e 'f8() { 1 } f8()'                          $d" "$d\n$d/e\n"   "" 0 "identifiers: func() - f8() f8()"
+
+test_rawhide "$rh -e 'fn { 1 } fn()'                            $d" "$d\n$d/e\n"   "" 0 "identifiers: func() - fn   fn()"
+test_rawhide "$rh -e 'fn() { 1 } fn'                            $d" "$d\n$d/e\n"   "" 0 "identifiers: func() - fn() fn"
+test_rawhide "$rh -e 'fn { 1 } fn'                              $d" "$d\n$d/e\n"   "" 0 "identifiers: func() - fn   fn"
+test_rawhide "$rh -e 'fn(x) { x } fn(size)'                     $d" "$d\n"         "" 0 "identifiers: func(x) param field"
+test_rawhide "$rh -e 'fn(x) { x } fn(!size)'                    $d" "$d/e\n"       "" 0 "identifiers: func(x) param field"
+test_rawhide "$rh -e 'fn(x,y) { x+y } fn(size,size)'            $d" "$d\n"         "" 0 "identifiers: func(x,y) param field"
+test_rawhide "$rh -e 'fn(x,y) { x+y } fn(!size,!size)'          $d" "$d/e\n"       "" 0 "identifiers: func(x,y) param field"
+test_rawhide "$rh -e 'fn(x,y,z) { x+y+z } fn(size,size,mtime)'  $d" "$d\n$d/e\n"   "" 0 "identifiers: func(x,y,z) param field"
+test_rawhide "$rh -e 'fn(x,y,z) { x+y+z } fn(!size,!size,!mtime)' $d" "$d/e\n"     "" 0 "identifiers: func(x,y,z) param field"
+
+test_rawhide "$rh -e 'fn() { undef } 1' $d" "" "./rh: command line: -e 'fn() { undef } 1': line 1 byte 12: undefined identifier: identifier undef\n" 1 "identifiers: undef"
+test_rawhide "$rh -e 'fn() { 1 } undef' $d" "" "./rh: command line: -e 'fn() { 1 } undef': line 1 byte 17: expected '(' or '{', found eof (possible attempt to call an undefined function)\n" 1 "identifiers: undef"
+
+case "$LANG" in
+	*.UTF-8)
+		test_rawhide "$rh -e 'áêìöç { 1 } áêìöç'           $d" "$d\n$d/e\n" "" 0 "function name with multibyte utf-8 characters"
+		test_rawhide "$rh -e 'áêìöç(üüü) { üüü } áêìöç(1)' $d" "$d\n$d/e\n" "" 0 "function/parameter names with multibyte utf-8 characters"
+		test_rawhide "$rh -e '🙂(🙃) { 🙃 } 🙂(1)'         $d" "$d\n$d/e\n" "" 0 "function/parameter names with multibyte utf-8 emoji"
+		;;
+esac
+
+# Datetimes
+
+touch -t 200202020808.09 $d/e
+
+test_rawhide "$rh -e 'mtime >= [2/2/2]             && mtime <  [2/2/3]'             $d" "$d/e\n" "" 0 "datetime [yy/m/d] includes"
+test_rawhide "$rh -e 'mtime <  [2/2/2]             || mtime >= [2/2/3]'             $d" "$d\n"   "" 0 "datetime [yy/m/d] excludes"
+test_rawhide "$rh -e 'mtime >= [2002/2/2]          && mtime <  [2002/2/3]'          $d" "$d/e\n" "" 0 "datetime [yyyy/m/d] includes"
+test_rawhide "$rh -e 'mtime <  [2002/2/2]          || mtime >= [2002/2/3]'          $d" "$d\n"   "" 0 "datetime [yyyy/m/d] excludes"
+test_rawhide "$rh -e 'mtime >= [2002/2/2 8]        && mtime <  [2002/2/2 9]'        $d" "$d/e\n" "" 0 "datetime [yyyy/m/d h] includes"
+test_rawhide "$rh -e 'mtime <  [2002/2/2 08]       || mtime >= [2002/2/2 09]'       $d" "$d\n"   "" 0 "datetime [yyyy/m/d h] excludes"
+test_rawhide "$rh -e 'mtime >= [2002/2/2 8:8]      && mtime <  [2002/2/2 8:9]'      $d" "$d/e\n" "" 0 "datetime [yyyy/m/d h:m] includes"
+test_rawhide "$rh -e 'mtime <  [2002/2/2 08:08]    || mtime >= [2002/2/2 08:09]'    $d" "$d\n"   "" 0 "datetime [yyyy/m/d h:m] excludes"
+test_rawhide "$rh -e 'mtime >= [2002/2/2 8:8:9]    && mtime <  [2002/2/2 8:8:10]'   $d" "$d/e\n" "" 0 "datetime [yyyy/m/d h:m:s] includes"
+test_rawhide "$rh -e 'mtime <  [2002/2/2 08:08:09] || mtime >= [2002/2/2 08:09:10]' $d" "$d\n"   "" 0 "datetime [yyyy/m/d h:m:s] excludes"
+
+test_rawhide "$rh -e '[2022/10/40] != [2022/11/9]'                   $d" "" "" 0 "date normalized"
+test_rawhide "$rh -e '[2022/10/40 25:90:90] != [2022/11/10 2:31:30]' $d" "" "" 0 "date/time normalized"
+
+test_rawhide "$rh -e '[09/09/09 09:09:09] != [2009/9/9 9:9:9]'       $d" "" "" 0 "date/time not octal"
+
+# Glob strings
+# For glob behaviour tests, see tests/t10 (glob)
+
+test_rawhide "$rh '\"*\"'          $d" "$d\n$d/e\n" "" 0 "glob str simple"
+test_rawhide "$rh '\"abc\\\"def\"' $d" ""           "" 0 "glob str quoted char"
+
+# Reference file stat fields (and aliases)
+
+test_rawhide "$rh -e '\"/\".exists'                        $d" "$d\n$d/e\n" ""                                                                                    0 "reference file exists function"
+test_rawhide "$rh -e '\"/\".mtime != 0'                    $d" "$d\n$d/e\n" ""                                                                                    0 "reference file mtime field for existing file"
+test_rawhide "$rh -e '\"/this-does-not-exist\".exists'     $d" ""           ""                                                                                    0 "reference file exists function"
+test_rawhide "$rh -e '\"/this-does-not-exist\".mtime == 0' $d" ""           "./rh: invalid reference \"/this-does-not-exist\".mtime: No such file or directory\n" 1 "reference file mtime function for non-existent file"
+
+test_rawhide "$rh -e 'dev == \"rh\".dev'                   $d" "$d\n$d/e\n" "" 0 "reference file dev field"
+test_rawhide "$rh -e 'major == \"rh\".major'               $d" "$d\n$d/e\n" "" 0 "reference file major field"
+test_rawhide "$rh -e 'minor == \"rh\".minor'               $d" "$d\n$d/e\n" "" 0 "reference file minor field"
+test_rawhide "$rh -e 'ino != \"rh\".ino'                   $d" "$d\n$d/e\n" "" 0 "reference file ino field"
+test_rawhide "$rh -e 'mode & \"rh\".mode'                  $d" "$d\n$d/e\n" "" 0 "reference file mode field"
+# Note: directories on btrfs can have only 1 hardlink(!)
+[ `$rh -e 'dir && nlink == 1' $d | wc -l` != 0 ] && btrfs=1 || btrfs=0
+[ $btrfs = 0 ] && test_rawhide "$rh -e 'nlink == \"rh\".nlink' $d" "$d/e\n"     "" 0 "reference file nlink field"
+[ $btrfs = 1 ] && test_rawhide "$rh -e 'nlink == \"rh\".nlink' $d" "$d\n$d/e\n" "" 0 "reference file nlink field"
+test_rawhide "$rh -e 'uid == \"$d\".uid'                   $d" "$d\n$d/e\n" "" 0 "reference file uid field"
+test_rawhide "$rh -e 'gid == \"$d\".gid'                   $d" "$d\n$d/e\n" "" 0 "reference file gid field"
+[ "`uname`" != OpenBSD ] && test_rawhide "$rh -e 'rdev == \"rh\".rdev'         $d" "$d\n$d/e\n" "" 0 "reference file rdev field"
+[ "`uname`" != OpenBSD ] && test_rawhide "$rh -e 'rmajor == \"rh\".rmajor'     $d" "$d\n$d/e\n" "" 0 "reference file rmajor field"
+[ "`uname`" != OpenBSD ] && test_rawhide "$rh -e 'rminor == \"rh\".rminor'     $d" "$d\n$d/e\n" "" 0 "reference file rminor field"
+[ "`uname`" = OpenBSD ]  && test_rawhide "$rh -e 'rdev == \"rh\".rdev'         $d" ""           "" 0 "reference file rdev field"
+[ "`uname`" = OpenBSD ]  && test_rawhide "$rh -e 'rmajor == \"rh\".rmajor'     $d" ""           "" 0 "reference file rmajor field"
+[ "`uname`" = OpenBSD ]  && test_rawhide "$rh -e 'rminor == \"rh\".rminor'     $d" ""           "" 0 "reference file rminor field"
+test_rawhide "$rh -e 'size == \"rh\".size'                 $d" ""           "" 0 "reference file size field"
+test_rawhide "$rh -e 'f && size == \"$d/e\".size'          $d" "$d/e\n"     "" 0 "reference file size field"
+test_rawhide "$rh -e 'blksize == \"rh\".blksize'           $d" "$d\n$d/e\n" "" 0 "reference file blksize field"
+test_rawhide "$rh -e 'blocks != \"rh\".blocks'             $d" "$d\n$d/e\n" "" 0 "reference file blocks field"
+test_rawhide "$rh -e 'atime != \"rh\".atime - 3600'        $d" "$d\n$d/e\n" "" 0 "reference file atime field"
+test_rawhide "$rh -e 'mtime != \"rh\".mtime - 3600'        $d" "$d\n$d/e\n" "" 0 "reference file mtime field"
+test_rawhide "$rh -e 'ctime != \"rh\".ctime - 3600'        $d" "$d\n$d/e\n" "" 0 "reference file ctime field"
+
+test_rawhide "$rh -e 'type == \"rh\".type'                 $d" "$d/e\n"     "" 0 "reference file type alias"
+test_rawhide "$rh -e 'perm & \"rh\".perm'                  $d" "$d\n$d/e\n" "" 0 "reference file perm alias"
+
+test_rawhide "$rh -e '\"rh\".strlen == 2'                  $d" "$d\n$d/e\n" "" 0 "reference file strlen function \"rh\" == 2"
+test_rawhide "$rh -e '\"/\".strlen == 0'                   $d" "$d\n$d/e\n" "" 0 "reference file strlen function \"/\" == 0"
+test_rawhide "$rh -e '\"./rh\".strlen == 2'                $d" "$d\n$d/e\n" "" 0 "reference file strlen function \"./rh\" == 2"
+test_rawhide "$rh -e '\"$d\".strlen == 4'                  $d" "$d\n$d/e\n" "" 0 "reference file strlen function \"$d\" == 4"
+
+test_rawhide "$rh -e '\"rh///\".strlen == 2'               $d" "$d\n$d/e\n" "" 0 "reference file strlen function \"rh///\" == 2 (trailing / removal)"
+test_rawhide "$rh -e '\"////\".strlen == 0'                $d" "$d\n$d/e\n" "" 0 "reference file strlen function \"////\" == 0 (trailing / removal)"
+test_rawhide "$rh -e '\"./rh///\".strlen == 2'             $d" "$d\n$d/e\n" "" 0 "reference file strlen function \"./rh///\" == 2 (trailing / removal)"
+test_rawhide "$rh -e '\"$d///\".strlen == 4'               $d" "$d\n$d/e\n" "" 0 "reference file strlen function \"$d///\" == 4 (trailing / removal)"
+
+test_rawhide "$rh -e '\"rh\".len == 2'                     $d" "$d\n$d/e\n" "" 0 "reference file len alias"
+test_rawhide "$rh -e '\"rh\".len == 2'                     $d" "$d\n$d/e\n" "" 0 "reference file len alias \"rh\" == 2"
+test_rawhide "$rh -e '\"/\".len == 0'                      $d" "$d\n$d/e\n" "" 0 "reference file len alias \"/\" == 0"
+test_rawhide "$rh -e '\"./rh\".len == 2'                   $d" "$d\n$d/e\n" "" 0 "reference file len alias \"./rh\" == 2"
+test_rawhide "$rh -e '\"$d\".len == 4'                     $d" "$d\n$d/e\n" "" 0 "reference file len alias \"$d\" == 4"
+
+test_rawhide "$rh -e 'size == \"rh\".sz'                   $d" ""           "" 0 "reference file sz alias"
+test_rawhide "$rh -e 'f && size == \"$d/e\".sz'            $d" "$d/e\n"     "" 0 "reference file size field"
+
+test_rawhide "$rh -e 'inode != \"rh\".inode'               $d" "$d\n$d/e\n" "" 0 "reference file inode alias"
+# Note: directories on btrfs can have only 1 hardlink(!) so exclude directories
+[ $btrfs = 0 ] && test_rawhide "$rh -e 'nlinks == \"rh\".nlinks' $d" "$d/e\n"     "" 0 "reference file nlinks alias"
+[ $btrfs = 1 ] && test_rawhide "$rh -e 'nlinks == \"rh\".nlinks' $d" "$d\n$d/e\n" "" 0 "reference file nlinks alias"
+test_rawhide "$rh -e 'user == \"$d\".user'                 $d" "$d\n$d/e\n" "" 0 "reference file user alias"
+test_rawhide "$rh -e 'group == \"$d\".group'               $d" "$d\n$d/e\n" "" 0 "reference file group alias"
+test_rawhide "$rh -e 'accessed != \"rh\".accessed - 3600'  $d" "$d\n$d/e\n" "" 0 "reference file accessed alias"
+test_rawhide "$rh -e 'modified != \"rh\".modified - 3600'  $d" "$d\n$d/e\n" "" 0 "reference file modified alias"
+test_rawhide "$rh -e 'changed != \"rh\".changed - 3600'    $d" "$d\n$d/e\n" "" 0 "reference file changed alias"
+
+# Implicit reference file path
+
+test_rawhide "$rh -e 'f && \"rh\".exists && \"rh\".size && \"rh\".mtime' $d" "$d/e\n" "" 0 "explicit reference file path reuse"
+test_rawhide "$rh -e 'f && \"rh\".exists && \"\".size && \"\".mtime' $d" "$d/e\n" "" 0 "implicit reference file path reuse"
+
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:

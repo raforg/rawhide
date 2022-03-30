@@ -1,0 +1,879 @@
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+die() { echo "$0: $@" >&2; exit 1; }
+
+for opt in "$@"
+do
+	case "$opt" in
+		--help|-h)
+			echo "$0 [options]"
+			echo "options:"
+			echo "  --help, -h         - Print this message then exit"
+			echo "  --verbose, -v      - Show resulting config diffs (Note: no option bundling)"
+			echo "  --test, -n         - Don't modify anything (Note: no option bundling)"
+			echo "  --destdir=/path    - Override DESTDIR in Makefile for building packages"
+			echo "  --prefix=/path     - Override platform-specific installation prefix"
+			echo "  --etcdir=/path     - Override platform-specific config directory"
+			echo "  --mandir=/path     - Override platform-specific manpage directory"
+			echo "  --macports         - Override default macOS config for macports"
+			echo "  --enable-pcre2     - Enable PCRE2 library (default when present)"
+			echo "  --disable-pcre2    - Disable PCRE2 library"
+			echo "  --enable-acl       - Enable ACL support (default when possible)"
+			echo "  --disable-acl      - Disable ACL support"
+			echo "  --enable-ea        - Enable EA support (default when possible)"
+			echo "  --disable-ea       - Disable EA support"
+			echo "  --enable-ndebug    - Enable NDEBUG (remove debugging code)"
+			echo "  --disable-ndebug   - Disable NDEBUG (keep debugging code - default)"
+			echo "  --enable-mangz     - Enable gzipped manpages (default on some systems)"
+			echo "  --disable-mangz    - Disable gzipped manpages (default)"
+			echo "  --static=SIZE      - Adjust static memory: large (default), small, tiny"
+			echo "  --disable-major    - Forget location of major/minor (for distribution)"
+			echo "  --enable-gcov      - Enable gcov test coverage measurement (do not install)"
+			echo "  --disable-gcov     - Disable gcov test coverage measurement (default)"
+			echo "  --disable-cc-other - Forget non-default compiler (for distribution)"
+			echo
+			echo "Rawhide should compile on any POSIX system as is, but different systems"
+			echo "want software, configuration, and manpages to be in different locations."
+			echo "This configure script knows where to put things for several platforms:"
+			echo
+			echo "  Linux, macOS/macports, FreeBSD, OpenBSD, NetBSD, Solaris, Cygwin"
+			echo ""
+			echo "To override the makefile \$(DESTDIR), use --destdir."
+			echo "This is for building packages and doesn't affect paths in the final binary."
+			echo ""
+			echo "To override a platform-specific install prefix, use --prefix (e.g. /opt/bin)."
+			echo "A synonym for --prefix=/usr/local is --prefix=default"
+			echo ""
+			echo "To override a platform-specific config directory, use --etcdir (e.g. /opt/etc)."
+			echo ""
+			echo "To override a platform-specific manpage directory, use --mandir (e.g. /opt/man)."
+			echo ""
+			echo "To compile for macports, use --macports (uses /opt/local for everything)."
+			echo ""
+			echo "It is highly recommended to have libpcre2-8 installed before running configure."
+			echo "It is optional, and rh is still much fun without it, but pcre greatly enhances"
+			echo "the level of fun to be had. It is enabled by default if it's available."
+			echo "To explicitly disable pcre2 and all the fun it brings, use --disable-pcre2."
+			echo ""
+			echo "If \$CC is set here, it will override the compiler in the Makefile."
+			echo ""
+			echo "\$CPPFLAGS, \$CFLAGS and \$LDFLAGS additions might need to be supplied to make"
+			echo "later."
+			echo ""
+			echo "The --static=SIZE option can reduce the sizes of static declarations for the"
+			echo "rawhide virtual machine. It might be useful on resource-constrained systems."
+			echo "But it just \"reduces\" unused virtual pages, so I'm not sure it does anything."
+			echo "But smaller settings do reduce resident memory noticeably, so it does something."
+			echo "See Makefile for more information."
+			echo ""
+			echo " large: code 2000000, stack 1000000, stringdata 200000, filerefs 10000 (default)"
+			echo " small: code  200000, stack  100000, stringdata  20000, filerefs  1000 (10%)"
+			echo "  tiny: code   20000, stack   10000, stringdata   2000, filerefs   100 (1%)"
+			echo ""
+			echo "Note that small and tiny will cause tests/t12 parser error tests to fail."
+			echo "So you can run tests before changing this, or just not worry about them."
+			echo ""
+			echo "Note that --enable-ndebug will break the \"invalid -? option argument: wrong\""
+			echo "test in tests/t20. But that's OK."
+			echo ""
+			echo "The --enable-mangz and --disable-mangz are for systems that this configure"
+			echo "script doesn't know about. By default, manual entries are not gzipped, except"
+			echo "for the operating systems that configure knows prefer gzipped manual entries."
+			echo "If configure doesn't know about your operating system, and it does prefer"
+			echo "gzipped manual entries, then use --enable-mangz."
+			echo ""
+			echo "Don't --enable-gcov and then install the resulting binary."
+			echo ""
+			exit 0
+			;;
+	esac
+done
+
+test=0
+verbose=0
+for opt in "$@"
+do
+	case "$opt" in
+		--verbose|-v)
+			verbose=1;
+			;;
+		--test|-n)
+			test=1;
+			;;
+	esac
+done
+
+editconf()
+{
+	fname="$1"; shift
+	if [ $verbose = 1 ]
+	then
+		sed "$@" < "$fname" > "$fname.tmp"; diff -u "$fname" "$fname.tmp"; rm "$fname.tmp"
+	fi
+	if [ $test = 0 ]
+	then
+		sed "$@" < "$fname" > "$fname.tmp" && mv "$fname.tmp" "$fname" || die "failed to edit $fname"
+	fi
+}
+
+case "`uname`" in
+	Linux*) # prefix=/usr/local etcdir=/etc mandir=$prefix/share/man manzip=1
+		echo "Configuring for linux"
+		editconf Makefile \
+			-e 's,^\(PREFIX = \).*$,\1/usr/local,' \
+			-e 's,^ETCDIR,#ETCDIR,' -e 's,^#\(ETCDIR = /etc\),\1,' \
+			-e 's,^\(MAN_INSDIR = \).*$,\1$(PREFIX)/share/man,' \
+			-e 's,^\(MAN_GZIP =\) 0,\1 1,'
+		;;
+
+	FreeBSD*) # prefix=/usr/local etcdir=$prefix/etc mandir=$prefix/man manzip=1
+		echo "Configuring for freebsd"
+		editconf Makefile \
+			-e 's,^\(PREFIX = \).*$,\1/usr/local,' \
+			-e 's,^ETCDIR,#ETCDIR,' -e 's,^#\(ETCDIR = $(PREFIX)/etc\),\1,' \
+			-e 's,^\(MAN_INSDIR = \).*$,\1$(PREFIX)/man,' \
+			-e 's,^\(MAN_GZIP =\) 0,\1 1,'
+		;;
+
+	NetBSD*) # prefix=/usr/pkg etcdir=$prefix/etc mandir=$prefix/man manzip=0
+		echo "Configuring for netbsd"
+		editconf Makefile \
+			-e 's,^\(PREFIX = \).*$,\1/usr/pkg,' \
+			-e 's,^ETCDIR,#ETCDIR,' -e 's,^#\(ETCDIR = $(PREFIX)/etc\),\1,' \
+			-e 's,^\(MAN_INSDIR = \).*$,\1$(PREFIX)/man,' \
+			-e 's,^\(MAN_GZIP =\) 1,\1 0,'
+		;;
+
+	OpenBSD*) # prefix=/usr/local etcdir=$prefix/etc mandir=$prefix/man manzip=0
+		echo "Configuring for openbsd"
+		editconf Makefile \
+			-e 's,^\(PREFIX = \).*$,\1/usr/local,' \
+			-e 's,^ETCDIR,#ETCDIR,' -e 's,^#\(ETCDIR = $(PREFIX)/etc\),\1,' \
+			-e 's,^\(MAN_INSDIR = \).*$,\1$(PREFIX)/man,' \
+			-e 's,^\(MAN_GZIP =\) 1,\1 0,'
+		;;
+
+	SunOS*) # prefix=/usr/local etcdir=/etc mandir=$prefix/man manzip=0
+		echo "Configuring for Solaris"
+		editconf Makefile \
+			-e 's,^\(PREFIX = \).*$,\1/usr/local,' \
+			-e 's,^ETCDIR,#ETCDIR,' -e 's,^#\(ETCDIR = /etc\),\1,' \
+			-e 's,^\(MAN_INSDIR = \).*$,\1$(PREFIX)/share/man,' \
+			-e 's,^\(MAN_GZIP =\) 1,\1 0,'
+		;;
+
+	Darwin*) # prefix=/usr/local etcdir=/etc mandir=$prefix/share/man manzip=0
+		echo "Configuring for macos"
+		editconf Makefile \
+			-e 's,^\(PREFIX = \).*$,\1/usr/local,' \
+			-e 's,^ETCDIR,#ETCDIR,' -e 's,^#\(ETCDIR = /etc\),\1,' \
+			-e 's,^\(MAN_INSDIR = \).*$,\1$(PREFIX)/share/man,' \
+			-e 's,^\(MAN_GZIP =\) 1,\1 0,'
+		;;
+
+	CYGWIN_NT*) # prefix=/usr/local etcdir=/etc mandir=$prefix/share/man manzip=1
+		echo "Configuring for cygwin"
+		editconf Makefile \
+			-e 's,^\(PREFIX = \).*$,\1/usr/local,' \
+			-e 's,^ETCDIR,#ETCDIR,' -e 's,^#\(ETCDIR = /etc\),\1,' \
+			-e 's,^\(MAN_INSDIR = \).*$,\1$(PREFIX)/share/man,' \
+			-e 's,^\(MAN_GZIP =\) 0,\1 1,'
+		;;
+
+	*)
+		echo "Unknown platform: Check Makefile for binary/config/manpage installation locations"
+		editconf Makefile \
+			-e 's,^\(PREFIX = \).*$,\1/usr/local,' \
+			-e 's,^ETCDIR,#ETCDIR,' -e 's,^#\(ETCDIR = $(PREFIX)/etc\),\1,' \
+			-e 's,^\(MAN_INSDIR = \).*$,\1$(PREFIX)/man,' \
+			-e 's,^\(MAN_GZIP =\) 1,\1 0,'
+		;;
+esac
+
+# Change from cc to gcc if cc is not in path (for Solaris)
+
+[ -z "`which cc 2>/dev/null`" -a -n "`which gcc 2>/dev/null`" ] &&
+editconf Makefile -e 's,^CC =,#CC =,' -e 's,^#\(CC = gcc\),\1,' \
+
+# Set CC from $CC (for macports)
+
+if [ "x$CC" != x ]
+then
+	echo "Configuring CC as $CC"
+	editconf Makefile \
+		-e 's/^\(CC = cc\)$/#\1/;' \
+		-e 's/^\(CC = gcc\)$/#\1/;' \
+		-e 's,^#CC = .*other$,CC = '"$CC"' # other,;'
+fi
+
+# Set $CC for tests below
+
+[ -z "$CC" -a -n "`which cc 2>/dev/null`" ] && CC=cc
+[ -z "$CC" -a -n "`which gcc 2>/dev/null`" ] && CC=gcc
+
+# Compile a test program
+
+compile_test()
+{
+	"$CC" $CFLAGS $TEST_CFLAGS -o configchk configchk.c $TEST_LDFLAGS $LDFLAGS 2>/dev/null
+	rc=$?
+	if [ $rc != 0 ]; then TEST_CFLAGS=""; TEST_LDFLAGS=""; fi
+	rm -f configchk.c configchk
+	return $rc
+}
+
+# Look for ACL
+
+create_acl_macos_code()
+{
+	cat > configchk.c <<END
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/acl.h>
+int main(int ac, char **av)
+{
+	acl_t acl;
+
+	if ((acl = acl_get_file(av[1], ACL_TYPE_EXTENDED))) /* ACL_TYPE_EXTENDED is an enum not a #define */
+	{
+		char *acl_text = acl_to_text(acl, NULL);
+
+		acl_free(acl);
+
+		if (acl_text)
+		{
+			printf("%s\n", acl_text);
+			acl_free(acl_text);
+		}
+	}
+
+	return 0;
+}
+END
+}
+
+test_acl_macos()
+{
+	create_acl_macos_code
+	compile_test || return 1
+	echo "Configuring --enable-acl$acl_reason"
+	editconf Makefile \
+		-e 's,^#\(ACL_DEFINES =\).*$,\1 -DHAVE_ACL=1 -DHAVE_POSIX_ACL=1 -DHAVE_MACOS_ACL=1,' \
+		-e 's,^#\(ACL_CFLAGS =\).*$,\1,' \
+		-e 's,^#\(ACL_LDFLAGS =\).*$,\1,'
+	HAVE_ACL=1
+	return 0
+}
+
+create_acl_freebsd_code()
+{
+	cat > configchk.c <<END
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/acl.h>
+int main(int ac, char **av)
+{
+	acl_t acl;
+
+	if ((acl = acl_get_file(av[1], ACL_TYPE_NFS4)))
+	{
+		char *acl_text = acl_to_text(acl, NULL);
+
+		if (acl_text)
+		{
+			printf("%s\n", acl_text);
+			acl_free(acl_text);
+		}
+
+		acl_text = acl_to_text_np(acl, NULL, ACL_TEXT_VERBOSE);
+
+		acl_free(acl);
+
+		if (acl_text)
+		{
+			printf("%s\n", acl_text);
+			acl_free(acl_text);
+		}
+	}
+
+	return 0;
+}
+END
+}
+
+test_acl_freebsd()
+{
+	create_acl_freebsd_code
+	compile_test || return 1
+	echo "Configuring --enable-acl$acl_reason"
+	editconf Makefile \
+		-e 's,^#\(ACL_DEFINES =\).*$,\1 -DHAVE_ACL=1 -DHAVE_POSIX_ACL=1 -DHAVE_FREEBSD_ACL=1,' \
+		-e 's,^#\(ACL_CFLAGS =\).*$,\1,' \
+		-e 's,^#\(ACL_LDFLAGS =\).*$,\1,'
+	HAVE_ACL=1
+	return 0
+}
+
+create_acl_posix_code()
+{
+	cat > configchk.c <<END
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/acl.h>
+int main(int ac, char **av)
+{
+	acl_t acl;
+
+	if ((acl = acl_get_file(av[1], ACL_TYPE_ACCESS)))
+	{
+		char *acl_text = acl_to_text(acl, NULL);
+
+		acl_free(acl);
+
+		if (acl_text)
+		{
+			printf("%s\n", acl_text);
+			acl_free(acl_text);
+		}
+	}
+
+	return 0;
+}
+END
+}
+
+test_acl_posix_native()
+{
+	create_acl_posix_code
+	compile_test || return 1
+	echo "Configuring --enable-acl$acl_reason"
+	editconf Makefile \
+		-e 's,^#\(ACL_DEFINES =\).*$,\1 -DHAVE_ACL=1 -DHAVE_POSIX_ACL=1,' \
+		-e 's,^#\(ACL_CFLAGS =\).*$,\1,' \
+		-e 's,^#\(ACL_LDFLAGS =\).*$,\1,'
+	HAVE_ACL=1
+	return 0
+}
+
+test_acl_posix_libacl()
+{
+	create_acl_posix_code
+	TEST_CFLAGS="`pkg-config --cflags libacl 2>/dev/null`"
+	[ $? = 0 ] || return 1
+	TEST_LDFLAGS="`pkg-config --libs libacl 2>/dev/null`"
+	compile_test || return 1
+	echo "Configuring --enable-acl$acl_reason"
+	editconf Makefile \
+		-e 's:^#\(ACL_DEFINES =\).*$:\1 -DHAVE_ACL=1 -DHAVE_POSIX_ACL=1:' \
+		-e 's:^#\(ACL_CFLAGS =\)$:\1 '"$TEST_CFLAGS"':' \
+		-e 's:^#\(ACL_LDFLAGS =\)$:\1 '"$TEST_LDFLAGS"':'
+	HAVE_ACL=1
+	TEST_CFLAGS=""
+	TEST_LDFLAGS=""
+	return 0
+}
+
+create_acl_solaris_code()
+{
+	cat > configchk.c <<END
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/acl.h>
+int main(int ac, char **av)
+{
+	acl_t *acl = NULL;
+
+	if (acl_get(av[1], ACL_NO_TRIVIAL, &acl) != -1 && acl)
+	{
+		char *acl_text = acl_totext(acl, ACL_COMPACT_FMT | ACL_SID_FMT);
+
+		acl_free(acl);
+
+		if (acl_text)
+		{
+			printf("%s\n", acl_text);
+			free(acl_text);
+		}
+	}
+
+	return 0;
+}
+END
+}
+
+test_solaris_acl_libsec()
+{
+	create_acl_solaris_code
+	TEST_CFLAGS=""
+	TEST_LDFLAGS="-lsec"
+	compile_test || return 1
+	echo "Configuring --enable-acl$acl_reason"
+	editconf Makefile \
+		-e 's:^#\(ACL_DEFINES =\).*$:\1 -DHAVE_ACL=1 -DHAVE_SOLARIS_ACL=1:' \
+		-e 's:^#\(ACL_CFLAGS =\)$:\1 '"$TEST_CFLAGS"':' \
+		-e 's:^#\(ACL_LDFLAGS =\)$:\1 '"$TEST_LDFLAGS"':'
+	HAVE_ACL=1
+	TEST_CFLAGS=""
+	TEST_LDFLAGS=""
+	return 0
+}
+
+case "$*" in
+	*--disable-acl*)
+		;;
+	*)
+		case "$*" in *--enable-acl*) acl_reason="";; *) acl_reason=" (default)";; esac
+		test_acl_posix_libacl || test_acl_macos || test_acl_freebsd || test_solaris_acl_libsec || test_acl_posix_native
+		;;
+esac
+
+# Look for EA
+
+create_ea_linux_code()
+{
+	cat > configchk.c <<END
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/xattr.h>
+
+int main(int ac, char **av)
+{
+	size_t keylistlen1 = listxattr(av[1], NULL, 0);
+	size_t keylistlen2 = llistxattr(av[1], NULL, 0);
+	size_t valuelen = getxattr(av[1], "key", NULL, 0);
+	return keylistlen1 && keylistlen2 && valuelen;
+}
+END
+}
+
+test_ea_linux()
+{
+	[ "`uname`" = NetBSD ] && return 1 # NetBSD just sets errno = Not supported
+	create_ea_linux_code
+	compile_test || return 1
+	echo "Configuring --enable-ea$ea_reason"
+	editconf Makefile \
+		-e 's,^#\(EA_DEFINES =\).*$,\1 -DHAVE_EA=1 -DHAVE_LINUX_EA=1,' \
+		-e 's,^#\(EA_CFLAGS =\).*$,\1,' \
+		-e 's,^#\(EA_LDFLAGS =\).*$,\1,'
+	HAVE_EA=1
+	return 0
+}
+
+create_ea_macos_code()
+{
+	cat > configchk.c <<END
+#include <stdio.h>
+#include <sys/xattr.h>
+int main(int ac, char **av)
+{
+	ssize_t keylistlen = listxattr(av[1], NULL, 0, XATTR_NOFOLLOW);
+	ssize_t varlen = getxattr(av[1], "name", NULL, 0, 0, XATTR_NOFOLLOW);
+	return keylistlen && varlen;
+}
+END
+}
+
+test_ea_macos()
+{
+	create_ea_macos_code
+	compile_test || return 1
+	echo "Configuring --enable-ea$ea_reason"
+	editconf Makefile \
+		-e 's,^#\(EA_DEFINES =\).*$,\1 -DHAVE_EA=1 -DHAVE_MACOS_EA=1,' \
+		-e 's,^#\(EA_CFLAGS =\).*$,\1,' \
+		-e 's,^#\(EA_LDFLAGS =\).*$,\1,'
+	HAVE_EA=1
+	return 0
+}
+
+create_ea_freebsd_code()
+{
+	cat > configchk.c <<END
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/extattr.h>
+int main(int ac, char **av)
+{
+	ssize_t l = extattr_list_file(av[1], EXTATTR_NAMESPACE_USER, NULL, 0);
+	ssize_t g = extattr_get_file(av[1], EXTATTR_NAMESPACE_SYSTEM, "name", NULL, 0);
+	return l && g;
+}
+END
+}
+
+test_ea_freebsd()
+{
+	[ "`uname`" = NetBSD ] && return 1 # NetBSD just sets errno = Not supported
+	create_ea_freebsd_code
+	compile_test || return 1
+	echo "Configuring --enable-ea$ea_reason"
+	editconf Makefile \
+		-e 's,^#\(EA_DEFINES =\).*$,\1 -DHAVE_EA=1 -DHAVE_FREEBSD_EA=1,' \
+		-e 's,^#\(EA_CFLAGS =\).*$,\1,' \
+		-e 's,^#\(EA_LDFLAGS =\).*$,\1,'
+	HAVE_EA=1
+	return 0
+}
+
+create_ea_solaris_code()
+{
+	cat > configchk.c <<END
+#include <unistd.h>
+#include <fcntl.h>
+int main(int ac, char **av)
+{
+	long x = pathconf(av[1], _PC_XATTR_EXISTS);
+	int fd = attropen(av[1], ".", O_RDONLY | O_XATTR);
+	return x && fd;
+}
+END
+}
+
+test_ea_solaris()
+{
+	create_ea_solaris_code
+	compile_test || return 1
+	echo "Configuring --enable-ea$ea_reason"
+	editconf Makefile \
+		-e 's,^#\(EA_DEFINES =\).*$,\1 -DHAVE_EA=1 -DHAVE_SOLARIS_EA=1,' \
+		-e 's,^#\(EA_CFLAGS =\).*$,\1,' \
+		-e 's,^#\(EA_LDFLAGS =\).*$,\1,'
+	HAVE_EA=1
+	return 0
+}
+
+case "$*" in
+	*--disable-ea*)
+		;;
+	*)
+		case "$*" in *--enable-ea*) ea_reason="";; *) ea_reason=" (default)";; esac
+		test_ea_linux || test_ea_macos || test_ea_freebsd || test_ea_solaris
+		;;
+esac
+
+# Look for PCRE2 (pkg-config/pcre2-config libpcre2-8)
+
+case "$*" in
+	*--disable-pcre2*)
+		;;
+	*)
+		case "$*" in *--enable-pcre2*) pcre2_reason="";; *) pcre2_reason=" (default when present)";; esac
+
+		PCRE2_CFLAGS="`pcre2-config --cflags 2>/dev/null`"
+		PCRE2_LDFLAGS="`pcre2-config --libs8 2>/dev/null`"
+		if [ $? != 0 ]
+		then
+			PCRE2_CFLAGS="`pkg-config --cflags libpcre2-8 2>/dev/null`"
+			PCRE2_LDFLAGS="`pkg-config --libs libpcre2-8 2>/dev/null`"
+			if [ $? != 0 ]
+			then
+				echo "Failed to find libpcre2-8 with pkg-config or pcre2-config."
+				echo "Please consider installing it, and then running $0 again."
+				echo "You won't regret it. But you don't have to. It is optional."
+			else
+				echo "Configuring --enable-pcre2$pcre2_reason"
+				editconf Makefile \
+					-e 's:^#\(PCRE2_DEFINES =\).*$:\1 -DHAVE_PCRE2=1:' \
+					-e 's:^#\(PCRE2_CFLAGS =\)$:\1 '"$PCRE2_CFLAGS"':' \
+					-e 's:^#\(PCRE2_LDFLAGS =\)$:\1 '"$PCRE2_LDFLAGS"':'
+				HAVE_PCRE2=1
+			fi
+		else
+			echo "Configuring --enable-pcre2$pcre2_reason"
+			editconf Makefile \
+				-e 's:^#\(PCRE2_DEFINES =\).*$:\1 -DHAVE_PCRE2=1:' \
+				-e 's:^#\(PCRE2_CFLAGS =\)$:\1 '"$PCRE2_CFLAGS"':' \
+				-e 's:^#\(PCRE2_LDFLAGS =\)$:\1 '"$PCRE2_LDFLAGS"':'
+			HAVE_PCRE2=1
+		fi
+		;;
+esac
+
+# Look for major() and minor() in <sys/types.h> and <sys/mkdev.h> and <sys/sysmacros.h>.
+
+create_major_minor_sys_types_code()
+{
+	cat > configchk.c <<END
+#include <sys/types.h>
+int main(int ac, char **av)
+{
+	dev_t d = (dev_t)0;
+	int major = major(d);
+	int minor = minor(d);
+	return 0;
+}
+END
+}
+
+test_major_minor_sys_types()
+{
+	create_major_minor_sys_types_code
+	compile_test || return 1
+	#echo "Configuring without <sys/mkdev.h>"
+	#echo "Configuring without <sys/sysmacros.h>"
+	editconf Makefile \
+		-e 's,^\(HAVE_SYS_MKDEV =.*\)$,#\1,' \
+		-e 's,^\(HAVE_SYS_SYSMACROS =.*\)$,#\1,'
+	return 0
+}
+
+create_major_minor_sys_mkdev_code()
+{
+	cat > configchk.c <<END
+#include <sys/types.h>
+#include <sys/mkdev.h>
+int main(int ac, char **av)
+{
+	dev_t d = (dev_t)0;
+	int major = major(d);
+	int minor = minor(d);
+	return 0;
+}
+END
+}
+
+test_major_minor_sys_mkdev()
+{
+	create_major_minor_sys_mkdev_code
+	if compile_test
+	then
+		echo "Configuring with <sys/mkdev.h> (for major() and minor())"
+		editconf Makefile -e 's,^#\(HAVE_SYS_MKDEV =.*\)$,\1,'
+		return 0
+	else
+		#echo "Configuring without <sys/mkdev.h>"
+		editconf Makefile -e 's,^\(HAVE_SYS_MKDEV =.*\)$,#\1,'
+		return 1
+	fi
+}
+
+create_major_minor_sys_sysmacros_code()
+{
+	cat > configchk.c <<END
+#include <sys/types.h>
+#include <sys/sysmacros.h>
+int main(int ac, char **av)
+{
+	dev_t d = (dev_t)0;
+	int major = major(d);
+	int minor = minor(d);
+	return 0;
+}
+END
+}
+
+test_major_minor_sys_sysmacros()
+{
+	create_major_minor_sys_sysmacros_code
+	if compile_test
+	then
+		echo "Configuring with <sys/sysmacros.h> (for major() and minor())"
+		editconf Makefile -e 's,^#\(HAVE_SYS_SYSMACROS =.*\).*$,\1,'
+		return 0
+	else
+		#echo "Configuring without <sys/sysmacros.h>"
+		editconf Makefile -e 's,^\(HAVE_SYS_SYSMACROS =.*\)$,#\1,'
+		return 1
+	fi
+}
+
+case "$*" in
+	*--disable-major*)
+		;;
+	*)
+		# On Solaris <sys/mkdev.h> must be included, <sys/sysmacros.h> is optional but is not enough
+		# On old glibc, warnings happen via <sys/types.h> rather than <sys/sysmacros.h>
+		# So test mkdev then sysmacros then types
+		test_major_minor_sys_mkdev || test_major_minor_sys_sysmacros || test_major_minor_sys_types || echo "Failed to locate major() and minor(). Where are they?"
+		;;
+esac
+
+# Process command line options
+
+for opt in "$@"
+do
+	case "$opt" in
+
+		--verbose|-v)
+			;;
+
+		--test|-n)
+			;;
+
+		--destdir=*)
+			echo "Configuring $opt"
+			destdir="${opt#--destdir=}"
+			[ -n "$destdir" ] && destdir=" $destdir"
+			editconf Makefile 's,^\(DESTDIR =\).*$,\1'"$destdir"''
+			;;
+
+		--prefix=*)
+			echo "Configuring $opt"
+			prefix="${1#--prefix=}"
+			[ "$prefix" = "default" ] && prefix=/usr/local
+			editconf Makefile 's,^\(PREFIX = \).*$,\1'"$prefix"','
+			;;
+
+		--mandir=*)
+			echo "Configuring $opt"
+			mandir="${opt#--mandir=}"
+			editconf Makefile 's,^\(MAN_INSDIR = \).*$,\1'"$mandir"''
+			;;
+
+		--macports) # prefix=/opt/local etcdir=/opt/local/etc mandir=$prefix/share/man manzip=1
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^\(PREFIX = \).*$,\1/opt/local,' \
+				-e 's,^ETCDIR,#ETCDIR,' -e 's,^#\(ETCDIR = $(PREFIX)/etc\),\1,' \
+				-e 's,^\(MAN_INSDIR = \).*$,\1$(PREFIX)/share/man,' \
+				-e 's,^\(MAN_GZIP =\) 0,\1 1,'
+			;;
+
+		--enable-pcre2)
+			[ "x$HAVE_PCRE2" != x1 ] && echo "Failed to find libpcre2-8 with pkg-config/pcre2-config"
+			;;
+
+		--disable-pcre2)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^\(PCRE2_DEFINES =\).*$,#\1,' \
+				-e 's,^\(PCRE2_CFLAGS =\).*$,#\1,' \
+				-e 's,^\(PCRE2_LDFLAGS =\).*$,#\1,' \
+			;;
+
+		--enable-acl)
+			[ "x$HAVE_ACL" != x1 ] && echo "Failed to identify ACL support"
+			;;
+
+		--disable-acl)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^\(ACL_DEFINES =\).*$,#\1,' \
+				-e 's,^\(ACL_CFLAGS =\).*$,#\1,' \
+				-e 's,^\(ACL_LDFLAGS =\).*$,#\1,' \
+			;;
+
+		--enable-ea)
+			[ "x$HAVE_EA" != x1 ] && echo "Failed to identify EA support"
+			;;
+
+		--disable-ea)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^\(EA_DEFINES =\).*$,#\1,' \
+				-e 's,^\(EA_CFLAGS =\).*$,#\1,' \
+				-e 's,^\(EA_LDFLAGS =\).*$,#\1,' \
+			;;
+
+		--disable-major)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^\(HAVE_SYS_MKDEV =.*\)$,#\1,' \
+				-e 's,^\(HAVE_SYS_SYSMACROS =.*\)$,#\1,'
+			;;
+
+		--enable-ndebug)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^#\(DEBUG_DEFINES =\).*$,\1 -DNDEBUG,'
+			;;
+
+		--disable-ndebug)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^\(DEBUG_DEFINES =.*\)$,#\1,'
+			;;
+
+		--enable-mangz)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^\(MAN_GZIP =\).*$,\1 1,'
+			;;
+
+		--disable-mangz)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^\(MAN_GZIP =\).*$,\1 0,'
+			;;
+
+		--static=large)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^.*-DMAX_PROGRAM_SIZE.*$,#	-DMAX_PROGRAM_SIZE=2000000 \\,' \
+				-e 's,^.*-DMAX_STACK_SIZE.*$,#	-DMAX_STACK_SIZE=1000000 \\,' \
+				-e 's,^.*-DMAX_DATA_SIZE.*$,#	-DMAX_DATA_SIZE=200000 \\,' \
+				-e 's,^.*-DMAX_FILEREF_SIZE.*$,#	-DMAX_FILEREF_SIZE=10000 \\,' \
+				-e 's,^.*-DMAX_IDENT_LENGTH.*$,#	-DMAX_IDENT_LENGTH=200,' \
+			;;
+
+		--static=small)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^.*-DMAX_PROGRAM_SIZE.*$,	-DMAX_PROGRAM_SIZE=200000 \\,' \
+				-e 's,^.*-DMAX_STACK_SIZE.*$,	-DMAX_STACK_SIZE=100000 \\,' \
+				-e 's,^.*-DMAX_DATA_SIZE.*$,	-DMAX_DATA_SIZE=20000 \\,' \
+				-e 's,^.*-DMAX_FILEREF_SIZE.*$,	-DMAX_FILEREF_SIZE=1000 \\,' \
+				-e 's,^.*-DMAX_IDENT_LENGTH.*$,	-DMAX_IDENT_LENGTH=200,' \
+			;;
+
+		--static=tiny)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^.*-DMAX_PROGRAM_SIZE.*$,	-DMAX_PROGRAM_SIZE=20000 \\,' \
+				-e 's,^.*-DMAX_STACK_SIZE.*$,	-DMAX_STACK_SIZE=10000 \\,' \
+				-e 's,^.*-DMAX_DATA_SIZE.*$,	-DMAX_DATA_SIZE=2000 \\,' \
+				-e 's,^.*-DMAX_FILEREF_SIZE.*$,	-DMAX_FILEREF_SIZE=100 \\,' \
+				-e 's,^.*-DMAX_IDENT_LENGTH.*$,	-DMAX_IDENT_LENGTH=200,' \
+			;;
+
+		--enable-gcov)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^#\(GCOV_CFLAGS =.*\)$,\1,'
+			;;
+
+		--disable-gcov)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^\(GCOV_CFLAGS =.*\)$,#\1,'
+			;;
+
+		--disable-cc-other)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^\(CC =.*\)$,#\1,' \
+				-e 's,^#\(CC =\) .* # other$,#\1 other,' \
+				-e 's,^#\(CC = cc\)$,\1,'
+			;;
+
+		*)
+			echo "$0: Unknown argument: $@" >&2
+			exit 1
+			;;
+
+	esac
+done
+
+exit 0
+
+# vi:set ts=4 sw=4:

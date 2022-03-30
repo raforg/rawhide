@@ -1,0 +1,105 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+. tests/.common
+
+label="-e and -f option variations"
+
+touch $d/abc
+
+test_rawhide "$rh $d"         "$d\n$d/abc\n"                           "" 0 "default -e 1"
+test_rawhide "$rh -e '' $d"   "$d\n$d/abc\n"                           "" 0 "explicit -e '' (default to implicit -e 1)"
+test_rawhide "$rh -e 1 $d"    "$d\n$d/abc\n"                           "" 0 "explicit -e 1"
+test_rawhide "$rh 1 $d"       "$d\n$d/abc\n"                           "" 0 "implicit -e 1 before dir"
+test_rawhide "$rh $d 1"       "$d\n$d/abc\n"                           "" 0 "implicit -e 1 after dir"
+test_rawhide "$rh $d 1 $d"    "$d\n$d/abc\n$d\n$d/abc\n"               "" 0 "implicit -e 1 between two dirs"
+test_rawhide "$rh -e file $d" "$d/abc\n"                               "" 0 "explicit -e file"
+test_rawhide "$rh file $d"    "$d/abc\n"                               "" 0 "implicit -e file before dir"
+test_rawhide "$rh $d file"    "$d/abc\n"                               "" 0 "implicit -e file after dir"
+test_rawhide "$rh $d file $d" "$d/abc\n$d/abc\n"                       "" 0 "implicit -e file between two dirs"
+test_rawhide "$rh -e dir $d"  "$d\n"                                   "" 0 "explicit -e dir"
+test_rawhide "$rh dir $d"     "$d\n"                                   "" 0 "implicit -e dir before dir"
+test_rawhide "$rh $d dir"     "$d\n"                                   "" 0 "implicit -e dir after dir"
+test_rawhide "$rh $d dir $d"  "$d\n$d\n"                               "" 0 "implicit -e dir between two dirs"
+
+test_rawhide "$rh -e 'jnk(){1}' 1 $d"       "$d\n$d/abc\n"             "" 0 "explicit -e with no expr with no expr and implicit -e 1 before dir"
+test_rawhide "$rh -e 'jnk(){1}' $d 1"       "$d\n$d/abc\n"             "" 0 "explicit -e with no expr and implicit -e 1 after dir"
+test_rawhide "$rh -e 'jnk(){1}' $d 1 $d"    "$d\n$d/abc\n$d\n$d/abc\n" "" 0 "explicit -e with no expr and implicit -e 1 between two dirs"
+test_rawhide "$rh -e 'jnk(){1}' file $d"    "$d/abc\n"                 "" 0 "explicit -e with no expr and implicit -e file before dir"
+test_rawhide "$rh -e 'jnk(){1}' $d file"    "$d/abc\n"                 "" 0 "explicit -e with no expr and implicit -e file after dir"
+test_rawhide "$rh -e 'jnk(){1}' $d file $d" "$d/abc\n$d/abc\n"         "" 0 "explicit -e with no expr and implicit -e file between two dirs"
+test_rawhide "$rh -e 'jnk(){1}' dir $d"     "$d\n"                     "" 0 "explicit -e with no expr and implicit -e dir before dir"
+test_rawhide "$rh -e 'jnk(){1}' $d dir"     "$d\n"                     "" 0 "explicit -e with no expr and implicit -e dir after dir"
+test_rawhide "$rh -e 'jnk(){1}' $d dir $d"  "$d\n$d\n"                 "" 0 "explicit -e with no expr and implicit -e dir between two dirs"
+
+test_rawhide "echo 0 | $builtin_rh -f- -e '' $d"   ""                               "" 0 "-fzero explicit -e '' (empty -e default to -fzero trailing expr)"
+test_rawhide "echo 0 | $builtin_rh -f- -e '' 1 $d" "$d\n$d/abc\n"                   "" 0 "-fzero explicit -e '' 1 (empty -e and implicit cmdarg expr)"
+
+# These tests have to run from inside the test directory (so as to default to ".")
+
+rh="$explicit_rh"
+test_rawhide_pre_hook() { test_rh_cd_pre_hook; }
+test_rawhide_post_hook() { test_rh_cd_post_hook; }
+
+test_rawhide "$rh dir"  ".\n"     "" 0 "implicit -e dir without dir args (default .)"
+test_rawhide "$rh file" "./abc\n" "" 0 "implicit -e file without dir args (default .)"
+
+test_rawhide_pre_hook() { true; }
+test_rawhide_post_hook() { true; }
+
+# Test -f and -f-
+
+rh="$builtin_rh"
+test_rawhide "$rh -f tests/missing $d"                               ""             "./rh: tests/missing: No such file or directory\n" 1 "-f with missing file"
+
+echo "yes() { 1 }" > $d.conf
+test_rawhide "$rh -f $d.conf $d"                                     "$d\n$d/abc\n" ""                                                 0 "-f ok but unused"
+test_rawhide "$rh -f $d.conf -f $d.conf $d"                          ""             "./rh: too many -f options\n"                      1 "-f twice (not allowed - is that acceptable?)"
+test_rawhide "$rh -f $d.conf -e yes $d"                              "$d\n$d/abc\n" ""                                                 0 "-e using code from -f"
+test_rawhide "$rh -e 1 -e 1 $d"                                      ""             "./rh: too many -e options\n"                      1 "-e twice (not allowed)"
+
+test_rawhide "cat $d.conf | $rh -f- $d"                              "$d\n$d/abc\n" ""                                                 0 "-f- ok but unused "
+test_rawhide "cat $d.conf | $rh -f- -f $d.conf $d"                   ""             "./rh: too many -f options\n"                      1 "-f- and -f (-f twice) (not allowed - is that acceptable?)"
+test_rawhide "cat $d.conf | $rh -f- -f- $d"                          ""             "./rh: too many -f options\n"                      1 "-f- twice (not allowed - definitely acceptable)"
+test_rawhide "cat $d.conf | $rh -f- -e yes $d"                       "$d\n$d/abc\n" ""                                                 0 "-e using code from -f-"
+
+# Add a file test expression to the -f file (i.e. a stored default test)
+echo "(mode & IFMT) == IFDIR" >> $d.conf
+
+test_rawhide "$rh -f $d.conf $d"                                     "$d\n"         ""                                                 0 "-f with stored default file test expression"
+test_rawhide "$rh -f $d.conf -e '(mode & IFMT) == IFREG' $d"         "$d/abc\n"     ""                                                 0 "-f with stored default file test expression overridden by explicit -e"
+test_rawhide "$rh -f $d.conf    '(mode & IFMT) == IFREG' $d"         "$d/abc\n"     ""                                                 0 "-f with stored default file test expression overridden by implicit -e"
+test_rawhide "cat $d.conf | $rh -f - $d"                             "$d\n"         ""                                                 0 "-f- with stored default file test expression"
+test_rawhide "cat $d.conf | $rh -f - -e '(mode & IFMT) == IFREG' $d" "$d/abc\n"     ""                                                 0 "-f- with stored default file test expression overridden by explicit -e"
+test_rawhide "cat $d.conf | $rh -f -    '(mode & IFMT) == IFREG' $d" "$d/abc\n"     ""                                                 0 "-f- with stored default file test expression overridden by implicit -e"
+
+test_rawhide "$rh -e"    "" "./rh: missing -e option argument (see ./rh -h for help)\n" 1 "-e with no argument"
+test_rawhide "$rh -f ''" "" "./rh: missing -f option argument (see ./rh -h for help)\n" 1 "-f with empty argument"
+test_rawhide "$rh -f"    "" "./rh: missing -f option argument (see ./rh -h for help)\n" 1 "-f with no argument"
+
+rm $d.conf
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:

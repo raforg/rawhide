@@ -1,59 +1,142 @@
+/*
+* rawhide - find files using pretty C expressions
+* https://raf.org/rawhide
+* https://github.com/raforg/rawhide
+*
+* Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 3 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, see <https://www.gnu.org/licenses/>.
+*
+* 20220330 raf <raf@raf.org>
+*/
 
-/* ----------------------------------------------------------------------
- * FILE: rhparse.c
- * VERSION: 2
- * Written by: Ken Stauffer
- * This contains the parser for the C expressions,
- * gettoken(), getit() and ungetit() routines.
- * sectime(), datespec(), expression(), expr(), exp0(), ... , factor()
- * locatename(), push(), find_macro()
- *
- *
- * ---------------------------------------------------------------------- */
-
-#include "rh.h"
-#include "rhcmds.h"
+#define _GNU_SOURCE /* For FNM_EXTMATCH and FNM_CASEFOLD in <fnmatch.h> */
+#define _FILE_OFFSET_BITS 64 /* For 64-bit off_t on 32-bit systems (Not AIX) */
 
 #include <unistd.h>
-#include <ctype.h>
-#include <pwd.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
+#include <fnmatch.h>
+#include <errno.h>
+#include <ctype.h>
+#include <time.h>
+#include <pwd.h>
+#include <grp.h>
+#include <sys/stat.h>
 
-static int cpos;		/* current character position */
-static int lineno;		/* current line number */
+#include "rh.h"
+#include "rhdata.h"
+#include "rhcmds.h"
+#include "rhstr.h"
 
-static void function(void);
-static int idlist(void);
-static void expression(void);
-static void expr0(void);
-static void expr1(void);
-static void expr2(void);
-static void expr3(void);
-static void expr4(void);
-static void expr5(void);
-static void expr6(void);
-static void expr7(void);
-static void expr8(void);
-static void expr9(void);
-static void expr10(void);
-static void factor(void);
-static int gettoken(void);
-static long sectime(int year, int month, int day);
-static long datespec(void);
+#ifdef NDEBUG
+#define debug(args)
+#define debug_extra(args)
+#else
+#define debug(args) debugf args
+#define debug_extra(args) debug_extraf args
+#endif
 
-/* ----------------------------------------------------------------------
- * getit:
- *	Return the next character, input is obtained from a file or
- *	a string.
- *	If expstr == NULL then input is from the file called 'expfname'
- *	with file pointer 'expfile'.
- *
- *	If expstr != NULL then input is from the string 'expstr'
- *
- */
+#define isaleph(c) ((c) != EOF && (isalpha(c) || (c) & 0x80))
 
-int getit(void)
+static int cpos;         /* Current byte position */
+static int lineno;       /* Current line number */
+static int decimal_mode; /* Only decimal, not octal */
+static int last_reffile; /* Most recent reference file */
+static char *saved_expstr;
+
+static void parse_function(void);
+static int parse_parameters(void);
+static void parse_expression(void);
+static void parse_or_expr(void);
+static void parse_and_expr(void);
+static void parse_bitor_expr(void);
+static void parse_bitxor_expr(void);
+static void parse_bitand_expr(void);
+static void parse_eq_expr(void);
+static void parse_rel_expr(void);
+static void parse_shift_expr(void);
+static void parse_add_expr(void);
+static void parse_mul_expr(void);
+static void parse_unary_expr(void);
+static void parse_factor(void);
+static void parse_arguments(int argc);
+static int get_token(void);
+static int get_token_decimal(void);
+static llong parse_datetime(void);
+static const char *show_token(void);
+
+#ifndef NDEBUG
+/*
+
+static void debugf(const char *format, ...);
+
+Print a debug message to stderr.
+
+*/
+
+static void debugf(const char *format, ...)
+{
+	va_list args;
+
+	if (!(attr.debug_flags & DEBUG_PARSER))
+		return;
+
+	va_start(args, format);
+	fprintf(stderr, "%s: ", "parser");
+	vfprintf(stderr, format, args);
+	fprintf(stderr, "\n");
+	va_end(args);
+}
+
+/*
+
+static void debug_extraf(const char *format, ...);
+
+Print an extra debug message to stderr.
+
+*/
+
+static void debug_extraf(const char *format, ...)
+{
+	va_list args;
+
+	if (!(attr.debug_flags & DEBUG_PARSER))
+		return;
+
+	if (!(attr.debug_flags & DEBUG_EXTRA))
+		return;
+
+	va_start(args, format);
+	fprintf(stderr, "%s: ", "parser");
+	vfprintf(stderr, format, args);
+	fprintf(stderr, "\n");
+	va_end(args);
+}
+#endif
+
+/*
+
+static int getch(void);
+
+Return the next input char from expstr or expfile.
+
+*/
+
+static int getch(void)
 {
 	int c;
 
@@ -70,23 +153,27 @@ int getit(void)
 
 	cpos++;
 
+	debug(("getch() = %c (%d)", (c != EOF && isprint(c)) ? c : ' ', c));
+
 	return c;
 }
 
-/* ----------------------------------------------------------------------
- * ungetit:
- *	Unget a char.
- *	A character is ungotten using the same scheme as stated for
- *	getit() for determining where input is comming from.
- *
- */
+/*
 
-void ungetit(int c)
+static void ungetch(int c);
+
+Unget the char c so that the next getch() will return it.
+
+*/
+
+static void ungetch(int c)
 {
+	debug(("ungetch() %c (%d)", (c != EOF && isprint(c)) ? c : ' ', c));
+
 	if (c == '\n')
 	{
 		lineno--;
-		cpos = 1;
+		cpos = 1; /* Wrong but OK */
 	}
 	else
 		cpos--;
@@ -94,177 +181,153 @@ void ungetit(int c)
 	if (expstr)
 		expstr = (c > 0) ? expstr - 1 : expstr;
 	else
-		ungetc(c,expfile);
+		ungetc(c, expfile);
 }
 
-/* ----------------------------------------------------------------------
- * error:
- *	Print an error message and quit.
- */
- 
-static void error(char *s)
+/*
+
+static void parser_error(const char *format, ...);
+
+Print a syntax message and exit.
+The format parameter is a printf-like format.
+Subsequent arguments must satisfy its conversions.
+
+*/
+
+static void parser_error(const char *format, ...)
 {
+	va_list args;
+
 	if (expstr)
-		fprintf(stderr, "Command line: ");
+		fprintf(stderr, "%s: command line: -e '%s': ", prog_name, saved_expstr);
 	else
-		fprintf(stderr, "%s: ", expfname);
+		fprintf(stderr, "%s: %s: ", prog_name, expfname);
 
-	fprintf(stderr, "line: %d, char: %d, %s.\n", lineno, cpos, s);
-	exit(1);
+	fprintf(stderr, "line %d byte %d: ", lineno, cpos);
+	va_start(args, format);
+	vfprintf(stderr, format, args);
+	va_end(args);
+	fprintf(stderr, "\n");
+
+	rawhide_finish();
+
+	if (expfile)
+		fclose(expfile);
+
+	exit(EXIT_FAILURE);
 }
 
-/* ----------------------------------------------------------------------
- * insertname:
- *	Inserts the symbol named 's' with type 't' and value 'val'
- *	into the symbol table. Return the a pointer to the symbol
- *	table entry. The symbol is inserted into the head of the
- *	linked list. This behavior is relied upon elswhere.
- *
- */
+/*
 
-struct symbol *insertname(char *s, int t, long val)
+static void add_instruction(void (*func)(llong), llong value);
+
+Store an instruction.
+
+*/
+
+static void add_instruction(void (*func)(llong), llong value)
 {
-	char *p;
-	struct symbol *sym;
+	debug_extra(("instruction %s %lld", instruction_name(func), value));
 
-	sym = (struct symbol *)malloc(sizeof(struct symbol));
-	if (sym == NULL)
-		error("no more memory");
-
-	p = sym->name = malloc(strlen(s) + 1);
-
-	if (sym->name == NULL)
-		error("no more memory");
-
-	while ((*p++ = *s++))
-		;
-
-	sym->type = t;
-	sym->value = val;
-
-	sym->next = symbols;
-	symbols = sym;
-	
-	return sym;
+	if (rawhide_instruction(func, value) == -1)
+		parser_error("program too big");
 }
 
-/* ----------------------------------------------------------------------
- * locatename:
- *	Do a linear search for 's' in the linked list symbols.
- *
- */
+/*
 
-struct symbol *locatename(char *s)
+void parse_program(void);
+
+Parse a program:
+
+	<program> ::=
+		  <function-list> <expression> ";" EOF
+		| <function-list> <expression> EOF
+		| <function-list> EOF
+
+	<function-list> ::=
+		  <function> <function-list>
+		| EMPTY
+
+*/
+
+void parse_program(void)
 {
-	struct symbol *p;
+	debug(("program(%s)", (expstr) ? expstr : expfname));
 
-	for (p = symbols; p; p = p->next)
-		if (!strcmp(s, p->name))
-			return p;
-
-	return NULL;
-}
-
-/* ----------------------------------------------------------------------
- * push:
- *	"assemble" the instruction into the StackProgram[] array.
- *
- */
-
-static void push(void (*func)(long), long val)
-{
-	if (PC >= MAX_PROGRAM_SIZE)
-		error("program to big");
-
-	StackProgram[PC].func = func;
-	StackProgram[PC++].value = val;
-}
-
-/* ----------------------------------------------------------------------
- * program:
- *	Parse a program of the form:
- *		<program> ==> <function-list> <expression> EOF
- *			| <function-list> EOF
- *			| <function-list> <expression> ;
- *
- *		<function-list> ==> <function> <function-list>
- *				| empty
- */
-
-void program(void)
-{
 	cpos = 0;
 	lineno = 1;
-	token = gettoken();
+	saved_expstr = expstr;
+	token = get_token();
 
-	for(;;)
-	{
-		if (token != IDENTIFIER)
-			break;
-
-		function();
-	}
+	while (token == IDENTIFIER)
+		parse_function();
 
 	if (token != EOF)
 	{
 		startPC = PC;
-		expression();
-		push(NULL, 0);
+		parse_expression();
+		add_instruction(NULL, 0);
 	}
 
-	if (token != EOF && token != ';')
-		error("EOF expected");
+	if (token != ';' && token != EOF)
+	{
+		if (token == '{' || token == '(')
+			parser_error("expected ';' or EOF after final condition expression, found %s (possible attempt to redefine an existing function)", show_token());
+		else
+			parser_error("expected ';' or EOF after final condition expression, found %s", show_token());
+	}
 }
 
-/* ----------------------------------------------------------------------
- * function:
- *	parse a function definition. Grammer for a function is:
- *	<function> ==> IDENTIFIER <id-list> { RETURN <expression> ; }
- *
- *	<id-list> ==> ( <ids> )
- *			| ( )
- *			| empty
- *
- *	<ids> ==> IDENTIFIER <idtail>
- *
- *	<idtail> ==> , <ids>
- *		| empty
- *
- */
+/*
 
-static void function(void)
+static void parse_function(void);
+
+Parse a function:
+
+	<function> ::=
+		IDENTIFIER <parameters> "{" <return> <expression> <eos> "}"
+
+	<return> ::=
+		  "return"
+		| EMPTY
+
+	<eos> == >
+		  ";"
+		| EMPTY
+
+*/
+
+static void parse_function(void)
 {
-	struct symbol *s;
+	symbol_t *s;
+
+	debug(("function()"));
 
 	s = tokensym;
 	tokensym->value = PC;
 	tokensym->type = FUNCTION;
 	tokensym->func = c_func;
 
-	token = gettoken();
+	token = get_token();
 
-	push(NULL, idlist());		/* save number of args for function */
+	add_instruction(NULL, parse_parameters()); /* Save number of parameters for function */
 
 	if (token != '{')
-		error("expected '{'");
+		parser_error("expected '{' to start a function body, found %s", show_token());
 
-	token = gettoken();
+	token = get_token();
 
-	if (token != RETURN)
-		error("expected keyword: return");
+	if (token == RETURN)
+		token = get_token();
 
-	token = gettoken();
+	parse_expression();
 
-	expression();
+	if (token == ';')
+		token = get_token();
 
-	if (token != ';')
-		error("expected ';'");
+	add_instruction(c_return, Program[s->value].value);
 
-	token = gettoken();
-
-	push(c_return, StackProgram[s->value].value);
-
-	/* free up the parameter symbols */
+	/* Free the parameter symbols */
 
 	while (symbols->type == PARAM)
 	{
@@ -275,772 +338,1267 @@ static void function(void)
 	}
 
 	if (token != '}')
-		error("expected '}'");
+		parser_error("expected '}' to end a function body, found %s", show_token());
 
-	token = gettoken();
+	token = get_token();
 }
 
-/* ----------------------------------------------------------------------
- * idlist:
- *	Return the maximum offset obtained in parsing the parameter list.
- *	<id-list> ==> ( <ids> )
- *		| ()
- *		| empty
- *
- *	<ids> ==> IDENTIFIER <idtail>
- *	<idtail> ==> <ids> , <idtail>
- *		| empty
- */
+/*
 
-static int idlist(void)
+static int parse_parameters(void);
+
+Parse a parameter list and return the maximum offset:
+
+	<parameters> ::=
+		  "(" <id-list> ")"
+		| "(" ")"
+		| EMPTY
+
+	<id-list> ::=
+		IDENTIFIER <id-tail>
+
+	<id-tail> ::=
+		  "," <id-list>
+		| EMPTY
+
+*/
+
+static int parse_parameters(void)
 {
 	int offset = 0;
 
+	debug_extra(("parameters()"));
+
 	if (token == '(')
-		token = gettoken();
+		token = get_token();
 	else if (token == '{')
 		return 0;
 	else
-		error("expected '(' or '{'");
+		parser_error("expected '(' or '{', found %s (possible attempt to call an undefined function)", show_token());
 
 	if (token == ')')
 	{
-		token = gettoken();
+		token = get_token();
 		return 0;
 	}
 
-	for(;;)
+	for (;;)
 	{
 		if (token != IDENTIFIER)
-			error("identifier expected");
+			parser_error("expected identifier (parameter name), found %s", show_token());
 
 		tokensym->type = PARAM;
 		tokensym->func = c_param;
 		tokensym->value = offset++;
-		token = gettoken();
+
+		token = get_token();
 
 		if (token == ')')
 			break;
 
 		if (token != ',')
-			error("expected ')'");
+			parser_error("expected ')' (end of parameters) or ',' (before next parameter), found %s", show_token());
 
-		token = gettoken();
+		token = get_token();
 	}
 
-	token = gettoken();
+	token = get_token();
+
 	return offset;
 }
 
-/* ----------------------------------------------------------------------
- * expression:
- *	Parse an expression. (top-level routine)
- *	OPERATOR ?:
- *
- */
+/*
 
-static void expression(void)
+static void parse_expression(void);
+
+Parse an expression. The conditional operator:
+
+	<expression> ::= <or> "?" <expression> ":" <expression> | <or>
+
+*/
+
+static void parse_expression(void)
 {
-	int qm, colon;
+	debug(("expression()"));
 
-	expr0();
+	parse_or_expr();
 
 	if (token == '?')
 	{
-		token = gettoken();
+		int qm, colon;
+
 		qm = PC;
-		push(c_qm, 0);
-		expression();
+		add_instruction(c_qm, 0);
+
+		token = get_token();
+		parse_expression();
 
 		if (token != ':')
-			error("missing ':'");
+			parser_error("expected ':' after '?' (ternary operator), found %s", show_token());
 
-		token = gettoken();
 		colon = PC;
-		push(c_colon, 0);
-		expression();
+		add_instruction(c_colon, 0);
 
-		StackProgram[qm].value = colon;
-		StackProgram[colon].value = PC - 1;
+		token = get_token();
+		parse_expression();
+
+		Program[qm].value = colon;
+		Program[colon].value = PC - 1;
 	}
-}		
+}
 
-/* OPERATOR || */ 
+/*
 
-static void expr0(void)
+static void parse_or_expr(void);
+
+Parse an or expression:
+
+	<or> ::= <and> "||" <or> | <and>
+
+*/
+
+static void parse_or_expr(void)
 {
-	expr1();
+	/* (a || b) is ((a) ? 1 : (b) ? 1 : 0) */
 
-	for(;;)
+	debug_extra(("or_expr()"));
+
+	parse_and_expr();
+
+	for (;;)
 	{
 		if (token == OR)
 		{
-			token = gettoken();
-			expr1();
-			push(c_or, 0);
+			int qm, colon;
+
+			qm = PC;
+			add_instruction(c_qm, 0);
+			add_instruction(c_number, 1);
+
+			colon = PC;
+			add_instruction(c_colon, 0);
+
+			token = get_token();
+			parse_and_expr();
+
+			Program[qm].value = colon;
+			Program[colon].value = PC - 1;
+
+			qm = PC;
+			add_instruction(c_qm, 0);
+			add_instruction(c_number, 1);
+
+			colon = PC;
+			add_instruction(c_colon, 0);
+			add_instruction(c_number, 0);
+
+			Program[qm].value = colon;
+			Program[colon].value = PC - 1;
 		}
 		else
 			break;
 	}
 }
 
-/* OPERATOR && */ 
+/*
 
-static void expr1(void)
+static void parse_and_expr(void);
+
+Parse an and expression:
+
+	<and> ::= <bitor> "&&" <and> | <bitor>
+
+*/
+
+static void parse_and_expr(void)
 {
-	expr2();
+	/* (a && b) is ((a) ? (b) ? 1 : 0 : 0) */
 
-	for(;;)
+	debug_extra(("and_expr()"));
+
+	parse_bitor_expr();
+
+	for (;;)
 	{
 		if (token == AND)
 		{
-			token = gettoken();
-			expr2();
-			push(c_and, 0);
+			int qm1, colon1;
+
+			qm1 = PC;
+			add_instruction(c_qm, 0);
+
+			token = get_token();
+			parse_bitor_expr();
+
+			{
+				int qm2, colon2;
+
+				qm2 = PC;
+				add_instruction(c_qm, 0);
+
+				add_instruction(c_number, 1);
+
+				colon2 = PC;
+				add_instruction(c_colon, 0);
+
+				add_instruction(c_number, 0);
+
+				Program[qm2].value = colon2;
+				Program[colon2].value = PC - 1;
+			}
+
+			colon1 = PC;
+			add_instruction(c_colon, 0);
+
+			add_instruction(c_number, 0);
+
+			Program[qm1].value = colon1;
+			Program[colon1].value = PC - 1;
 		}
 		else
 			break;
 	}
 }
 
-/* OPERATOR | */
+/*
 
-static void expr2(void)
+static void parse_bitor_expr(void);
+
+Parse a bitor expression:
+
+	<bitor> ::= <bitxor> "|" <bitor> | <bitxor>
+
+*/
+
+static void parse_bitor_expr(void)
 {
-	expr3();
+	debug_extra(("bitor_expr()"));
 
-	for(;;)
+	parse_bitxor_expr();
+
+	for (;;)
 	{
 		if (token == '|')
 		{
-			token = gettoken();
-			expr3();
-			push(c_bor, 0);
+			token = get_token();
+			parse_bitxor_expr();
+			add_instruction(c_bitor, 0);
 		}
 		else
 			break;
 	}
 }
 
-/* OPERATOR ^ */
+/*
 
-static void expr3(void)
+static void parse_bitxor_expr(void);
+
+Parse a bitxor expression:
+
+	<bitxor> ::= <bitand> "^" <bitxor> | <bitand>
+
+*/
+
+static void parse_bitxor_expr(void)
 {
-	expr4();
+	debug_extra(("bitxor_expr()"));
 
-	for(;;)
+	parse_bitand_expr();
+
+	for (;;)
 	{
 		if (token == '^')
 		{
-			token = gettoken();
-			expr4();
-			push(c_bxor, 0);
+			token = get_token();
+			parse_bitand_expr();
+			add_instruction(c_bitxor, 0);
 		}
 		else
 			break;
 	}
 }
 
-/* OPERATOR & */
+/*
 
-static void expr4(void)
+static void parse_bitand_expr(void);
+
+Parse a bitand expression:
+
+	<bitand> ::= <eq> "&" <bitand> | <eq>
+
+*/
+
+static void parse_bitand_expr(void)
 {
-	expr5();
+	debug_extra(("bitand_expr()"));
 
-	for(;;)
+	parse_eq_expr();
+
+	for (;;)
 	{
 		if (token == '&')
 		{
-			token = gettoken();
-			expr5();
-			push(c_band, 0);
+			token = get_token();
+			parse_eq_expr();
+			add_instruction(c_bitand, 0);
 		}
 		else
 			break;
 	}
 }
 
-/* OPERATOR == != */
+/*
 
-static void expr5(void)
+static void parse_eq_expr(void);
+
+Parse an equality expression:
+
+	<eq> ::= <rel> <eq-op> <rel> | <rel>
+	<eq-op> ::= "==" | "!="
+
+*/
+
+static void parse_eq_expr(void)
 {
-	int t;
+	debug_extra(("eq_expr()"));
 
-	expr6();
+	parse_rel_expr();
 
-	for(; (t = token);)
+	if (token == EQ)
 	{
-		if (t == EQ)
+		token = get_token();
+		parse_rel_expr();
+		add_instruction(c_eq, 0);
+	}
+	else if (token == NE)
+	{
+		token = get_token();
+		parse_rel_expr();
+		add_instruction(c_ne, 0);
+	}
+}
+
+/*
+
+static void parse_rel_expr(void);
+
+Parse a relative comparison expression:
+
+	<rel> ::= <shift> <rel-op> <shift> | <shift>
+	<rel-op> ::= "<" | ">" | "<=" | ">="
+
+*/
+
+static void parse_rel_expr(void)
+{
+	debug_extra(("rel_expr()"));
+
+	parse_shift_expr();
+
+	if (token == LE)
+	{
+		token = get_token();
+		parse_shift_expr();
+		add_instruction(c_le, 0);
+	}
+	else if (token == GE)
+	{
+		token = get_token();
+		parse_shift_expr();
+		add_instruction(c_ge, 0);
+	}
+	else if (token == '>')
+	{
+		token = get_token();
+		parse_shift_expr();
+		add_instruction(c_gt, 0);
+	}
+	else if (token == '<')
+	{
+		token = get_token();
+		parse_shift_expr();
+		add_instruction(c_lt, 0);
+	}
+}
+
+/*
+
+static void parse_shift_expr(void);
+
+Parse a shift expression:
+
+	<shift> ::= <add> <shift-op> <shift> | <add>
+	<shift-op> ::= "<<" | ">>"
+
+*/
+
+static void parse_shift_expr(void)
+{
+	debug_extra(("shift_expr()"));
+
+	parse_add_expr();
+
+	for (;;)
+	{
+		if (token == SHIFTL)
 		{
-			token = gettoken();
-			expr6();
-			push(c_eq, 0);
+			token = get_token();
+			parse_add_expr();
+			add_instruction(c_lshift, 0);
 		}
-		else if (t == NE)
+		else if (token == SHIFTR)
 		{
-			token = gettoken();
-			expr6();
-			push(c_ne, 0);
+			token = get_token();
+			parse_add_expr();
+			add_instruction(c_rshift, 0);
 		}
 		else
 			break;
 	}
 }
 
-/* OPERATOR < <= > >= */
+/*
 
-static void expr6(void)
+static void parse_add_expr(void);
+
+Parse an additive expression:
+
+	<add> ::= <mul> <add-op> <add> | <mul>
+	<add-op> ::= "+" | "-"
+
+*/
+
+static void parse_add_expr(void)
 {
-	int t;
+	debug_extra(("add_expr()"));
 
-	expr7();
+	parse_mul_expr();
 
-	for(; (t = token);)
+	for (;;)
 	{
-		if (t == LE)
+		if (token == '+')
 		{
-			token = gettoken();
-			expr7();
-			push(c_le, 0);
+			token = get_token();
+			parse_mul_expr();
+			add_instruction(c_plus, 0);
 		}
-		else if (t == GE)
+		else if (token == '-')
 		{
-			token = gettoken();
-			expr7();
-			push(c_ge, 0);
-		}
-		else if (t == '>')
-		{
-			token = gettoken();
-			expr7();
-			push(c_gt, 0);
-		}
-		else if (t == '<')
-		{
-			token = gettoken();
-			expr7();
-			push(c_lt, 0);
+			token = get_token();
+			parse_mul_expr();
+			add_instruction(c_minus, 0);
 		}
 		else
 			break;
 	}
 }
 
-/* OPERATOR << >> */
+/*
 
-static void expr7(void)
+static void parse_mul_expr(void);
+
+Parse a multiplicative expression:
+
+	<mul> ::= <unary> <mul-op> <mul> | <unary>
+	<mul-op> ::= "*" | "/" | "%"
+
+*/
+
+static void parse_mul_expr(void)
 {
-	int t;
+	debug_extra(("mul_expr()"));
 
-	expr8();
+	parse_unary_expr();
 
-	for(; (t = token);)
-		if (t == SHIFTL)
-		{
-			token = gettoken();
-			expr8();
-			push(c_lshift, 0);
-		}
-		else if (t == SHIFTR)
-		{
-			token = gettoken();
-			expr8();
-			push(c_rshift, 0);
-		}
-		else
-			break;
-}
-
-/* OPERATOR + - */
-
-static void expr8(void)
-{
-	int t;
-
-	expr9();
-
-	for(; (t = token);)
+	for (;;)
 	{
-		if (t == '+')
+		if (token == '*')
 		{
-			token = gettoken();
-			expr9();
-			push(c_plus, 0);
+			token = get_token();
+			parse_unary_expr();
+			add_instruction(c_mul, 0);
 		}
-		else if (t=='-')
+		else if (token == '/')
 		{
-			token = gettoken();
-			expr9();
-			push(c_minus, 0);
+			token = get_token();
+			parse_unary_expr();
+			add_instruction(c_div, 0);
+		}
+		else if (token == '%')
+		{
+			token = get_token();
+			parse_unary_expr();
+			add_instruction(c_mod, 0);
 		}
 		else
 			break;
 	}
 }
 
-/* OPERATOR * / % */
+/*
 
-static void expr9(void)
+static void parse_unary_expr(void);
+
+Parse a unary operator expression:
+
+	<unary> ::= <unary-op> <unary> | <factor>
+	<unary-op> ::= "-" | "~" | "!"
+
+*/
+
+static void parse_unary_expr(void)
 {
-	int t;
+	debug_extra(("unary_expr()"));
 
-	expr10();
-
-	for(; (t = token);)
+	if (token == '!')
 	{
-		if (t == '*')
-		{
-			token = gettoken();
-			expr10();
-			push(c_mul, 0);
-		}
-		else if (t == '/')
-		{
-			token = gettoken();
-			expr10();
-			push(c_div, 0);
-		}
-		else if (t == '%')
-		{
-			token = gettoken();
-			expr10();
-			push(c_mod, 0);
-		}
-		else
-			break;
+		token = get_token();
+		parse_unary_expr();
+		add_instruction(c_not, 0);
 	}
-}
-
-/* OPERATOR ~ ! - */ 
-
-static void expr10(void)
-{
-	int t;
-
-	t = token;	
-
-	if (t == '!')
+	else if (token == '-')
 	{
-		token = gettoken();
-		expr10();
-		push(c_not, 0);
+		token = get_token();
+		parse_unary_expr();
+		add_instruction(c_uniminus, 0);
 	}
-	else if (t== '~')
+	else if (token == '~')
 	{
-		token = gettoken();
-		expr10();
-		push(c_bnot, 0);
-	}
-	else if (t== '-')
-	{
-		token = gettoken();
-		expr10();
-		push(c_uniminus, 0);
+		token = get_token();
+		parse_unary_expr();
+		add_instruction(c_bitnot, 0);
 	}
 	else
-		factor();
+		parse_factor();
 }
 
-/* ----------------------------------------------------------------------
- * explist:
- *	argc is the number of arguments expected.
- *	Parse an expression list of the form:
- *		<explist> ==> ( <exps> )
- *			| ( )
- *			| empty
- *
- *		<exps> ==> <exps> , <expression>
- *			| <expression>
- *
- */
+/*
 
-static void explist(int argc)
+static void parse_factor(void);
+
+Parse a factor:
+
+	<factor> ::=
+		  <number>
+		| <user-id>
+		| <group-id>
+		| "[" <date-time> "]"
+		| <pattern>
+		| <reference-file>
+		| <built-in>
+		| <function-call>
+		| <parameter>
+		| "(" <expression> ")"
+
+*/
+
+static void parse_factor(void)
 {
+	debug_extra(("factor()"));
+
+	switch (token)
+	{
+		case '(':
+		{
+			token = get_token();
+			parse_expression();
+
+			if (token != ')')
+				parser_error("expected ')', found %s", show_token());
+
+			token = get_token();
+
+			break;
+		}
+
+		case NUMBER:
+		{
+			add_instruction(c_number, tokenval);
+			token = get_token();
+
+			break;
+		}
+
+		case FUNCTION:
+		{
+			int pc = tokensym->value;
+
+			token = get_token();
+			parse_arguments(Program[pc].value);
+			add_instruction(c_func, pc);
+
+			break;
+		}
+
+		case PARAM:
+		{
+			add_instruction(c_param, tokensym->value);
+			token = get_token();
+
+			break;
+		}
+
+		case '[':
+		{
+			llong l;
+
+			token = get_token_decimal();
+			l = parse_datetime();
+
+			if (token != ']')
+				parser_error("expected ']', found %s", show_token());
+
+			token = get_token();
+			add_instruction(c_number, l);
+
+			break;
+		}
+
+		case STRING:
+		{
+			add_instruction(c_glob, tokenval);
+			token = get_token();
+
+			break;
+		}
+
+		case FIELD:
+		case PATMOD:
+		case REFFILE:
+		{
+			add_instruction(tokensym->func, tokenval);
+			token = get_token();
+
+			break;
+		}
+
+		case IDENTIFIER:
+		{
+			parser_error("undefined identifier: %s", show_token());
+		}
+
+		default:
+		{
+			parser_error("syntax error: %s", show_token());
+		}
+	}
+}
+
+/*
+
+static void parse_arguments(int argc);
+
+Parse function arguments:
+
+	<arguments> ::=
+		  "(" <expr-list> ")"
+		| "(" ")"
+		| EMPTY
+
+	<expr-list> ::=
+		<expression> <expr-tail>
+
+	<expr-tail> ::=
+		  "," <expr-list>
+		| EMPTY
+
+The argc parameter is the number of arguments expected.
+
+*/
+
+static void parse_arguments(int argc)
+{
+	int orig_argc = argc;
+
+	debug_extra(("arguments()"));
+
 	if (token != '(' && !argc)
 		return;
 
 	if (token != '(')
-		error("missing '('");
+		parser_error("expected '(' in function call (%d argument%s %s required), found %s", argc, (argc == 1) ? "" : "s", (argc == 1) ? "is" : "are", show_token());
 
-	token = gettoken();
+	token = get_token();
 
 	if (!argc && token == ')')
 	{
-		token = gettoken();
+		token = get_token();
 		return;
 	}
 
 	for (;;)
 	{
-		expression();
+		parse_expression();
 		argc--;
 
 		if (token == ')')
 			break;
 
 		if (token != ',')
-			error("missing ','");
+			parser_error("expected ')' or ',' in function argument list, found %s", show_token());
 
-		token = gettoken();
+		token = get_token();
 	}
 
-	token = gettoken();
+	token = get_token();
 
 	if (argc)
-		error("wrong number of arguments");
-}	
-
-/* ----------------------------------------------------------------------
- * factor:
- *	Parse a factor. Could be a number, variable, date, function call or
- *	regular expression string.
- */
- 
-static void factor(void)
-{
-	long l;
-	int pc;
-
-	switch (token)
-	{
-		case '(':
-		{
-			token = gettoken();
-			expression();
-
-			if (token != ')')
-				error("missing ')'");
-
-			token = gettoken();
-
-			break;
-		}
-		case NUMBER:
-		{
-			push(c_number, tokenval);
-			token = gettoken();
-
-			break;
-		}
-		case FUNCTION:
-		{
-			pc = tokensym->value;
-			token = gettoken();
-			explist(StackProgram[pc].value);
-			push(c_func, pc);
-
-			break;
-		}
-		case PARAM:
-		{
-			push(c_param, tokensym->value);
-			token = gettoken();
-
-			break;
-		}
-		case FIELD:
-		{
-			push(tokensym->func, tokenval);
-			token = gettoken();
-
-			break;
-		}
-		case '[':
-		{
-			token = gettoken();
-			l = datespec();
-
-			if (token != ']')
-				error("missing ']'");
-
-			token = gettoken();
-			push(c_number, l);
-
-			break;
-		}
-		case STR:
-		{
-			push(c_str, tokenval);
-			token = gettoken();
-
-			break;
-		}
-		case IDENTIFIER:
-		{
-			error("undefined identifier");
-		}
-		default:
-		{
-			error("syntax error");
-		}
-	}
+		parser_error("wrong number of function arguments: expected %d, found %d", orig_argc, orig_argc - argc);
 }
 
-/* ----------------------------------------------------------------------
- * sectime:
- *	calculate the number of seconds between January 1, 1970
- *	and year/month/day. Return that value.
- *
- */
+/*
 
-#define leap(d)	(((d % 4 == 0) && (d % 100 != 0)) || (d % 400 == 0))
-#define DAYSEC	(3600 * 24)
-#define YERSEC	(3600 * 24 * 365)
-#define TIME0	1970
+static llong parse_datetime(void);
 
-static long sectime(int year, int month, int day)
+Parse a date/time:
+
+	<date-time> ::=
+		  NUMBER "/" NUMBER "/" NUMBER
+		| NUMBER "/" NUMBER "/" NUMBER NUMBER
+		| NUMBER "/" NUMBER "/" NUMBER NUMBER ":" NUMBER
+		| NUMBER "/" NUMBER "/" NUMBER NUMBER ":" NUMBER ":" NUMBER
+
+If the year is below 100 it is interpreted as being in the current century.
+Return the seconds from the UNIX epoch until the specified date/time.
+
+*/
+
+static llong parse_datetime(void)
 {
-	static int months[13] = { 0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
-	int yeardays, leapers, x;
-	long seconds;
+	int year, month, day, hour = 0, minute = 0, second = 0;
+	llong seconds;
+	struct tm tm[1];
+	char *env;
 
-	if (month > 12 || month < 1 || year < TIME0 || day < 1 || day > months[month] + (month == 2 && leap(year)))
-		return -1;
+	debug_extra(("datetime()"));
 
-	yeardays = leapers = 0;
-
-	for (x = 1; x < month; x++)
-		yeardays += months[x];
-
-	if ((month > 2) && leap(year))
-		yeardays++;
-
-	for (x = TIME0; x < year; x++)
-		if (leap(x))
-			leapers++;
-	
-	seconds = yeardays * DAYSEC + (year - TIME0) * YERSEC + 7 * 3600 + leapers * DAYSEC + day * DAYSEC;
-
-	return seconds;
-}
-
-/* ----------------------------------------------------------------------
- * datespec:
- *	parse a date. Return the number of seconds from
- *	some date in 1970, until the specified date.
- */
-
-static long datespec(void)
-{
-	int year, month, day, seconds;
+	/* Year */
 
 	if (token != NUMBER)
-		error("number expected");
+		parser_error("expected year number, found %s", show_token());
 
 	year = tokenval;
-	token = gettoken();
 
-	if (token != '/')
-		error("missing '/'");
+	if (year < 100)
+	{
+		time_t now = time(NULL);
+		struct tm *lc = localtime(&now);
 
-	token = gettoken();
+		year += ((lc->tm_year + 1900) / 100) * 100;
+	}
 
-	if (token != NUMBER)
-		error("number expected");
+	/* Month */
+
+	if ((token = get_token()) != '/')
+		parser_error("expected '/' after year, found %s", show_token());
+
+	if ((token = get_token_decimal()) != NUMBER)
+		parser_error("expected month number, found %s", show_token());
 
 	month = tokenval;
-	token = gettoken();
 
-	if (token != '/')
-		error("missing '/'");
+	/* Day */
 
-	token = gettoken();
+	if ((token = get_token()) != '/')
+		parser_error("expected '/' after month, found %s", show_token());
 
-	if (token != NUMBER)
-		error("number expected");
+	if ((token = get_token_decimal()) != NUMBER)
+		parser_error("expected day number, found %s", show_token());
 
 	day = tokenval;
-	token = gettoken();
 
-	if ((seconds = sectime(year, month, day)) < 0) 
-		error("invalid date");
+	/* Hour (optional) */
+
+	if ((token = get_token_decimal()) == NUMBER)
+	{
+		hour = tokenval;
+
+		/* Minutes (optional) */
+
+		if ((token = get_token()) == ':')
+		{
+			if ((token = get_token_decimal()) != NUMBER)
+				parser_error("expected minute number, found %s", show_token());
+
+			minute = tokenval;
+
+			/* Seconds (optional) */
+
+			if ((token = get_token()) == ':')
+			{
+				if ((token = get_token_decimal()) != NUMBER)
+					parser_error("expected second number, found %s", show_token());
+
+				second = tokenval;
+				token = get_token();
+			}
+		}
+	}
+
+	/* Convert to seconds since the epoch */
+
+	tm->tm_sec = second;
+	tm->tm_min = minute;
+	tm->tm_hour = hour;
+	tm->tm_mday = day;
+	tm->tm_mon = month - 1;
+	tm->tm_year = year - 1900;
+	tm->tm_wday = 0;
+	tm->tm_yday = 0;
+	tm->tm_isdst = -1;
+
+	if ((seconds = (llong)mktime(tm)) == -1 || (year == 1900 && (env = getenv("RAWHIDE_TEST_INVALID_DATE")) && *env))
+	{
+		if (hour == 0 && minute == 0 && second == 0)
+			parser_error("invalid date: [%04d/%d/%d]", year, month, day);
+		else if (minute == 0 && second == 0)
+			parser_error("invalid time: [%04d/%d/%d %d]", year, month, day, hour);
+		else if (second == 0)
+			parser_error("invalid time: [%04d/%d/%d %d:%02d]", year, month, day, hour, minute);
+		else
+			parser_error("invalid time: [%04d/%d/%d %d:%02d:%02d]", year, month, day, hour, minute, second);
+	}
 
 	return seconds;
 }
 
-/* ----------------------------------------------------------------------
- * gettoken:
- *	Return the next token.
- *	global variable: tokenval will contain any extra
- *	attribute associated with the returned token, ie
- *	the VALUE of a number, the index of the string etc...
- *	tokensym will be a pointer to the symbol table entry for
- *	any symbol encountered.
- *
- */
- 
-static int gettoken(void)
+/*
+
+static int get_token(void);
+
+Scan the next token and return the token type.
+The global variable, tokenval, will contain any extra
+attribute associated with the returned token type, i.e.,
+the value of a NUMBER token, the index of the string etc.
+The global variable, tokensym, will be a pointer to the
+symbol table entry for any symbol encountered.
+
+Tokens look like:
+
+    <number> ::=
+          DECIMAL
+        | DECIMAL NOSPACE <scale>
+        | "0" NOSPACE OCTAL
+        | "0x" NOSPACE HEXADECIMAL
+
+    <scale> ::=
+          "K" | "M" | "G" | "T" | "P" | "E"
+        | "k" | "m" | "g" | "t" | "p" | "e"
+
+    <user-id> ::=
+          "$" NOSPACE USERNAME
+        | "$$"
+
+    <group-id> ::=
+          "@" NOSPACE GROUPNAME
+        | "@@"
+
+    <pattern> ::=
+          STRING
+        | STRING NOSPACE "." NOSPACE <pattern-modifier>
+
+    <pattern-modifier> ::= PATMOD symbol tale entries
+
+    <reference-file> ::=
+        STRING NOSPACE "." NOSPACE <reference-file-field>
+
+    <reference-file-field> ::= REFFILE symbol table entries
+
+    <built-in> ::= FIELD/NUMBER symbol table entries
+
+    <parameter> ::= PARAM symbol table entries
+
+And single-letter operators.
+
+*/
+
+static int _get_token(void);
+static int get_token(void)
 {
-	char buf[MAX_IDENT_LENGTH + 1], *bufp = buf;
-	int c, incomment;
+	int saved_token, new_token;
 
-	incomment = 0;
-	c = getit();
+	new_token = _get_token();
+	saved_token = token;
+	token = new_token;
+	debug(("get_token() = %s", show_token()));
+	token = saved_token;
 
-	while (c == ' ' || c == '\t' || c == '\n' || c == '/' || incomment)
+	return new_token;
+}
+
+static int _get_token(void)
+{
+	static char *scales = "KMGTPEkmgtpe";
+	static llong factor[] =
 	{
+		1LL << 10, 1LL << 20, 1LL << 30, 1LL << 40, 1LL << 50, 1LL << 60,
+		1000LL, 1000000LL, 1000000000LL, 1000000000000LL, 1000000000000000LL, 1000000000000000000LL
+	};
+
+	char buf[MAX_IDENT_LENGTH + 1], *bufp = buf;
+	int incomment = 0, c;
+	char *scale, *start;
+
+	tokensym = NULL;
+	c = getch();
+
+	/* Comment */
+
+	while (c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '/' || c == '#' || incomment)
+	{
+		if (c == EOF)
+			parser_error("unterminated comment");
+
 		if (c == '/' && !incomment)
 		{
-			c = getit();
+			c = getch();
 
-			if (c != '*')
+			if (c == '/')
 			{
-				ungetit(c);
+				while ((c = getch()) != '\n' && c != EOF)
+					;
+			}
+			else if (c == '*')
+			{
+				incomment = 1;
+			}
+			else
+			{
+				ungetch(c);
 				c = '/';
 
 				break;
 			}
-
-			incomment = 1;
 		}
 		else if (c == '*')
 		{
-			c = getit();
+			c = getch();
 
 			if (c == '/')
 				incomment = 0;
 		}
+		else if (c == '#' && !incomment)
+		{
+			while ((c = getch()) != '\n' && c != EOF)
+				;
+		}
 
-		c = getit();
+		c = getch();
 	}
 
-	if (c == '0')
+	/* Octal/Hexadecimal */
+
+	if (c == '0' && !decimal_mode)
 	{
 		tokenval = 0;
 
-		while ((c = getit()) >= '0' && c <= '7')
+		c = getch();
+
+		if (c == 'x')
 		{
-			tokenval <<= 3;
-			tokenval += c - '0';
+			int num_digits = 0;
+
+			while (isxdigit(c = getch()))
+			{
+				tokenval <<= 4;
+				tokenval += (isdigit(c)) ? c - '0' : 10 + c - ((isupper(c)) ? 'A' : 'a');
+				++num_digits;
+			}
+
+			if (num_digits == 0)
+				parser_error("invalid hexadecimal digit: %c", c);
+
+			ungetch(c);
 		}
+		else
+		{
+			ungetch(c);
 
-		if (isdigit(c))
-			error("bad octal constant");
+			while ((c = getch()) >= '0' && c <= '7')
+			{
+				tokenval <<= 3;
+				tokenval += c - '0';
+			}
 
-		ungetit(c);
+			if (isdigit(c))
+				parser_error("invalid octal digit: %c", c);
+
+			ungetch(c);
+		}
 
 		return NUMBER;
 	}
- 
+
+	/* Decimal */
+
 	if (isdigit(c))
 	{
 		tokenval = c - '0';
 
-		while (isdigit((c = getit())))
+		while (isdigit((c = getch())))
 		{
-			tokenval *=10;
+			tokenval *= 10;
 			tokenval += c - '0';
 		}
 
-		ungetit(c);
+		if ((scale = strchr(scales, c)))
+			tokenval *= factor[scale - scales];
+		else
+			ungetch(c);
 
 		return NUMBER;
 	}
-	
-	if (isalpha(c))
-	{
-		int count = 0;
 
+	/* Identifier / Keyword */
+
+	if (isaleph(c) || c == '_')
+	{
 		do
 		{
-			if (count++ < MAX_IDENT_LENGTH)
+			/* Identifiers are silently truncated */
+
+			if (bufp - buf < MAX_IDENT_LENGTH)
 				*bufp++ = c;
 
-			c = getit();
-		} while (isalnum(c));
+			c = getch();
+		}
+		while (isaleph(c) || isdigit(c) || c == '_');
 
-		ungetit(c);
+		ungetch(c);
 		*bufp = '\0';
 
-		if ((tokensym = locatename(buf)) == NULL)
-		{
-			tokensym = insertname(buf, IDENTIFIER, 0);
-		}
+		if (!strcmp(buf, "return"))
+			return RETURN;
+
+		if (!(tokensym = locate_symbol(buf)))
+			if (!(tokensym = insert_symbol(buf, IDENTIFIER, 0)))
+				parser_error("no more memory");
 
 		tokenval = tokensym->value;
 
 		return tokensym->type;
 	}
 
+	/* Glob/regex pattern / Reference file / Shell command */
+
 	if (c == '"')
 	{
+		llong reffield, refstrfree, i, stripped = 0;
+
 		tokenval = strfree;
 
-		while ((c = getit()) != '"')
+		while ((c = getch()) != '"' && c != EOF)
 		{
-			if (strfree > MAX_STRBUF_SIZE)
-				error("no more string space");
+			if (strfree >= MAX_DATA_SIZE - 1)
+				parser_error("no more string space");
+
+			if (c == '\\')
+			{
+				if ((c = getch()) == EOF)
+					parser_error("invalid character quoting in string");
+
+				/* Backslash is only special before \ or " */
+
+				if (!(c == '\\' || c == '"'))
+				{
+					if (strfree >= MAX_DATA_SIZE - 2)
+						parser_error("no more string space");
+
+					Strbuf[strfree++] = '\\';
+				}
+			}
 
 			Strbuf[strfree++] = c;
 		}
 
+		if (c != '"')
+			parser_error("invalid string literal (missing closing double quote)");
+
 		Strbuf[strfree++] = '\0';
 
-		return STR;
-	}
+		/* Look for a suffix */
 
-	if (c == '=')
-	{
-		c = getit();
+		if ((c = getch()) != '.')
+		{
+			ungetch(c);
 
-		if (c == '=')
-			return EQ;
+			/* Assume "".path when / is present */
+
+			if (!strchr(Strbuf + tokenval, '/'))
+				return STRING;
+
+			tokensym = locate_symbol(".path");
+
+			return PATMOD;
+		}
+
+		/* Get the reference file field name */
+
+		reffield = refstrfree = strfree;
+
+		if (refstrfree >= MAX_DATA_SIZE - 1)
+			parser_error("no more reference file field name space");
+
+		Strbuf[refstrfree++] = c;
+
+		while ((c = getch()) != EOF && isalpha(c))
+		{
+			if (refstrfree >= MAX_DATA_SIZE - 1)
+				parser_error("no more reference file field name space");
+
+			Strbuf[refstrfree++] = c;
+		}
+
+		ungetch(c);
+		Strbuf[refstrfree] = '\0';
+
+		if (!(tokensym = locate_symbol(Strbuf + reffield)) || (tokensym->type != REFFILE && tokensym->type != PATMOD))
+			parser_error("invalid string suffix: %s (expected pattern modifier or reference file field)", ok(Strbuf + reffield));
+
+		if (tokensym->type == PATMOD)
+			return PATMOD;
+
+		/* Strip trailing / */
+
+		for (refstrfree = reffield - 1; refstrfree - 1 > tokenval && Strbuf[refstrfree - 1] == '/'; )
+			Strbuf[--refstrfree] = '\0', ++stripped;
+
+		/* If the reference path is empty, it refers to the most recent reference path */
+
+		if (Strbuf[tokenval] == '\0')
+		{
+			if (!reffree)
+				parser_error("invalid implicit reference file path: \"\"%s (no preceding reference file path to refer to)", ok(Strbuf + reffield));
+
+			strfree = tokenval;      /* Discard this empty reference file path */
+			tokenval = last_reffile; /* Index into RefFile of the most recent reference file */
+
+			return REFFILE;
+		}
+
+		/* Look for an earlier reference to the same path, or record this one */
+
+		for (i = 0; i < reffree; ++i)
+			if (Strbuf[tokenval] && !strcmp(Strbuf + RefFile[i].fpathi, Strbuf + tokenval))
+				break;
+
+		if (i < reffree)
+		{
+			strfree = tokenval;          /* Discard duplicates of the reference file path */
+			last_reffile = tokenval = i; /* Index into RefFile of the first occurrence */
+		}
 		else
 		{
-			ungetit(c);
+			RefFile[reffree].fpathi = tokenval;
+			start = (start = strrchr(Strbuf + tokenval, '/')) ? start + 1 : Strbuf + tokenval;
+			RefFile[reffree].baselen = reffield - 1 - (start - Strbuf) - stripped;
+			RefFile[reffree].exists = ((attr.follow_symlinks ? stat : lstat)(Strbuf + RefFile[reffree].fpathi, RefFile[reffree].statbuf) != -1);
 
-			return '=';
+			last_reffile = tokenval = reffree++;
 		}
+
+		debug(("reffile %s: type %o perm %o uid %d gid %d size %d", Strbuf + RefFile[tokenval].fpathi, RefFile[tokenval].statbuf->st_mode & S_IFMT, RefFile[tokenval].statbuf->st_mode & ~S_IFMT, RefFile[tokenval].statbuf->st_uid, RefFile[tokenval].statbuf->st_gid, RefFile[tokenval].statbuf->st_size));
+
+		return REFFILE;
 	}
+
+	/* User ID */
 
 	if (c == '$')
 	{
-		int count = 0;
-		struct passwd *info, *getpwnam();
+		struct passwd *pwd;
 
-		c = getit();
-
-		if (c == '$')
+		if ((c = getch()) == '$')
 		{
 			tokenval = getuid();
 
 			return NUMBER;
 		}
 
-		do
+		while (isaleph(c) || isdigit(c) || c == '.' || c == '-' || c == '_')
 		{
-			if (count++ < MAX_IDENT_LENGTH)
+			if (bufp - buf < MAX_IDENT_LENGTH)
 				*bufp++ = c;
 
-			c = getit();
-		} while (isalnum(c));
+			c = getch();
+		}
 
-		ungetit(c);
+		ungetch(c);
 		*bufp = '\0';
 
-		if ((info = getpwnam(buf)) == NULL) 
-			error("no such user");
+		if (!(pwd = getpwnam(buf)))
+			parser_error("no such user: %s", ok(buf));
 
-		tokenval = info->pw_uid;
+		tokenval = pwd->pw_uid;
 
 		return NUMBER;
 	}
-	
+
+	/* Group ID */
+
+	if (c == '@')
+	{
+		struct group *grp;
+
+		if ((c = getch()) == '@')
+		{
+			tokenval = getgid();
+
+			return NUMBER;
+		}
+
+		while (isaleph(c) || isdigit(c) || c == '.' || c == '-' || c == '_')
+		{
+			if (bufp - buf < MAX_IDENT_LENGTH)
+				*bufp++ = c;
+
+			c = getch();
+		}
+
+		ungetch(c);
+		*bufp = '\0';
+
+		if (!(grp = getgrnam(buf)))
+			parser_error("no such group: %s", ok(buf));
+
+		tokenval = grp->gr_gid;
+
+		return NUMBER;
+	}
+
+	/* Operator == (or char '=') */
+
+	if (c == '=')
+	{
+		c = getch();
+
+		if (c == '=')
+			return EQ;
+
+		ungetch(c);
+
+		return '=';
+	}
+
+	/* Operator != or ! */
+
 	if (c == '!')
 	{
-		c = getit();
+		c = getch();
 
 		if (c == '=')
 			return NE;
 
-		ungetit(c);
+		ungetch(c);
 
 		return '!';
 	}
- 
+
+	/* Operator >= or >> or > */
+
 	if (c == '>')
 	{
-		c = getit();
+		c = getch();
 
 		if (c == '=')
 			return GE;
@@ -1048,14 +1606,16 @@ static int gettoken(void)
 		if (c == '>')
 			return SHIFTR;
 
-		ungetit(c);
+		ungetch(c);
 
 		return '>';
 	}
 
+	/* Operator <= or << or < */
+
 	if (c == '<')
 	{
-		c = getit();
+		c = getch();
 
 		if (c == '=')
 			return LE;
@@ -1063,36 +1623,101 @@ static int gettoken(void)
 		if (c == '<')
 			return SHIFTL;
 
-		ungetit(c);
+		ungetch(c);
 
 		return '<';
 	}
 
+	/* Operator && or & */
+
 	if (c == '&')
 	{
-		c = getit();
+		c = getch();
 
 		if (c == '&')
 			return AND;
 
-		ungetit(c);
+		ungetch(c);
 
 		return '&';
 	}
 
+	/* Operator || or | */
+
 	if (c == '|')
 	{
-		c = getit();
+		c = getch();
 
 		if (c == '|')
 			return OR;
 
-		ungetit(c);
+		ungetch(c);
 
 		return '|';
 	}
 
+	/* Any other character or EOF */
+
 	return c;
+}
+
+/*
+
+static int get_token_decimal(void);
+
+Like get_token() with decimal_mode set first and cleared afterwards.
+This is for parsing datetimes to allow leading zeroes.
+
+*/
+
+static int get_token_decimal(void)
+{
+	int t;
+
+	decimal_mode = 1;
+	t = get_token();
+	decimal_mode = 0;
+
+	return t;
+}
+
+/*
+
+static const char *show_token(void);
+
+Return text describing the current token for error messages.
+
+*/
+
+static const char *show_token(void)
+{
+	#define BUFSIZE 4096
+	static char buf[BUFSIZE];
+
+	switch (token)
+	{
+		case EOF: snprintf(buf, BUFSIZE, "eof"); break;
+		case RETURN: snprintf(buf, BUFSIZE, "return"); break;
+		case IDENTIFIER: snprintf(buf, BUFSIZE, "identifier %s", tokensym->name); break;
+		case FUNCTION: snprintf(buf, BUFSIZE, "function %s", tokensym->name); break;
+		case PARAM: snprintf(buf, BUFSIZE, "param %s", tokensym->name); break;
+		case NUMBER: snprintf(buf, BUFSIZE, "number %lld%s%s", tokenval, (tokensym) ? " " : "", (tokensym) ? tokensym->name : ""); break;
+		case FIELD: snprintf(buf, BUFSIZE, "field %s", tokensym->name); break;
+		case STRING: snprintf(buf, BUFSIZE, "string \"%s\"", Strbuf + tokenval); break;
+		case PATMOD: snprintf(buf, BUFSIZE, "patmod \"%s\"%s", Strbuf + tokenval, tokensym->name); break;
+		case REFFILE: snprintf(buf, BUFSIZE, "reffile \"%s\"%s", Strbuf + RefFile[tokenval].fpathi, tokensym->name); break;
+		case EQ: snprintf(buf, BUFSIZE, "eq =="); break;
+		case NE: snprintf(buf, BUFSIZE, "ne !="); break;
+		case GE: snprintf(buf, BUFSIZE, "ge >="); break;
+		case LE: snprintf(buf, BUFSIZE, "le <="); break;
+		case SHIFTL: snprintf(buf, BUFSIZE, "shiftl <<"); break;
+		case SHIFTR: snprintf(buf, BUFSIZE, "shiftr >>"); break;
+		case AND: snprintf(buf, BUFSIZE, "and &&"); break;
+		case OR: snprintf(buf, BUFSIZE, "or ||"); break;
+		default: snprintf(buf, BUFSIZE, (isquotable(token)) ? "char 0x%02x" : "'%c'", (char)token); break;
+	}
+
+	return buf;
 }
 
 /* vi:set ts=4 sw=4: */

@@ -21,27 +21,12 @@
 * 20220330 raf <raf@raf.org>
 */
 
-#ifndef RAWHIDE_RHDIR_H
-#define RAWHIDE_RHDIR_H
+#ifndef RAWHIDE_RHERR_H
+#define RAWHIDE_RHERR_H
 
-llong env_int(char *envname, llong min_value, llong max_value, llong default_value);
-int rawhide_search(char *fpath);
-int following_symlinks(void);
-const char *ytypecode(struct stat *statbuf);
-const char *modestr(struct stat *statbuf);
-const char *aclea(void);
-int fcntl_set_fdflag(int fd, int flag);
-void visitf_default(void);
-void visitf_long(void);
-void visitf_execute(void);
-void visitf_execute_local(void);
-void visitf_unlink(void);
-void visitf_format(void);
-int syscmd(const char *cmd);
-int remove_danger_from_path(void);
-int interpolate_command(const char *srccmd, char *command, int cmdbufsize);
-int chdir_local(int do_debug);
-
-#define CMDBUFSIZE 8192
+int error(const char *format, ...);
+int errorsys(const char *format, ...);
+void fatal(const char *format, ...);
+void fatalsys(const char *format, ...);
 
 #endif

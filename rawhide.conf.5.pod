@@ -1,0 +1,2252 @@
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+=head1 NAME
+
+C</etc/rawhide.conf> - configuration file for I<rh(1)>
+
+=head1 DESCRIPTION
+
+The C</etc/rawhide.conf> file (or similar) contains a "standard" library of
+functions that can be used by all users of I<rh(1)>. It is the first file
+read by I<rh(1)>. Any files in the C</etc/rawhide.conf.d> directory (or
+similar) whose names do not start with dot (C<".">) are then read (in
+lexicographic order), and can contain additional system-wide function
+definitions.
+
+User-specific configuration is then read from the C<~/.rhrc> and
+C<~/.rhrc.d/*> files in the same manner.
+
+Any file specified by I<rh(1)>'s C<-f> option is then read, followed by the
+contents of I<rh(1)>'s C<-e> option argument, which can also contain
+additional function definitions, and a trailing file test expression.
+
+All of these share the same syntax.
+
+The location of the system-wide configuration might be somewhere else,
+depending on the operating system preferences (e.g., C</usr/local/etc>,
+C</opt/local/etc>, C</usr/pkg/etc>).
+
+The output of S<C<rh --help>> states where the system-wide configuration
+files are on the local system.
+
+=head1 FILE FORMAT
+
+The following subsections describe the syntax and semantics of I<rawhide>
+search criteria source/configuration files.
+
+=head2 File structure
+
+Every I<rawhide> source/configuration file consists of zero or more function
+definitions, optionally followed by a file test expression, which is
+optionally terminated by a semicolon (C<";">).
+
+If a source file does contain a trailing file test expression, that
+expression becomes the default file test expression, unless another file
+read later also contains a trailing file test expression, in which case,
+that expression becomes the default file test expression. It is not expected
+that any system-wide or user-specific configuration files will contain a
+trailing file test expression, but they can.
+
+Files specified with the C<-f> option are more likely to contain a trailing
+file test expression, in which case, there is no need for the C<-e> option
+(explicit or implicit). But if the C<-e> option is also supplied, then any
+file test expression that it specifies takes precedence.
+
+Technically, even the C<-e> option argument does not require a file test
+expression (because there is a default which matches everything), but it
+will usually supply one.
+
+=head2 Comments
+
+Search criteria can include explanations in the form of comments. There are
+three comment styles:
+
+=over 4
+
+=item S<C</* C-style comments */>>
+
+These comments start with C</*> and end with C<*/> and can span multiple
+lines.
+
+=item S<C<// C++-style comments>>
+
+These comments start with C<//> and end at the end of the line.
+
+=item S<C<# Shell-style comments>>
+
+These comments start with C<#> and end at the end of the line.
+
+=back
+
+=head2 Grammar
+
+The I<rawhide> search criteria language is like a tiny subset of the I<C>
+language's expression syntax, with a few domain-specific additions. All of
+I<C>'s conditional, logical, relational, equality, arithmetic, and bit
+operators are available. But the only type is integer. There are special
+tokens to represent various things, some built-in symbols, and user-defined
+functions.
+
+Here is the grammar of the search criteria language (BNF with a few
+liberties taken):
+
+  <program> ::=
+        <function-list> <expression> ";" EOF
+      | <function-list> <expression> EOF
+      | <function-list> EOF
+
+  <function-list> ::=
+        <function> <function-list>
+      | EMPTY
+
+  <function> ::=
+      IDENTIFIER <parameters> "{" <return> <expression> <eos> "}"
+
+  <return> ::=
+        "return"
+      | EMPTY
+
+  <eos> == >
+        ";"
+      | EMPTY
+
+  <parameters> ::=
+        "(" <id-list> ")"
+      | "(" ")"
+      | EMPTY
+
+  <id-list> ::=
+      IDENTIFIER <id-tail>
+
+  <id-tail> ::=
+        "," <id-list>
+      | EMPTY
+
+  <expression> ::= <or> "?" <expression> ":" <expression> | <or>
+
+  <or> ::= <and> "||" <or> | <and>
+
+  <and> ::= <bitor> "&&" <and> | <bitor>
+
+  <bitor> ::= <bitxor> "|" <bitor> | <bitxor>
+
+  <bitxor> ::= <bitand> "^" <bitxor> | <bitand>
+
+  <bitand> ::= <eq> "&" <bitand> | <eq>
+
+  <eq> ::= <rel> <eq-op> <rel> | <rel>
+  <eq-op> ::= "==" | "!="
+
+  <rel> ::= <shift> <rel-op> <shift> | <shift>
+  <rel-op> ::= "<" | ">" | "<=" | ">="
+
+  <shift> ::= <add> <shift-op> <shift> | <add>
+  <shift-op> ::= "<<" | ">>"
+
+  <add> ::= <mul> <add-op> <add> | <mul>
+  <add-op> ::= "+" | "-"
+
+  <mul> ::= <unary> <mul-op> <mul> | <unary>
+  <mul-op> ::= "*" | "/" | "%"
+
+  <unary> ::= <unary-op> <unary> | <factor>
+  <unary-op> ::= "-" | "~" | "!"
+
+  <factor> ::=
+        <number>
+      | <user-id>
+      | <group-id>
+      | "[" <date-time> "]"
+      | <pattern>
+      | <reference-file>
+      | <built-in>
+      | <function-call>
+      | <parameter>
+      | "(" <expression> ")"
+
+  <number> ::=
+        DECIMAL
+      | DECIMAL NOSPACE <scale>
+      | "0" NOSPACE OCTAL
+      | "0x" NOSPACE HEXADECIMAL
+
+  <scale> ::=
+        "K" | "M" | "G" | "T" | "P" | "E"
+      | "k" | "m" | "g" | "t" | "p" | "e"
+
+  <user-id> ::=
+        "$" NOSPACE USERNAME
+      | "$$"
+
+  <group-id> ::=
+        "@" NOSPACE GROUPNAME
+      | "@@"
+
+  <date-time> ::=
+        DECIMAL "/" DECIMAL "/" DECIMAL
+      | DECIMAL "/" DECIMAL "/" DECIMAL DECIMAL
+      | DECIMAL "/" DECIMAL "/" DECIMAL DECIMAL ":" DECIMAL
+      | DECIMAL "/" DECIMAL "/" DECIMAL DECIMAL ":" DECIMAL ":" DECIMAL
+
+  <pattern> ::=
+        STRING
+      | STRING NOSPACE "." NOSPACE <pattern-modifier>
+
+  <pattern-modifier> ::=
+        "i"     | "path"   | "ipath"   | "link"   | "ilink"
+      | "acl"   | "iacl"   | "ea"      | "iea"    | "re"
+      | "rei"   | "repath" | "reipath" | "relink" | "reilink"
+      | "reacl" | "reiacl" | "reea"    | "reiea"  | "sh"
+
+  <reference-file> ::=
+      STRING NOSPACE "." NOSPACE <reference-file-field>
+
+  <reference-file-field> ::=
+        "exists"  | "dev"      | "major"    | "minor"   | "ino"
+      | "mode"    | "type"     | "perm"     | "nlink"   | "uid"
+      | "gid"     | "rdev"     | "rmajor"   | "rminor"  | "size"
+      | "blksize" | "blocks"   | "atime"    | "mtime"   | "ctime"
+      | "strlen"  | "inode"    | "nlinks"   | "user"    | "group"
+      | "sz"      | "accessed" | "modified" | "changed" | "len"
+
+  <built-in> ::=
+        "dev"      | "major"      | "minor"    | "ino"      | "mode"
+      | "nlink"    | "uid"        | "gid"      | "rdev"     | "rmajor"
+      | "rminor"   | "size"       | "blksize"  | "blocks"   | "atime"
+      | "mtime"    | "ctime"      | "nouser"   | "nogroup"  | "readable"
+      | "writable" | "executable" | "strlen"   | "depth"    | "prune"
+      | "trim"     | "exit"       | "now"      | "today"    | "second"
+      | "minute"   | "hour"       | "day"      | "week"     | "month"
+      | "year"     | "IFREG"      | "IFDIR"    | "IFLNK"    | "IFCHR"
+      | "IFBLK"    | "IFSOCK"     | "IFIFO"    | "IFDOOR"   | "IFMT"
+      | "ISUID"    | "ISGID"      | "ISVTX"    | "IRWXU"    | "IRUSR"
+      | "IWUSR"    | "IXUSR"      | "IRWXG"    | "IRGRP"    | "IWGRP"
+      | "IXGRP"    | "IRWXO"      | "IROTH"    | "IWOTH"    | "IXOTH"
+      | "texists"  | "tdev"       | "tmajor"   | "tminor"   | "tino"
+      | "tmode"    | "tnlink"     | "tuid"     | "tgid"     | "trdev"
+      | "trmajor"  | "trminor"    | "tsize"    | "tblksize" | "tblocks"
+      | "tatime"   | "tmtime"     | "tctime"   | "tstrlen"
+
+  <function-call> ::=
+      IDENTIFIER <arguments>
+
+  <arguments> ::=
+        "(" <expr-list> ")"
+      | "(" ")"
+      | EMPTY
+
+  <expr-list> ::=
+      <expression> <expr-tail>
+
+  <expr-tail> ::=
+        "," <expr-list>
+      | EMPTY
+
+  <parameter> ::=
+      IDENTIFIER
+
+=head2 Operators
+
+The following I<C> operators are available (presented in groups of
+increasing precedence):
+
+  ?:  Conditional (i.e., condition-expr ? if-expr : else-expr)
+
+  ||  Logical or
+
+  &&  Logical and
+
+  |   Bit or
+
+  ^   Bit exclusive or
+
+  &   Bit and
+
+  ==  Equals
+  !=  Not equals
+
+  <   Less than
+  >   Greater than
+  <=  Less than or equal to
+  >=  Greater than or equal to
+
+  <<  Bit shift left
+  >>  Bit shift right
+
+  +   Addition
+  -   Subtraction
+
+  *   Multiplication
+  /   Division
+  %   Modulo (remainder)
+
+  -   Minus (unary)
+  ~   Bit not (unary)
+  !   Logical not (unary)
+
+Parentheses override operator precedence (e.g., S<C<(1 + 2) * 3>>).
+
+Like in I<C>, the C<?:> and C<||> and C<&&> operators use "short-circuit"
+evaluation.
+
+With the ternary I<conditional> operator (C<?:>), the second operand is only
+evaluated when the first operand evaluates to true (i.e., non-zero), and the
+third operand is only evaluated when the first operand evaluates to false
+(i.e., zero).
+
+With the I<logical or> operator (C<||>), the second operand is only
+evaluated when the first operand evaluates to false. Otherwise, it is not
+necessary.
+
+With the I<logical and> operator (C<&&>), the second operand is only
+evaluated when the first operand evaluates to true. Otherwise, it is not
+necessary.
+
+This matters when using the C<prune>, C<trim>, or C<exit> built-ins (see
+below), because they have control flow side-effects when they are
+evaluated. It is also important when using the C<texists> built-in, the C<sh> "pattern"
+modifier, and the C<exists> reference file field (see below).
+
+All the other binary operators always evaluate both operands.
+
+=head2 Numbers
+
+Numeric constants can be decimal, octal (starting with C<0>), or hexadecimal
+(starting with C<0x>). All numbers are integers. And everything is a number.
+
+Decimal numbers can have a suffix letter that indicates the scale (e.g.,
+C<10K>), in units based on 1024 (upper case), or based on 1000 (lower case):
+
+  K = Kibibytes (KiB, units of 1024)
+  M = Mebibytes (MiB, units of 1024^2)
+  G = Gibibytes (GiB, units of 1024^3)
+  T = Tebibytes (TiB, units of 1024^4)
+  P = Pebibytes (PiB, units of 1024^5)
+  E = Exbibytes (EiB, units of 1024^6)
+
+  k = Kilobytes  (KB, units of 1000)
+  m = Megabytes  (MB, units of 1000^2)
+  g = Gigabytes  (GB, units of 1000^3)
+  t = Terabytes  (TB, units of 1000^4)
+  p = Petabytes  (PB, units of 1000^5)
+  e = Exabytes   (EB, units of 1000^6)
+
+=head2 Strings
+
+String literals are enclosed in double quotes (C<""">). Any double quote
+characters in the string must be quoted with a preceding backslash character
+(C<"\">). Backslashes can also be quoted with a preceding backslash. Any
+backslashes that do not precede a double quote or another backslash are
+treated as normal characters, and are included in the string.
+
+Strings usually contain a pattern to match against file names (or certain
+other information associated with files). The value of a pattern string is
+whether or not the pattern match succeeded. Strings can also contain a shell
+command to execute. The value of a shell command string is the exit success
+status of the command. See the B<Pattern matching> and B<Pattern modifiers>
+sections below for details. Strings can also contain the path of a reference
+file to use for comparison purposes. See the B<Reference file fields>
+section below for details.
+
+=head2 User IDs
+
+A token starting with a dollar sign (C<"$">) immediately followed by a user
+name evaluates to that user's user ID. It is assumed that user names consist
+entirely of letters, digits, and dot (C<".">), dash (C<"-">), and underscore
+characters (C<"_">). All non-I<ASCII> characters (I<UTF-8> or I<ISO-8859-*>)
+are considered to be "letters".
+
+The token C<$$> evaluates to the current user's user ID.
+
+=head2 Group IDs
+
+A token starting with an at sign (C<"@">) immediately followed by a group
+name evaluates to that group's group ID. It is assumed that group names
+consist entirely of letters, digits, and dot (C<".">), dash (C<"-">), and
+underscore characters (C<"_">). All non-I<ASCII> characters (I<UTF-8> or
+I<ISO-8859-*>) are considered to be "letters".
+
+The token C<@@> evaluates to the current user's primary group ID.
+
+=head2 Dates and date/times
+
+Dates and date/times can be specified between square brackets (C<"[]">)
+(i.e., C<[>I<YYYY>C</>I<MM>C</>I<DD>C<]> and C<[>I<YYYY>C</>I<MM>C</>I<DD>
+I<hh>C<:>I<mm>C<:>I<ss>C<]>). They are interpreted as being in the local
+time zone. If the year is specified as a number below 100, then it is
+interpreted as being a year in the current century. Hours must be in 24-hour
+time, not 12-hour time. The seconds component is optional if it is zero
+(i.e., C<[>I<YYYY>C</>I<MM>C</>I<DD> I<hh>C<:>I<mm>C<]>). The minutes
+component is also optional if both it and the seconds are zero (i.e.,
+C<[>I<YYYY>C</>I<MM>C</>I<DD> I<hh>C<]>). The hours component is also
+optional if it and the minutes and seconds are all zero (i.e.,
+midnight). Then, it's just a date. Dates and date/times evaluate to the corresponding
+number of seconds since the I<UNIX> epoch.
+
+Note that if the month, day, hours, minutes, or seconds are outside their
+valid ranges, the date or date/time is normalized so that, for example, the
+40th of October is interpreted as the 9th of November, and the time
+C<25:90:90> is interpreted as C<2:31:30> the following day. See I<mktime(3)>
+for details.
+
+=head2 Functions
+
+Functions can be defined to give names to expressions, and to make those
+names available for use in subsequent expressions. Function names can't be
+the same as the names of any existing functions or built-in symbols.
+
+  f() { return expr; }
+
+Functions can only contain a return statement or expression. The C<return>
+keyword and semicolon (C<";">) are optional.
+
+  f() { expr }
+
+Functions can have parameters. Parameter names can't be the same as the
+names of any existing functions or built-in symbols.
+
+  f(x, y, z) { (x + y) * z }
+
+Functions with no parameters can be defined and called with or without
+parentheses.
+
+  f() { expr }
+  g { f }
+  g()
+
+A function can only be called if its definition has already been encountered
+by the parser. So recursive functions are possible, but mutually recursive
+functions are not.
+
+The names of functions and parameters must start with a letter or underscore
+character (C<"_">), which can be followed by letters, underscores, and
+digits. All non-I<ASCII> characters (I<UTF-8> or I<ISO-8859-*>) are
+considered to be "letters".
+
+=head2 Built-in symbols
+
+There are various built-in symbols representing inode metadata (i.e.,
+I<stat(2)> structure fields), constants, and other useful information.
+
+=over 4
+
+=item C<dev>
+
+The device number of the device/filesystem that the current candidate file
+resides on. This is the C<st_dev> field of the corresponding I<stat(2)>
+structure. See the related C<major> and C<minor> built-ins (next) for
+extracting the major and minor device numbers from C<dev>.
+
+=item C<major>
+
+The major device number of the device/filesystem that the current candidate
+file resides on. This is part of the C<st_dev> field of the corresponding
+I<stat(2)> structure.
+
+=item C<minor>
+
+The minor device number of the device/filesystem that the current candidate
+file resides on. This is part of the C<st_dev> field of the corresponding
+I<stat(2)> structure.
+
+=item C<ino>
+
+The inode number of the current candidate file. This is the C<st_ino> field
+of the corresponding I<stat(2)> structure.
+
+=item C<mode>
+
+The mode of the current candidate file. This is the C<st_mode> field of the
+corresponding I<stat(2)> structure. This contains the file type and
+permissions. The "standard" library provides the C<type> and C<perm>
+functions (among others) for extracting the file type and permissions from
+C<mode>.
+
+=item C<nlink>
+
+The number of hard links to the current candidate file. This is the
+C<st_nlink> field of the corresponding I<stat(2)> structure.
+
+=item C<uid>
+
+The user ID of the owner of the current candidate file. This is the
+C<st_uid> field of the corresponding I<stat(2)> structure.
+
+=item C<gid>
+
+The group ID of the group of the current candidate file. This is the
+C<st_gid> field of the corresponding I<stat(2)> structure.
+
+=item C<rdev>
+
+The device number of the current candidate file. This is the C<st_rdev>
+field of the corresponding I<stat(2)> structure. This is only meaningful for
+character devices and block devices. See the related C<rmajor> and C<rminor>
+built-ins (next) for extracting the major and minor device numbers from
+C<rdev>.
+
+=item C<rmajor>
+
+The major device number of the current candidate file. This is part of the
+C<st_rdev> field of the corresponding I<stat(2)> structure. This is only
+meaningful for character devices and block devices.
+
+=item C<rminor>
+
+The minor device number of the current candidate file. This is part of the
+C<st_rdev> field of the corresponding I<stat(2)> structure. This is only
+meaningful for character devices and block devices.
+
+=item C<size>
+
+The size in bytes of the current candidate file. This is the C<st_size>
+field of the corresponding I<stat(2)> structure.
+
+For candidate symlinks (that are not followed with the C<-y> or C<-Y>
+option), this is the length in bytes of the target path.
+
+For candidate directories that are readable, this is not the C<st_size>
+field of the corresponding I<stat(2)> structure. Instead, this is the number
+of entries it contains (excluding C<.> and C<..>).
+
+For candidate directories that are unreadable (and everything else), this is
+the usual (undocumented) C<st_size> field of the corresponding I<stat(2)>
+structure.
+
+=item C<blksize>
+
+The preferred block size for efficient I/O on the current candidate file's
+filesystem. This is the C<st_blksize> field of the corresponding I<stat(2)>
+structure. On some filesystems (e.g., I<zfs>), this is specific to each
+file, rather than to the whole filesystem.
+
+Note that this is unrelated to the C<blocks> built-in (see next).
+
+=item C<blocks>
+
+The number of 512-byte blocks occupied by the current candidate file. This
+is the C<st_blocks> field of the corresponding I<stat(2)> structure.
+
+=item C<atime>
+
+The time that the current candidate file was last accessed. This is the
+C<st_atime> field of the corresponding I<stat(2)> structure.
+
+=item C<mtime>
+
+The time that the current candidate file's contents were last modified. This
+is the C<st_mtime> field of the corresponding I<stat(2)> structure.
+
+=item C<ctime>
+
+The time that the current candidate file's inode was last changed. This is
+the C<st_ctime> field of the corresponding I<stat(2)> structure.
+
+=item C<nouser>
+
+This is true (i.e., non-zero) when the current candidate file's C<uid> does
+not correspond to any user in the user database (e.g., the local
+password file C</etc/passwd>, I<NIS>, and I<LDAP>).
+
+=item C<nogroup>
+
+This is true (i.e., non-zero) when the current candidate file's C<gid> does
+not correspond to any group in the group database (e.g., the local group
+file C</etc/group>, I<NIS>, and I<LDAP>).
+
+=item C<readable>
+
+This is true (i.e., non-zero) when the current candidate file is readable by
+the current user. This uses the I<access(2)> system call, rather than the
+file permissions.
+
+=item C<writable>
+
+This is true (i.e., non-zero) when the current candidate file is writable by
+the current user. This uses the I<access(2)> system call, rather than the
+file permissions.
+
+=item C<executable>
+
+This is true (i.e., non-zero) when the current candidate file is executable
+by the current user. This uses the I<access(2)> system call, rather than the
+file permissions.
+
+=item C<strlen>
+
+This is the length in bytes of the base name of the current candidate
+file. Note that this is zero for the root directory (C</>) which has no base name.
+
+=item C<depth>
+
+This is the depth of the current candidate file relative to the starting
+search directory. The starting search directory itself has depth C<0>. Its
+children have depth C<1>, and so on.
+
+=item C<prune>
+
+This always evaluates to true (i.e., non-zero), and as a side-effect, causes
+the directory tree being searched to be "pruned". This means that the
+current candidate file will not match, and if it is a directory, it will not
+be searched. This can be used to speed up a search.
+
+C<prune> needs to be used with the C<?:> or C<||> or C<&&> operator (see
+above) to conditionally skip part of a directory tree and search the rest.
+
+C<prune> and the C<-D> (depth-first) option are incompatible. When the C<-D>
+option is used, C<prune> will not work. It will not prevent searching below
+the current candidate path. The same applies to the C<-U> (unlink) option,
+which implies the C<-D> option.
+
+Note: This is counter-intuitive. C<prune> evaluates to true, even though it
+effectively causes the file test expression as a whole to evaluate to false
+(i.e., zero), in order to prevent the current candidate file from
+matching. The reason that C<prune> evaluates to true rather than false, is to make it
+possible to have expressions like S<C<(bad && prune || good)>> as a syntactic
+alternative to S<C<(bad ? prune : good)>>.
+
+Note: The C<prune> and C<trim> built-ins are very similar (see next). They
+both prevent searching below the current candidate path. The only difference
+between them is whether or not the current candidate path itself is also
+prevented from matching. Use C<prune> when the current candidate path needs
+to be excluded. Use C<trim> when it needs to be included. You can think of
+C<prune> as a heavy C<trim>.
+
+=item C<trim>
+
+This always evaluates to true (i.e., non-zero), and as a side-effect, causes
+the directory tree being searched to be "trimmed". This means that if the
+current candidate file is a directory, it will not be searched (like
+C<prune>). Unlike C<prune>, the current candidate file itself is not
+prevented from matching. So this has no side-effect when the current
+candidate file is not a directory. This can be used to speed up a search.
+
+C<trim> needs to be used with the C<?:> or C<||> or C<&&> operator (see
+above) to conditionally skip part of a directory tree and search the rest.
+
+C<trim> and the C<-D> (depth-first) option are incompatible. When the C<-D>
+option is used, C<trim> will not work. It will not prevent searching below
+the current candidate path. The same applies to the C<-U> (unlink) option,
+which implies the C<-D> option.
+
+Note: The C<trim> and C<prune> built-ins are very similar (see above). They
+both prevent searching below the current candidate path. The only difference
+between them is whether or not the current candidate path itself is also
+prevented from matching. Use C<trim> when the current candidate path needs
+to be included. Use C<prune> when it needs to be excluded. You can think of
+C<trim> as a light C<prune>.
+
+=item C<exit>
+
+This always evaluates to true (i.e., non-zero), and as a side-effect, causes
+the search to terminate immediately after the current candidate file. This
+can be used to find the first matching file, and then stop.
+
+C<exit> needs to be used with the C<?:> or C<||> or C<&&> operator (see
+above) to conditionally terminate the search.
+
+C<exit> can be used in combination with C<prune> and/or C<trim> (see above)
+(e.g., S<C<bad && prune || good && exit>>).
+
+=item C<now>
+
+The current time (when I<rh(1)> started) in seconds since the I<UNIX> epoch.
+
+=item C<today>
+
+The time last midnight (local time) in seconds since the I<UNIX> epoch.
+
+=item C<second>
+
+The value C<1>.
+
+=item C<minute>
+
+The number of seconds in a minute.
+
+=item C<hour>
+
+The number of seconds in an hour.
+
+=item C<day>
+
+The number of seconds in a day.
+
+=item C<week>
+
+The number of seconds in a week.
+
+=item C<month>
+
+The average number of seconds in a month.
+
+=item C<year>
+
+The average number of seconds in a year.
+
+=item C<IFMT>
+
+The same as the C<S_IFMT> bit mask from I<C>'s C<< <sys/stat.h> >> header
+file. This bit mask represents the bits in the C<mode> that represent the
+file type. The file type is S<C<(mode & IFMT>)> (see next), and the file
+permissions are S<C<(mode & ~IFMT)>> (see below).
+
+=item C<IFREG>, C<IFDIR>, C<IFLNK>, C<IFCHR>, C<IFBLK>, C<IFSOCK>, C<IFIFO>, C<IFDOOR>
+
+The same as the corresponding C<"S_"> values from I<C>'s C<< <sys/stat.h> >>
+header file. These values correspond to the different types of filesystem
+entry (i.e., regular file, directory, symbolic link, character device, block
+device, socket, fifo/pipe, and door, respectively). C<IFDOOR> only applies
+to I<Solaris>.
+
+=item C<ISUID>, C<ISGID>, C<ISVTX>
+
+The same as the corresponding C<"S_"> bit masks from I<C>'s C<< <sys/stat.h>
+>> header file. These bit masks correspond to the setuid, setgid, and sticky
+bits in file permissions (i.e., C<--S------>, C<-----S--->, and
+C<--------T>, respectively (aka C<04000>, C<02000>, and C<01000>)).
+
+=item C<IRWXU>, C<IRUSR>, C<IWUSR>, C<IXUSR>
+
+The same as the corresponding C<"S_"> bit masks from I<C>'s C<< <sys/stat.h>
+>> header file. These bit masks correspond to the user/owner file
+permissions (i.e., C<rwx------>, C<r-------->, C<-w------->, and
+C<--x------>, respectively (aka C<0700>, C<0400>, C<0200>, and C<0100>)).
+
+=item C<IRWXG>, C<IRGRP>, C<IWGRP>, C<IXGRP>
+
+The same as the corresponding C<"S_"> bit masks from I<C>'s C<< <sys/stat.h>
+>> header file. These bit masks correspond to the group file permissions
+(i.e., C<---rwx--->, C<---r----->, C<----w---->, and C<-----x--->,
+respectively (aka C<0070>, C<0040>, C<0020>, and C<0010>)).
+
+=item C<IRWXO>, C<IROTH>, C<IWOTH>, C<IXOTH>
+
+The same as the corresponding C<"S_"> bit masks from I<C>'s C<< <sys/stat.h>
+>> header file. These bit masks correspond to the other/world file
+permissions (i.e., C<------rwx>, C<------r-->, C<-------w->, and
+C<--------x>, respectively (aka C<0007>, C<0004>, C<0002>, and C<0001>)).
+
+=item C<texists>
+
+This is true (i.e., non-zero) when the current candidate file is a symlink
+whose ultimate target exists (i.e., when I<rh(1)> can obtain its I<stat(2)>
+structure information). Note that a false value (i.e., zero) might be due to
+permissions, rather than non-existence.
+
+It should be used with the C<?:> or C<||> or C<&&> operator (see above) to
+conditionally use any of the following I<stat(2)> structure fields relating
+to symlink targets. Unless the target exists, their values are all zero and
+meaningless.
+
+Note: The C<-Y> option is incompatible with this built-in. The only symlinks
+seen will be broken ones, and this built-in will return zero.
+
+Note: Even without the C<-y> or C<-Y> option (so symlinks are not followed
+for the purpose of searching), symlinks are followed for the purpose of
+obtaining the I<stat(2)> structure information of the current candidate
+symlink's ultimate target so as to support the following target-related
+built-in symbols.
+
+=item C<tdev>
+
+The device number of the device/filesystem that the current candidate
+symlink's ultimate target resides on. This is the C<st_dev> field of the
+corresponding I<stat(2)> structure. See the related C<tmajor> and C<tminor>
+built-ins (next) for extracting the major and minor device numbers from
+C<tdev>.
+
+This should only be used when the current candidate file is a symlink, and
+when its ultimate target exists (i.e., when C<texists> is true). Otherwise,
+this is zero.
+
+Note: The C<-Y> option is incompatible with this built-in. The only symlinks
+seen will be broken ones, and this built-in will return zero.
+
+=item C<tmajor>
+
+The major device number of the device/filesystem that the current candidate
+symlink's ultimate target resides on. This is part of the C<st_dev> field of
+the corresponding I<stat(2)> structure.
+
+This should only be used when the current candidate file is a symlink, and
+when its ultimate target exists (i.e., when C<texists> is true). Otherwise,
+this is zero.
+
+Note: The C<-Y> option is incompatible with this built-in. The only symlinks
+seen will be broken ones, and this built-in will return zero.
+
+=item C<tminor>
+
+The minor device number of the device/filesystem that the current candidate
+symlink's ultimate target resides on. This is part of the C<st_dev> field of
+the corresponding I<stat(2)> structure.
+
+This should only be used when the current candidate file is a symlink, and
+when its ultimate target exists (i.e., when C<texists> is true). Otherwise,
+this is zero.
+
+Note: The C<-Y> option is incompatible with this built-in. The only symlinks
+seen will be broken ones, and this built-in will return zero.
+
+=item C<tino>
+
+The inode number of the current candidate symlink's ultimate target. This is
+the C<st_ino> field of the corresponding I<stat(2)> structure.
+
+This should only be used when the current candidate file is a symlink, and
+when its ultimate target exists (i.e., when C<texists> is true). Otherwise,
+this is zero.
+
+Note: The C<-Y> option is incompatible with this built-in. The only symlinks
+seen will be broken ones, and this built-in will return zero.
+
+=item C<tmode>
+
+The mode of the current candidate symlink's ultimate target. This is the
+C<st_mode> field of the corresponding I<stat(2)> structure. This contains
+the file type and permissions. The "standard" library provides the C<ttype>
+and C<tperm> functions (among others) for extracting the file type and
+permissions from C<tmode>.
+
+This should only be used when the current candidate file is a symlink, and
+when its ultimate target exists (i.e., when C<texists> is true). Otherwise,
+this is zero.
+
+Note: The C<-Y> option is incompatible with this built-in. The only symlinks
+seen will be broken ones, and this built-in will return zero.
+
+=item C<tnlink>
+
+The number of hard links to the current candidate symlink's ultimate
+target. This is the C<st_nlink> field of the corresponding I<stat(2)> structure.
+
+This should only be used when the current candidate file is a symlink, and
+when its ultimate target exists (i.e., when C<texists> is true). Otherwise,
+this is zero.
+
+Note: The C<-Y> option is incompatible with this built-in. The only symlinks
+seen will be broken ones, and this built-in will return zero.
+
+=item C<tuid>
+
+The user ID of the owner of the current candidate symlink's ultimate
+target. This is the C<st_uid> field of the corresponding I<stat(2)> structure.
+
+This should only be used when the current candidate file is a symlink, and
+when its ultimate target exists (i.e., when C<texists> is true). Otherwise,
+this is zero.
+
+Note: The C<-Y> option is incompatible with this built-in. The only symlinks
+seen will be broken ones, and this built-in will return zero.
+
+=item C<tgid>
+
+The group ID of the group of the current candidate symlink's ultimate
+target. This is the C<st_gid> field of the corresponding I<stat(2)>
+structure.
+
+This should only be used when the current candidate file is a symlink, and
+when its ultimate target exists (i.e., when C<texists> is true). Otherwise,
+this is zero.
+
+Note: The C<-Y> option is incompatible with this built-in. The only symlinks
+seen will be broken ones, and this built-in will return zero.
+
+=item C<trdev>
+
+The device number of the current candidate symlink's ultimate target. This
+is the C<st_rdev> field of the corresponding I<stat(2)> structure. This is
+only meaningful for character devices and block devices. See the related
+C<trmajor> and C<trminor> built-ins (next) for extracting the major and
+minor device numbers from C<trdev>.
+
+This should only be used when the current candidate file is a symlink, and
+when its ultimate target exists (i.e., when C<texists> is true). Otherwise,
+this is zero.
+
+Note: The C<-Y> option is incompatible with this built-in. The only symlinks
+seen will be broken ones, and this built-in will return zero.
+
+=item C<trmajor>
+
+The major device number of the current candidate symlink's ultimate
+target. This is part of the C<st_rdev> field of the corresponding I<stat(2)>
+structure. This is only meaningful for character devices and block devices.
+
+This should only be used when the current candidate file is a symlink, and
+when its ultimate target exists (i.e., when C<texists> is true). Otherwise,
+this is zero.
+
+Note: The C<-Y> option is incompatible with this built-in. The only symlinks
+seen will be broken ones, and this built-in will return zero.
+
+=item C<trminor>
+
+The minor device number of the current candidate symlink's ultimate
+target. This is part of the C<st_rdev> field of the corresponding I<stat(2)>
+structure. This is only meaningful for character devices and block devices.
+
+This should only be used when the current candidate file is a symlink, and
+when its ultimate target exists (i.e., when C<texists> is true). Otherwise,
+this is zero.
+
+Note: The C<-Y> option is incompatible with this built-in. The only symlinks
+seen will be broken ones, and this built-in will return zero.
+
+=item C<tsize>
+
+The size in bytes of the current candidate symlink's ultimate target
+file. This is the C<st_size> field of the corresponding I<stat(2)> structure.
+
+For an ultimate target that is a readable directory, this is not the
+C<st_size> field of the corresponding I<stat(2)> structure. Instead, this is
+the number of entries it contains (excluding C<.> and C<..>).
+
+For an ultimate target that is an unreadable directory (and everything
+else), this is the usual (undocumented) C<st_size> field of the
+corresponding I<stat(2)> structure.
+
+This should only be used when the current candidate file is a symlink, and
+when its ultimate target exists (i.e., when C<texists> is true). Otherwise,
+this is zero.
+
+Note: The C<-Y> option is incompatible with this built-in. The only symlinks
+seen will be broken ones, and this built-in will return zero.
+
+=item C<tblksize>
+
+The preferred block size for efficient I/O on the current candidate
+symlink's ultimate target's filesystem. This is the C<st_blksize> field of
+the corresponding I<stat(2)> structure. On some filesystems (e.g., I<zfs>),
+this is specific to each file, rather than to the whole filesystem.
+
+Note that this is unrelated to the C<tblocks> built-in (see next).
+
+This should only be used when the current candidate file is a symlink, and
+when its ultimate target exists (i.e., when C<texists> is true). Otherwise,
+this is zero.
+
+Note: The C<-Y> option is incompatible with this built-in. The only symlinks
+seen will be broken ones, and this built-in will return zero.
+
+=item C<tblocks>
+
+The number of 512-byte blocks occupied by the current candidate symlink's
+ultimate target. This is the C<st_blocks> field of the corresponding
+I<stat(2)> structure.
+
+This should only be used when the current candidate file is a symlink, and
+when its ultimate target exists (i.e., when C<texists> is true). Otherwise,
+this is zero.
+
+Note: The C<-Y> option is incompatible with this built-in. The only symlinks
+seen will be broken ones, and this built-in will return zero.
+
+=item C<tatime>
+
+The time that the current candidate symlink's ultimate target was last
+accessed. This is the C<st_atime> field of the corresponding I<stat(2)>
+structure.
+
+This should only be used when the current candidate file is a symlink, and
+when its ultimate target exists (i.e., when C<texists> is true). Otherwise,
+this is zero.
+
+Note: The C<-Y> option is incompatible with this built-in. The only symlinks
+seen will be broken ones, and this built-in will return zero.
+
+=item C<tmtime>
+
+The time that the current candidate symlink's ultimate target's contents
+were last modified. This is the C<st_mtime> field of the corresponding
+I<stat(2)> structure.
+
+This should only be used when the current candidate file is a symlink, and
+when its ultimate target exists (i.e., when C<texists> is true). Otherwise,
+this is zero.
+
+Note: The C<-Y> option is incompatible with this built-in. The only symlinks
+seen will be broken ones, and this built-in will return zero.
+
+=item C<tctime>
+
+The time that the current candidate symlink's ultimate target's inode was
+last changed. This is the C<st_ctime> field of the corresponding I<stat(2)>
+structure.
+
+This should only be used when the current candidate file is a symlink, and
+when its ultimate target exists (i.e., when C<texists> is true). Otherwise,
+this is zero.
+
+Note: The C<-Y> option is incompatible with this built-in. The only symlinks
+seen will be broken ones, and this built-in will return zero.
+
+=item C<tstrlen>
+
+This is the length in bytes of the base name of the current candidate
+symlink's immediate target path. Note that this is zero if the target path
+is the root directory (C</>) which has no base name.
+
+This should only be used when the current candidate file is a
+symlink. Otherwise, this is zero. But the ultimate target does not need to exist.
+
+Note: The C<-Y> option affects this built-in. The only symlinks seen will be
+broken ones, but this built-in will still return the correct length.
+
+=back
+
+=head2 Pattern matching
+
+By default, string literals (C<">I<pattern>C<">) contain shell-style file
+glob patterns that are matched against each candidate file's base name. See
+the B<Pattern modifiers> section below for variations.
+
+Pattern strings evaluate to true (i.e., non-zero) if the pattern match
+succeeds, or false (i.e., zero) otherwise.
+
+The following I<POSIX> glob pattern notation is supported on all platforms:
+
+=over 4
+
+=item C<?>
+
+Matches any single character. A leading dot character (C<".">) is not
+treated as a special character. For example, C<?profile> would match
+C<.profile>. This is unlike C</bin/sh> behaviour, but it is like I<POSIX
+find(1)> behaviour.
+
+=item C<*>
+
+Matches any string of characters, including the empty string. A leading dot
+character (C<".">) is not treated as a special character. For example, C<*>
+would match C<.profile>. This is unlike C</bin/sh> behaviour, but it is like
+I<POSIX find(1)> behaviour.
+
+=item C<[abc]>
+
+Matches any single character in the given set. Ranges of characters can be
+specified (e.g., C<[a-z0-9]>).
+
+=item C<[!abc]>
+
+Matches any single character that is not in the given set. Ranges of
+characters can be specified (e.g., C<[!A-Z]>).
+
+And although it's non-standard (i.e., officially undefined), on most systems
+you can use the more familiar C<^> instead of C<!> to complement the set in
+character classes (e.g., C<[^abc]>), but not on I<Solaris>.
+
+=back
+
+Locale-specific character class notation should also be available on all
+platforms (i.e., named character classes like C<[[:lower:]]>, collating
+symbols like C<[[.a-acute.]]>, and equivalence class expressions like
+C<[[=a=]]>), but not all locales support them all.
+
+The special meanings of C<?>, C<*> and C<[> can be removed by quoting them
+with a preceding backslash character (C<"\">).
+
+The following I<Ksh> extended glob pattern notation is supported on
+platforms with I<GNU glibc> (i.e., I<Linux>):
+
+=over 4
+
+=item C<?(a|b|c)>
+
+Matches if zero or one occurrences of any of the sub-patterns match the
+text.
+
+=item C<*(a|b|c)>
+
+Matches if zero or more occurrences of any of the sub-patterns match the
+text.
+
+=item C<+(a|b|c)>
+
+Matches if one or more occurrences of any of the sub-patterns match the
+text.
+
+=item C<@(a|b|c)>
+
+Matches if exactly one occurrence of any of the sub-patterns matches the
+text.
+
+=item C<!(a|b|c)>
+
+Matches if the text cannot be matched by any of the sub-patterns.
+
+=back
+
+The special meanings of C<?>, C<*>, C<+>, C<@>, C<!>, C<(>, C<|> and C<)>
+can be removed by quoting them with a preceding backslash character
+(C<"\">).
+
+The output of S<C<rh --help>> states if I<Ksh> extended glob pattern
+notation is available on the local system.
+
+See I<fnmatch(3)> and I<glob(7)> for more details.
+
+=head2 Pattern modifiers
+
+Pattern modifiers (C<">I<pattern>C<".>I<modifier>) are suffixes to string
+literals that change how the string is interpreted, and what is done with
+it. There must be no spaces around the dot between the string literal and
+the modifier name. The following modifiers exist, but not all are available
+on all systems.
+
+=over 4
+
+=item C<path>
+
+Apply the glob pattern to each candidate file's full path starting from the
+search directory, not just its base name. Slash characters (C<"/">) are not
+treated as special characters. For example, C<"./sr*sc".path> would match
+C<./src/misc>.
+
+Note: Since a slash character can never appear in a file's base name, if a
+glob pattern string with no pattern modifier does contain a slash character
+(e.g., C<"/">), then instead of attempting (and failing) to match it against
+the file's base name, an implicit C<path> pattern modifier is assumed (e.g.,
+C<"/".path>), and it will be matched against the file's full path starting
+from the search directory instead.
+
+=item C<link>
+
+Apply the glob pattern to each candidate symlink's target path, rather than
+its base name. Slash characters (C<"/">) are not treated as special
+characters. For example, C<"./sr*sc".path> would match C<./src/misc>.
+
+=item C<i>
+
+Apply the glob pattern without case-sensitivity. This is available on most
+systems, but maybe not all.
+
+The output of S<C<rh --help>> states if case-insensitive glob matching is
+available on the local system.
+
+=item C<ipath>
+
+Like the C<path> modifier, but apply the glob pattern without
+case-sensitivity. This is available on most systems, but maybe not all.
+
+=item C<ilink>
+
+Like the C<link> modifier, but apply the glob pattern without
+case-sensitivity. This is available on most systems, but maybe not all.
+
+=item C<re>
+
+Match each candidate file's base name against a I<Perl>-compatible regular
+expression (regex) instead of a glob pattern. See I<perlre(1)>,
+I<pcre2pattern(3)>, and I<pcre2syntax(3)> for details. This is available on
+systems that have I<libpcre2-8> installed.
+
+The output of S<C<rh --help>> states whether or not I<Perl>-compatible
+regular expressions are available on the local system.
+
+Regex patterns are not automatically anchored to the start and end, and so
+do not have to match the entire text.
+
+The following I<PCRE2> options are always enabled:
+
+=over 4
+
+=item C<PCRE2_DOTALL>
+
+The C<.> meta-character matches any character, including the newline
+character. This prevents surprises when files have newline characters in
+their names. This is like I<Perl>'s C</s> modifier.
+
+=item C<PCRE2_MULTILINE>
+
+The C<^> meta-character matches after every internal newline character, not
+just at the start. The C<$> meta-character matches before every internal
+newline character, not just at the end. This is useful for access control
+list (ACL) and extended attribute (EA) searches (see below) where the text
+can occupy multiple lines. This is like I<Perl>'s C</m> modifier.
+
+=item C<PCRE2_EXTENDED>
+
+Ignore (outside character classes) most whitespace characters and everything
+from a hash character (C<"#">) until the end of the line. Matching a
+whitespace or hash character requires quoting it with a preceding backslash
+character (C<"\">). Complex regex patterns can be made more readable this
+way, and it enables comments in regex patterns. This is like I<Perl>'s C</x>
+modifier.
+
+=item C<PCRE2_EXTENDED_MORE>
+
+Ignore space and tab characters inside character classes. Matching a space
+or tab in a character class requires quoting it with a preceding backslash
+character (C<"\">). Complex character classes can be made more readable this
+way. This is like I<Perl>'s C</xx> modifier.
+
+=item C<PCRE2_NO_AUTO_CAPTURE>
+
+Prevent parentheses from automatically capturing matching text (i.e., always
+treat C<(>I<...>C<)> as C<(?:>I<...>C<)>). There are no uses for captures in
+I<rh(1)>, and this should make matching ever so slightly smaller and faster,
+without the explicit C<?:>. This is like I<Perl>'s C</n> modifier.
+
+=item C<PCRE2_NEVER_BACKSLASH_C>
+
+Prevent the use of the C<\C> escape sequence. This avoids the possibility of
+breaking apart multi-byte I<UTF-8> characters.
+
+=back
+
+Note that the regex pattern and the text being matched are generally assumed
+to be encoded as I<UTF-8>. If you need to suppress this assumption, set the
+environment variable C<RAWHIDE_PCRE2_NOT_UTF8_DEFAULT=1>. When this
+environment variable is set, individual regex patterns can still enable
+I<UTF-8> interpretation with a leading C<(*UTF)>. This I<UTF-8> assumption
+is made when the locale uses I<UTF-8> (i.e., when the C<$LANG> environment
+variable includes C<"UTF-8">). When the locale doesn't use I<UTF-8>, and you
+want I<rh> to assume that everything is I<UTF-8> anyway, set the environment
+variable C<RAWHIDE_PCRE2_UTF8_DEFAULT=1>.
+
+=item C<repath>
+
+Like the C<re> modifier, but apply the regex to each candidate file's full
+path starting from the search directory, not just its base name.
+
+=item C<relink>
+
+Like the C<re> modifier, but apply the regex to each candidate symlink's
+target path, rather than its base name.
+
+=item C<rei>
+
+Like the C<re> modifier, but apply the regex without case-sensitivity.
+
+=item C<reipath>
+
+Like the C<repath> modifier, but apply the regex without case-sensitivity.
+
+=item C<reilink>
+
+Like the C<relink> modifier, but apply the regex without case-sensitivity.
+
+=item C<acl>
+
+Apply the glob pattern to each candidate file's access control list (ACL),
+rather than its base name.
+
+This is available on systems with I<"POSIX"> ACLs (e.g., I<Linux>,
+I<FreeBSD>, I<Solaris> (for I<ufs>), and I<Cygwin>), and I<NFSv4> ACLs
+(e.g., I<FreeBSD> and I<Solaris> (for I<zfs>)), and I<macOS> with its own
+I<Extended> ACLs. I<OpenBSD> and I<NetBSD> don't do ACLs. See I<acl(2)> or
+I<acl(3)> or I<acl(5)> for more details.
+
+The output of S<C<rh --help>> states if access control lists are available on
+the local system.
+
+I<"POSIX"> ACL text consists of multiple lines, each terminated by a newline
+character. It looks like this:
+
+  user::rwx
+  user:name:rwx
+  group::rwx
+  group:name:rwx
+  mask::rwx
+  other::rwx
+
+I<NFSv4> ACL text comes in two forms. In the compact form, the items look
+like these:
+
+      owner@:rwxp--aARWcCos:-------:allow
+   user:name:rwxp--aARWcCos:-------:allow
+      group@:r-x---a-R-c--s:-------:allow
+  group:name:r-x---a-R-c--s:-------:allow
+   everyone@:r-x---a-R-c--s:-------:allow
+
+In the non-compact form, the items each look something like this:
+
+  owner@:read_data/write_data/append_data/read_xattr/write_xattr
+    /execute/read_attributes/write_attributes/read_acl/write_acl
+    /write_owner/synchronize:allow
+
+Searches can be made for either form. But be warned that the permission
+names in the non-compact form do not always appear in the same order (at
+least on I<Solaris>).
+
+On I<FreeBSD>, I<NFSv4> ACL text has each item on a separate line,
+terminated by a newline character, and there are leading spaces for vertical
+alignment before each item. On I<Solaris>, I<NFSv4> ACL text is a
+comma-separated list of items with no leading spaces and no newline
+character. 
+
+I<macOS> has its own I<Extended> ACLs that look like this:
+
+  !#acl 1
+  user:906E2CAD-E971-12D8-ACB9-000A95DF094B:drew:502:allow:write
+
+An easy way to see what ACLs look like on your system is:
+
+  $ rh -L '%p\n%z\n'
+
+But bear in mind that this reformats multiple lines into a comma-separated
+list. That can be avoided if the locale uses I<UTF-8> and I<jq(1)> is
+installed:
+
+  $ rh -L %j | jq -r .access_control_list
+
+Note that glob patterns are anchored to the start and end, and so must match
+the entire text.
+
+On I<Solaris>, ACLs are always present by default, even if they are
+trivially identical to the file permission bits. This can be convenient, but
+if it seems like noise, it can be silenced (but only on I<Solaris>) by
+setting the environment variable C<RAWHIDE_SOLARIS_ACL_NO_TRIVIAL=1>.
+
+=item C<iacl>
+
+Like the C<acl> modifier, but apply the glob pattern without
+case-sensitivity. This might not be available on all systems.
+
+=item C<reacl>
+
+Like the C<acl> modifier, but match each candidate file's access control
+list (ACL) against a I<Perl>-compatible regular expression (regex) instead
+of a glob pattern. This is available on systems that have I<libpcre2-8>
+installed, and supported access control lists. See the C<re> modifier above
+for more information.
+
+=item C<reiacl>
+
+Like the C<reacl> modifier, but apply the regex without case-sensitivity.
+
+=item C<ea>
+
+Apply the glob pattern to each candidate file's extended attributes (EA),
+rather than its base name.
+
+This is available on I<Linux>, I<FreeBSD>, I<macOS>, I<Solaris>, and
+I<Cygwin>. I<OpenBSD> and I<NetBSD> don't do EAs. See I<xattr(1)> or
+I<xattr(7)> or I<extattr(2)> or I<fsattr(7)> for more details.
+
+The output of S<C<rh --help>> states if extended attributes are available on
+the local system.
+
+The extended attributes text, if any, will be possibly multiple lines, one
+per extended attribute, each terminated by a newline character. Each
+extended attribute starts with its name. If it also has a value, then the
+name is followed by colon and space characters (S<C<": ">>), and then the
+value. Note that on I<macOS>, some extended attribute names contain a colon
+character, but they aren't typically followed by a space character.
+
+Note that any control characters (i.e., I<ASCII> 0-31, 127) in extended
+attribute names or values, and any non-I<ASCII> bytes (i.e., 128-255) in the
+values, will be presented as I<C>-like backslash escape sequences such as
+C<"\n"> for the newline character, and C<"\0"> for the null character, or as
+hexadecimal escape sequences such as C<"\x1b"> for the escape character. Any
+backslash characters are quoted with a preceding backslash. Note that commas
+are not quoted.
+
+This encoding is the text that patterns must be written to match
+against. But you can still match against any text in extended attribute names, and
+I<ASCII>-only text in their values, as you normally would.
+
+Note that glob patterns are anchored to the start and end, and so must match
+the entire text.
+
+On I<FreeBSD>, extended attributes in the I<user> namespace are presented
+with C<"user."> as a prefix to their actual name, and those in the I<system>
+namespace are presented with C<"system."> as a name prefix. On I<FreeBSD>,
+only the C<root> user may see extended attributes in the I<system>
+namespace.
+
+On most systems with extended attributes, the values are typically only up
+to a few hundred bytes in size. But on I<Solaris>, extended attributes take
+the form of regular files in a special extended attributes directory
+"hidden" inside each real file. Entire files can be copied into that special
+directory, and they become extended attributes. So extended attributes could
+tend to be larger on I<Solaris>.
+
+The default maximum total size for (encoded) extended attributes is 4KiB on
+most systems, and 64KiB on I<Solaris>. If this is not enough, extended
+attributes will be silently truncated. This affects extended attribute
+searching (C<ea>), and the S<C<-L %x>> format conversion. To prevent
+truncation, set the environment variable C<RAWHIDE_EA_SIZE> to a positive
+integer value that is large enough for your needs. Note that the value must
+be the size in bytes. Scale units are not supported.
+
+On I<Solaris>, every file's extended attributes directory contains the
+I<SUNWattr_ro> and I<SUNWattr_rw> extended attributes. By default, they are
+included for every file that has any other extended attributes. They can be
+excluded by setting the environment variable
+C<RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1>.
+
+Also on I<Solaris>, since extended attributes are files (of a sort), they
+each have their own I<stat(2)> information. By default, this information is
+represented as an artificial extended attribute whose name is the name of
+the corresponding real extended attribute followed by C<"/stat">. These
+artificial extended attributes have the following format:
+
+  name/stat: -rw-r--r-- nlink user group size mtime atime ctime
+
+The I<name> is the name of the corresponding real extended attribute. The
+C<"/stat:"> is literal. The I<nlink> is always C<1>. The I<user> and
+I<group> are names or numeric IDs. The I<size> is in bytes. The I<mtime>,
+I<atime>, and I<ctime> are in ISO date/time format (C<"YYYY-MM-DD HH:MM:SS
++HHMM">).
+
+This makes it possible on I<Solaris> to search for files by the I<stat(2)>
+information of their extended attributes. But it can only be a text-based
+search (glob or regex).
+
+These artificial extended attributes can be suppressed by setting the
+environment variable C<RAWHIDE_SOLARIS_EA_NO_STATINFO=1>.
+
+=item C<iea>
+
+Like the C<ea> modifier, but apply the glob pattern without
+case-sensitivity. This might not be available on all systems.
+
+=item C<reea>
+
+Like the C<ea> modifier, but match each candidate file's extended attributes
+(EA) against a I<Perl>-compatible regular expression (regex) instead of a
+glob pattern. This is available on systems that have I<libpcre2-8>
+installed, and supported extended attributes. See the C<re> modifier above
+for more information.
+
+=item C<reiea>
+
+Like the C<reea> modifier, but apply the regex without case-sensitivity.
+
+=item C<sh>
+
+This interprets the string literal, not as a pattern at all, but as an
+external shell command to execute via I<system(3)> (i.e., via
+C</bin/sh>). It evaluates to the exit success status of the external shell command. If
+its exit status is zero, then the value is true (i.e., non-zero). Otherwise,
+it is false (i.e., zero).
+
+This enables arbitrary command line utilities to contribute to the search
+criteria. But be warned, this can be slow, because it involves the creation
+of possibly many other processes. But it makes many things possible. To
+reduce the number of external shell commands that need to be executed, the
+C<sh> "pattern" modifier can be used conditionally with the C<?:> or C<||>
+or C<&&> operator (see above).
+
+The string can contain C<%s> which will be replaced with the matching
+entry's full path starting from the search directory. It can also contain
+C<%S> which will be replaced with the matching entry's base name (or with
+C<"/"> when the matching entry is the root directory (C</>) which has no
+base name). For example, given the matching file C</etc/passwd>, C<%s> and
+C<%S> would be replaced with C<"/etc/passwd"> and C<"passwd">,
+respectively. To include a literal per cent sign (C<"%">) in the shell command, use
+C<%%>. It is an error if C<%> is not followed by C<s>, C<S>, or C<%>.
+
+Any shell meta-characters in the interpolated path or base name are quoted
+with preceding backslash characters (C<"\">) to prevent shell command
+injection, so there is no need to place any quote characters around C<%s> or
+C<%S>.
+
+Every shell command is executed after safely changing the current working
+directory to the directory containing each candidate file. This minimizes
+the number of path-based race conditions. So the C<%S> interpolation is more
+likely to be useful than the C<%s> interpolation.
+
+And if the user's C<$PATH> environment variable includes the current working
+directory, or any other non-absolute paths, that could be dangerous, so they
+are automatically removed first.
+
+Note: Since the shell commands are executed from the directory containing
+each matching entry, if they do require the matching entry's full path
+starting from the search directory (i.e., C<%s>), then it's best if the
+starting search paths are all absolute paths, so that C<%s> is always an
+absolute path. Otherwise, the shell command might need to change its current
+working directory back to the initial working directory. Also note that
+C<%s> suffers from many path-based race conditions, which is insecure on
+hosts with malicious local actors that have write access to the directory
+tree being searched, and so should not generally be used.
+
+=back
+
+=head2 Reference file fields
+
+Reference file fields (C<">I</path>C<".>I<field>) are suffixes to string
+literals that represent the inode metadata of arbitrary reference files for
+the purpose of comparison. There must be no spaces around the dot between
+the path string and the field name.
+
+If the path is the empty string (e.g., C<"".>I<field>), then it refers to
+the most recent reference file path encountered by the parser. This makes
+multiple references to the same reference file more concise (e.g.,
+S<C<< "/path".exists && mtime > "".mtime >>>).
+
+The following reference file fields are available.
+
+=over 4
+
+=item C<exists>
+
+This is true (i.e., non-zero) when the reference file exists (i.e., when
+I<rh(1)> can obtain its I<stat(2)> structure information). Note that a false
+value (i.e., zero) might be due to permissions, rather than non-existence.
+
+If there is any chance that a reference file does not exist, then the
+C<exists> field must be used to determine whether or not most of the other
+reference file fields can be used. If a reference file does not exist, and
+any of its I<stat(2)> structure fields below are used in a file test
+expression, an error message will be output, and I<rh(1)> will terminate
+with a non-zero exit status. C<exists> is to be used with the C<?:> or C<||>
+or C<&&> operator (see above) to conditionally use any of the following
+I<stat(2)> structure fields (e.g., S<C<< "/path".exists && size > "".size >>>).
+
+=item C<dev>
+
+The device number of the device/filesystem that the reference file resides
+on. This is the C<st_dev> field of the corresponding I<stat(2)>
+structure. See the related C<major> and C<minor> reference file fields (next) for
+extracting the major and minor device numbers from C<dev>.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<major>
+
+The major device number of the device/filesystem that the reference file
+resides on. This is part of the C<st_dev> field of the corresponding
+I<stat(2)> structure.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<minor>
+
+The minor device number of the device/filesystem that the reference file
+resides on. This is part of the C<st_dev> field of the corresponding
+I<stat(2)> structure.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<ino>
+
+The inode number of the reference file. This is the C<st_ino> field of the
+corresponding I<stat(2)> structure.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<mode>
+
+The mode of the reference file. This is the C<st_mode> field of the
+corresponding I<stat(2)> structure. This contains the file type and
+permissions. See the related C<type> and C<perm> reference file fields
+(next) for extracting the file type and permissions from C<mode>.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<type>
+
+The file type of the reference file (i.e., an alias for S<C<mode & IFMT>>).
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<perm>
+
+The file permissions of the reference file (i.e., an alias for S<C<mode &
+~IFMT>>).
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<nlink>
+
+The number of hard links to the reference file. This is the C<st_nlink> field
+of the corresponding I<stat(2)> structure.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<uid>
+
+The user ID of the owner of the reference file. This is the C<st_uid> field
+of the corresponding I<stat(2)> structure.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<gid>
+
+The group ID of the group of the reference file. This is the C<st_gid> field
+of the corresponding I<stat(2)> structure.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<rdev>
+
+The device number of the reference file. This is the C<st_rdev> field of the
+corresponding I<stat(2)> structure. This is only meaningful for character
+devices and block devices. See the related C<rmajor> and C<rminor> reference
+file fields (next) for extracting the major and minor device numbers from
+C<rdev>.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<rmajor>
+
+The major device number of the reference file. This is part of the
+C<st_rdev> field of the corresponding I<stat(2)> structure. This is only
+meaningful for character devices and block devices.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<rminor>
+
+The minor device number of the reference file. This is part of the
+C<st_rdev> field of the corresponding I<stat(2)> structure. This is only
+meaningful for character devices and block devices.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<size>
+
+The size in bytes of the reference file. This is the C<st_size> field of the
+corresponding I<stat(2)> structure.
+
+For reference files that are symlinks (that are not followed with the C<-y>
+or C<-Y> option), this is the length in bytes of the target path.
+
+For reference files that are readable directories, this is not the
+C<st_size> field of the corresponding I<stat(2)> structure. Instead, this is
+the number of entries it contains (excluding C<.> and C<..>).
+
+For reference files that are unreadable directories (and everything else),
+this is the usual (undocumented) C<st_size> field of the corresponding
+I<stat(2)> structure.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<blksize>
+
+The preferred block size for efficient I/O on the reference file's
+filesystem. This is the C<st_blksize> field of the corresponding I<stat(2)>
+structure. On some filesystems (e.g., I<zfs>), this is specific to each
+file, rather than to the whole filesystem.
+
+Note that this is unrelated to the C<blocks> reference file field (see
+next).
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<blocks>
+
+The number of 512-byte blocks occupied by the reference file. This is the
+C<st_blocks> field of the corresponding I<stat(2)> structure.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<atime>
+
+The time that the reference file was last accessed. This is the C<st_atime>
+field of the corresponding I<stat(2)> structure.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<mtime>
+
+The time that the reference file's contents were last modified. This is the
+C<st_mtime> field of the corresponding I<stat(2)> structure.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<ctime>
+
+The time that the reference file's inode was last changed. This is the
+C<st_ctime> field of the corresponding I<stat(2)> structure.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<strlen>
+
+The length in bytes of the base name of the reference file. Note that this
+is zero if the reference file is the root directory (C</>) which has no base
+name.
+
+=item C<inode>
+
+An alias for C<ino>.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<nlinks>
+
+An alias for C<nlink>.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<user>
+
+An alias for C<uid>.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<group>
+
+An alias for C<gid>.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<sz>
+
+An alias for C<size>.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<accessed>
+
+An alias for C<atime>.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<modified>
+
+An alias for C<mtime>.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<changed>
+
+An alias for C<ctime>.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<len>
+
+An alias for C<strlen>.
+
+=back
+
+=head1 EXAMPLES
+
+This is the default C</etc/rawhide.conf> "standard" library:
+
+  # /etc/rawhide.conf: rh system-wide configuration.
+  # See rh(1) and rawhide.conf(5) for more information.
+  
+  /*
+  This file constitutes the rawhide "standard" library.
+  
+  On some systems, this file could be somewhere other than /etc
+  (e.g., /usr/local/etc, /opt/local/etc, /usr/pkg/etc).
+  
+  You can modify this file, and/or place additional files
+  in the /etc/rawhide.conf.d directory.
+  They'll be read after this file, in lexicographic order.
+  Any files whose names start with dot are skipped.
+  
+  You can also create your own user-specific rawhide
+  functions in ~/.rhrc and ~/.rhrc.d/*. They'll be read
+  by rh in the same manner after these system-wide files.
+  */
+  
+  
+  // File types (canonical, aliases)
+  
+  type { mode & IFMT }
+  
+  reg  { type == IFREG }
+  dir  { type == IFDIR }
+  blk  { type == IFBLK }
+  chr  { type == IFCHR }
+  lnk  { type == IFLNK }
+  sock { type == IFSOCK }
+  fifo { type == IFIFO }
+  door { type == IFDOOR } # Solaris
+  
+  file      { reg }
+  directory { dir }
+  block     { blk }
+  char      { chr }
+  device    { blk || chr }
+  symlink   { lnk }
+  link      { lnk }
+  socket    { sock }
+  namedpipe { fifo }
+  pipe      { fifo }
+  
+  f { reg }
+  d { dir }
+  b { blk }
+  c { chr }
+  l { lnk }
+  s { sock }
+  p { fifo }
+  D { door } # Solaris
+  
+  
+  // File permissions (canonical, aliases, helpers)
+  
+  perm { mode & ~IFMT }
+  
+  ur { perm & IRUSR }
+  uw { perm & IWUSR }
+  ux { perm & IXUSR }
+  gr { perm & IRGRP }
+  gw { perm & IWGRP }
+  gx { perm & IXGRP }
+  or { perm & IROTH }
+  ow { perm & IWOTH }
+  ox { perm & IXOTH }
+  wr { perm & IROTH }
+  ww { perm & IWOTH }
+  wx { perm & IXOTH }
+  
+  user_readable    { ur }
+  user_writable    { uw }
+  user_executable  { ux }
+  group_readable   { gr }
+  group_writable   { gw }
+  group_executable { gx }
+  other_readable   { or }
+  other_writable   { ow }
+  other_executable { ox }
+  world_readable   { wr }
+  world_writable   { ww }
+  world_executable { wx }
+  
+  
+  suid { perm & ISUID }
+  sgid { perm & ISGID }
+  svtx { perm & ISVTX }
+  
+  setuid { suid }
+  setgid { sgid }
+  sticky { svtx }
+  
+  
+  all(bitmask)  { (perm & bitmask) == bitmask }
+  any(bitmask)  { perm & bitmask }
+  none(bitmask) { !any(bitmask) }
+  
+  allr  { all(IRUSR | IRGRP | IROTH) }
+  allw  { all(IWUSR | IWGRP | IWOTH) }
+  allx  { all(IXUSR | IXGRP | IXOTH) }
+  anyr  { any(IRUSR | IRGRP | IROTH) }
+  anyw  { any(IWUSR | IWGRP | IWOTH) }
+  anyx  { any(IXUSR | IXGRP | IXOTH) }
+  noner { !anyr }
+  nonew { !anyw }
+  nonex { !anyx }
+  
+  all_readable    { allr }
+  all_writable    { allw }
+  all_executable  { allx }
+  any_readable    { anyr }
+  any_writable    { anyw }
+  any_executable  { anyx }
+  none_readable   { noner }
+  none_writable   { nonew }
+  none_executable { nonex }
+  
+  
+  // Aliases for built-ins
+  
+  inode    { ino }
+  nlinks   { nlink }
+  user     { uid }
+  group    { gid }
+  space    { blocks * 512 }
+  accessed { atime }
+  modified { mtime } # Refers to the contents
+  changed  { ctime } # Refers to the inode
+  len      { strlen }
+  sz       { size }
+  
+  seconds  { second }
+  minutes  { minute }
+  hours    { hour }
+  days     { day }
+  weeks    { week }
+  months   { month }
+  years    { year }
+  quit     { exit }
+  
+  imayread  { readable }   # Uses access(2) not perm
+  imaywrite { writable }   # Uses access(2) not perm
+  imayexec  { executable } # Uses access(2) not perm
+  
+  ir { readable }
+  iw { writable }
+  ix { executable }
+  
+  
+  // File types for symlink targets (canonical, aliases)
+  
+  ttype { tmode & IFMT }
+  
+  treg  { ttype == IFREG }
+  tdir  { ttype == IFDIR }
+  tblk  { ttype == IFBLK }
+  tchr  { ttype == IFCHR }
+  tsock { ttype == IFSOCK }
+  tfifo { ttype == IFIFO }
+  tdoor { ttype == IFDOOR } # Solaris
+  
+  tfile      { treg }
+  tdirectory { tdir }
+  tblock     { tblk }
+  tchar      { tchr }
+  tdevice    { tblk || tchr }
+  tsocket    { tsock }
+  tnamedpipe { tfifo }
+  tpipe      { tfifo }
+  
+  tf { treg }
+  td { tdir }
+  tb { tblk }
+  tc { tchr }
+  ts { tsock }
+  tp { tfifo }
+  tD { tdoor } # Solaris
+  
+  target_type { ttype }
+  
+  target_reg  { treg }
+  target_dir  { tdir }
+  target_blk  { tblk }
+  target_chr  { tchr }
+  target_sock { tsock }
+  target_fifo { tfifo }
+  target_door { tdoor } # Solaris
+  
+  target_file      { treg }
+  target_directory { tdir }
+  target_block     { tblk }
+  target_char      { tchr }
+  target_device    { tblk || tchr }
+  target_socket    { tsock }
+  target_namedpipe { tfifo }
+  target_pipe      { tfifo }
+  
+  target_f { treg }
+  target_d { tdir }
+  target_b { tblk }
+  target_c { tchr }
+  target_s { tsock }
+  target_p { tfifo }
+  target_D { tdoor }
+  
+  
+  // File permissions for symlink targets (canonical, aliases, helpers)
+  
+  tperm { tmode & ~IFMT }
+  
+  tur { tperm & IRUSR }
+  tuw { tperm & IWUSR }
+  tux { tperm & IXUSR }
+  tgr { tperm & IRGRP }
+  tgw { tperm & IWGRP }
+  tgx { tperm & IXGRP }
+  tor { tperm & IROTH }
+  tow { tperm & IWOTH }
+  tox { tperm & IXOTH }
+  twr { tperm & IROTH }
+  tww { tperm & IWOTH }
+  twx { tperm & IXOTH }
+  
+  target_perm { tperm }
+  
+  target_ur { tur }
+  target_uw { tuw }
+  target_ux { tux }
+  target_gr { tgr }
+  target_gw { tgw }
+  target_gx { tgx }
+  target_or { tor }
+  target_ow { tow }
+  target_ox { tox }
+  target_wr { twr }
+  target_ww { tww }
+  target_wx { twx }
+  
+  target_user_readable    { tur }
+  target_user_writable    { tuw }
+  target_user_executable  { tux }
+  target_group_readable   { tgr }
+  target_group_writable   { tgw }
+  target_group_executable { tgx }
+  target_other_readable   { tor }
+  target_other_writable   { tow }
+  target_other_executable { tox }
+  target_world_readable   { twr }
+  target_world_writable   { tww }
+  target_world_executable { twx }
+  
+  
+  tsuid { tperm & ISUID }
+  tsgid { tperm & ISGID }
+  tsvtx { tperm & ISVTX }
+  
+  tsetuid { tsuid }
+  tsetgid { tsgid }
+  tsticky { tsvtx }
+  
+  target_suid { tsuid }
+  target_sgid { tsgid }
+  target_svtx { tsvtx }
+  
+  target_setuid { tsuid }
+  target_setgid { tsgid }
+  target_sticky { tsvtx }
+  
+  
+  tall(bitmask)  { (tperm & bitmask) == bitmask }
+  tany(bitmask)  { tperm & bitmask }
+  tnone(bitmask) { !tany(bitmask) }
+  
+  tallr  { tall(IRUSR | IRGRP | IROTH) }
+  tallw  { tall(IWUSR | IWGRP | IWOTH) }
+  tallx  { tall(IXUSR | IXGRP | IXOTH) }
+  tanyr  { tany(IRUSR | IRGRP | IROTH) }
+  tanyw  { tany(IWUSR | IWGRP | IWOTH) }
+  tanyx  { tany(IXUSR | IXGRP | IXOTH) }
+  tnoner { !tanyr }
+  tnonew { !tanyw }
+  tnonex { !tanyx }
+  
+  target_all(bitmask)  { tall(bitmask) }
+  target_any(bitmask)  { tany(bitmask) }
+  target_none(bitmask) { tnone(bitmask) }
+  
+  target_allr  { tallr }
+  target_allw  { tallw }
+  target_allx  { tallx }
+  target_anyr  { tanyr }
+  target_anyw  { tanyw }
+  target_anyx  { tanyx }
+  target_noner { tnoner }
+  target_nonew { tnonew }
+  target_nonex { tnonex }
+  
+  target_all_readable    { tallr }
+  target_all_writable    { tallw }
+  target_all_executable  { tallx }
+  target_any_readable    { tanyr }
+  target_any_writable    { tanyw }
+  target_any_executable  { tanyx }
+  target_none_readable   { tnoner }
+  target_none_writable   { tnonew }
+  target_none_executable { tnonex }
+  
+  
+  // Aliases for symlink target built-ins
+  
+  target_exists  { texists }
+  target_dev     { tdev }
+  target_ino     { tino }
+  target_mode    { tmode }
+  target_nlink   { tnlink }
+  target_uid     { tuid }
+  target_gid     { tgid }
+  target_rdev    { trdev }
+  target_size    { tsize }
+  target_blksize { tblksize }
+  target_blocks  { tblocks }
+  target_atime   { tatime }
+  target_mtime   { tmtime }
+  target_ctime   { tctime }
+  target_strlen  { tstrlen }
+  
+  tinode    { tino }
+  tnlinks   { tnlink }
+  tuser     { tuid }
+  tgroup    { tgid }
+  tspace    { tblocks * 512 }
+  taccessed { tatime }
+  tmodified { tmtime } # Refers to the target's contents
+  tchanged  { tctime } # Refers to the target's inode
+  tlen      { tstrlen }
+  tsz       { tsize }
+  
+  target_inode    { tinode }
+  target_nlinks   { tnlinks }
+  target_user     { tuser }
+  target_group    { tgroup }
+  target_space    { tspace }
+  target_accessed { taccessed }
+  target_modified { tmodified }
+  target_changed  { tchanged }
+  target_len      { tlen }
+  target_sz       { tsz }
+  
+  
+  // Aliases for size units
+  
+  KiB { 1K }
+  MiB { 1M }
+  GiB { 1G }
+  TiB { 1T }
+  PiB { 1P }
+  EiB { 1E }
+  
+  KB { 1k }
+  MB { 1m }
+  GB { 1g }
+  TB { 1t }
+  PB { 1p }
+  EB { 1e }
+  
+  
+  // Miscellaneous helper functions
+  
+  empty { size == 0 } # Only for files and readable directories
+  roots { uid == 0 }
+  mine { uid == $$ }
+  ours { gid == @@ }
+  broken { symlink && !texists }
+  dangling { broken }
+  gmtoday { now - now % day }
+  
+  ago(sec)  { now - sec }
+  old(sec)  { mtime <= ago(sec) }
+  past(sec) { mtime >= ago(sec) }
+  
+  min(x, y) { (x < y) ? x : y }
+  max(x, y) { (x > y) ? x : y }
+  abs(x)    { (x < 0) ? -x : x }
+  
+  
+  // Examples
+  
+  // Complex tests can be very readable (and/or very concise)
+  // rootshell { setuid && roots && (group_writable | other_writable) }
+  // rootshell { suid && roots && (gw | ow) }
+  // csrc { "*.[ch]" || "[Mm]akefile" }
+  // oldaout { "a.out" && f && old(week) }
+  // oldcore { "^core(\.\d+)?$".re && f && old(week) }
+  // bad { oldaout || oldcore || "*.BAK" || "*.CKP" || (gw | ow) }
+  // Note: Read "<" and ">" as before/after, not as less/more than
+  // recent { modified >= ago(hour) }
+  
+  // Silly recursive functions are possible (but not mutual recursion)
+  // sqrt1(n, odd) { (n <= 0) ? 0 : sqrt1(n - odd, odd + 2) + 1 }
+  // sqrt(n) { sqrt1(n, 1) }
+  // prime1(n, i) { (i * i > n) ? 1 : !(n % i) ? 0 : prime1(n, i + 2) }
+  // prime(n) { (n < 2) ? 0 : !(n % 2) ? n == 2 : prime1(n, 3) }
+  // factorial(x) { (x > 0) ? x * factorial(x - 1) : 1 }
+  // ack(x, y) { !x ? y+1 : !y ? ack(x-1, 1) : ack(x-1, ack(x, y-1)) }
+
+The following aliases provide greater brevity for some built-ins. Perhaps
+they could have gone into the "standard" library, but you might have better
+uses for these identifiers.
+
+  // Brevity (aliases)
+  
+  i { ino }
+  n { nlink }
+  u { uid }
+  g { gid }
+  a { atime }
+  m { mtime }
+  
+  su { suid }
+  sg { sgid }
+  
+  nu { nouser }
+  ng { nogroup }
+  
+  r { readable }
+  w { writable }
+  x { executable }
+  
+  q { exit }
+  
+  sec { second }
+  mn  { minute }
+  hr  { hour }
+  dy  { day }
+  wk  { week }
+  mth { month }
+  yr  { year }
+
+See I<rh(1)> for more examples.
+
+=head1 FILES
+
+The following source/configuration files are read by default:
+
+  /etc/rawhide.conf     - main system-wide configuration
+  /etc/rawhide.conf.d/* - additional system-wide configuration
+  ~/.rhrc               - main user-specific configuration
+  ~/.rhrc.d/*           - additional user-specific configuration
+
+The location of the system-wide configuration might be somewhere else,
+depending on the operating system preferences (e.g., C</usr/local/etc>,
+C</opt/local/etc>, C</usr/pkg/etc>).
+
+The output of S<C<rh --help>> states where the system-wide configuration
+files are on the local system.
+
+The location of the main system-wide configuration file
+(C</etc/rawhide.conf>, or similar) can be overridden with the environment
+variable C<RAWHIDE_CONFIG>. This is only available to non-C<root> users (as
+it could be dangerous for C<root>). The directory containing any additional
+system-wide configuration files is derived from it by appending C<".d">.
+
+The location of the main user-specific configuration file (C<~/.rhrc>) can
+be overridden with the environment variable C<RAWHIDE_RC>. This is only
+available to non-C<root> users (as it could be dangerous for C<root>). The
+directory containing any additional user-specific configuration files is
+derived from it by appending C<".d">.
+
+=head1 SEE ALSO
+
+I<rh(1)>, I<stat(2)>, I<mktime(3)>, I<fnmatch(3)>, I<glob(7)>, I<perlre(1)>,
+I<pcre2pattern(3)>, I<pcre2syntax(3)>, I<access(2)>, I<acl(2)> or I<acl(3)>
+or I<acl(5)>, I<xattr(1)> or I<xattr(7)> or I<extattr(2)> or I<fsattr(7)>,
+I<jq(1)>, I<The C programming language>.
+
+=head1 AUTHORS
+
+19900218 Ken Stauffer (University of Calgary)
+
+20220330 raf <raf@raf.org>
+
+=cut
+

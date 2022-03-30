@@ -1,0 +1,60 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+. tests/.common
+
+label="prune/trim"
+
+touch $d/good
+mkdir $d/.snapshot
+mkdir $d/.snapshot/bb
+touch $d/.snapshot/bb/111
+touch $d/.snapshot/bb/222
+mkdir $d/.snapshot/aaa
+touch $d/.snapshot/aaa/111
+touch $d/.snapshot/aaa/222
+touch $d/xxx
+touch $d/bad
+mkdir $d/thing
+touch $d/thing/other
+touch $d/blah~
+touch $d/blah
+touch $d/grr
+touch $d/aaa
+mkdir $d/thing~
+touch $d/thing~/ggg
+touch $d/thing~/fff
+
+test_rawhide_pre_hook() { test_rh_find_pre_hook; }
+
+test_rawhide_find "$rh -e '\".snapshot\" ? prune : !\"*~\"' $d" "find $d -name .snapshot -prune -o \( \! -name '*~' -print \)" "prune target but not siblings (?:)"
+test_rawhide_find "$rh -e '\".snapshot\" && prune || !\"*~\"' $d" "find $d -name .snapshot -prune -o \( \! -name '*~' -print \)" "prune target but not siblings (&& and ||)"
+
+test_rawhide_find "$rh -e '\".snapshot\" ? trim : !\"*~\"' $d" "find $d -name .snapshot -print -prune -o \( \! -name '*~' -print \)" "trim target but not siblings (?:)"
+test_rawhide_find "$rh -e '\".snapshot\" && trim || !\"*~\"' $d" "find $d -name .snapshot -print -prune -o \( \! -name '*~' -print \)" "trim target but not siblings (&& and ||)"
+
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:

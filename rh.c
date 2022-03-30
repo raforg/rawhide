@@ -1,210 +1,661 @@
+/*
+* rawhide - find files using pretty C expressions
+* https://raf.org/rawhide
+* https://github.com/raforg/rawhide
+*
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 3 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, see <https://www.gnu.org/licenses/>.
+*
+* 20220330 raf <raf@raf.org>
+*/
 
-/* ----------------------------------------------------------------------
- * FILE: rh.c
- * VERSION: 2
- * Written by: Ken Stauffer
- * 
- * printhelp(), execute(), exam1(), exam2(), exam3(), main()
- *
- *
- * ---------------------------------------------------------------------- */
-
-#include "rh.h"
-#include "rhdata.h"
-#include "rhdir.h"
-#include "rhparse.h"
+#define _GNU_SOURCE /* For FNM_EXTMATCH and FNM_CASEFOLD in <fnmatch.h> */
+#define _FILE_OFFSET_BITS 64 /* For 64-bit off_t on 32-bit systems (Not AIX) */
 
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
+#include <locale.h>
+#include <fnmatch.h>
+#include <glob.h>
+#include <errno.h>
+#include <pwd.h>
+#include <sys/stat.h>
 
-static char usage[] = "usage: %s [-hvlr] [-e expr | -f filename] [-x command] dir...\n";
+#include "rh.h"
+#include "rhparse.h"
+#include "rhdata.h"
+#include "rhdir.h"
+#include "rhstr.h"
+#include "rherr.h"
 
-/* ----------------------------------------------------------------------
- * printhelp:
- *	Print out the help screen. The string 's' is argv[0].
- *	Called when the -h option is used.
- *
- */
+#ifdef NDEBUG
+#define debug(args)
+#else
+#define debug(args) debugf args
+#endif
 
-void printhelp(char *s)
+/*
+
+static void help_message(void);
+
+Output the usage message, then exit.
+
+*/
+
+static void help_message(void)
 {
-	struct symbol *p;
+	symbol_t *s;
 	int i;
 
-	printf(usage, s);
+	printf("usage: %s [options] [path...]\n", RAWHIDE_PROG_NAME);
 	printf("options:\n");
-	printf("  -h           - Show this message then exit\n");
-	printf("  -v           - Verbose output\n");
-	printf("  -l           - Long filename output\n");
-	printf("  -r           - Makes %s non-recursive\n", s);
-	printf("  -e 'expr'    - Get expression from the command line\n");
-	printf("  -f filename  - Get expression from a file\n");
-	printf("  -x 'command' - Execute a unix command for matching files\n");
+	printf("  -h --help    - Show this message, then exit\n");
+	printf("  -V --version - Show the version message, then exit\n");
+	printf("  -N           - Don't read system-wide config (" RAWHIDE_CONF ")\n");
+	printf("  -n           - Don't read user-specific config (~" RAWHIDE_RC ")\n");
+	printf("  -f fname     - Read functions and/or expression from a file/stdin\n");
+	printf(" [-e] 'expr'   - Read functions and/or expression from the cmdline\n");
+	printf("\n");
+	printf("traversal options:\n");
+	printf("  -r           - Only search one level down (same as -m1 -M1)\n");
+	printf("  -m #         - Override the default minimum depth (0)\n");
+	printf("  -M #         - Override the default maximum depth (system limit)\n");
+	printf("  -D           - Depth-first searching (contents before directory)\n");
+	printf("  -1           - Single filesystem (don't cross filesystem boundaries)\n");
+	printf("  -y           - Follow symlinks on the cmdline and in reference files\n");
+	printf("  -Y           - Follow symlinks while searching as well\n");
+	printf("\n");
+	printf("alternative action options:\n");
+	printf("  -x 'cmd %%s'  - Execute a shell command for each match (racy)\n");
+	printf("  -X 'cmd %%S'  - Like -x but run from each match's directory (safer)\n");
+	printf("  -U -U -U     - Unlink matches (but tell me three times), implies -D\n");
+	printf("\n");
+	printf("output action options:\n");
+	printf("  -l           - Output matching entries like ls -l (but unsorted)\n");
+	printf("  -d           - Include device column, implies -l\n");
+	printf("  -i           - Include inode column, implies -l\n");
+	printf("  -B           - Include block size column, implies -l\n");
+	printf("  -s           - Include blocks column, implies -l\n");
+	printf("  -S           - Include space column, implies -l\n");
+	printf("  -g           - Exclude user/owner column, implies -l\n");
+	printf("  -o           - Exclude group column, implies -l\n");
+	printf("  -a           - Include atime rather than mtime column, implies -l\n");
+	printf("  -u           - Same as -a (like ls(1))\n");
+	printf("  -c           - Include ctime rather than mtime column, implies -l\n");
+	printf("  -v           - Verbose: All columns, implies -ldiBsSac (unless -xXU0L)\n");
+	printf("  -0           - Output null chars instead of newlines (for xargs -0)\n");
+	printf("  -L format    - Output matching entries in a user-supplied format\n");
+	printf("\n");
+	printf("path format options:\n");
+	printf("  -Q           - Enclose paths in double quotes\n");
+	printf("  -E           - Output C-style escapes for control characters\n");
+	printf("  -b           - Same as -E (like ls(1))\n");
+	printf("  -q           - Output ? for control characters (default if tty)\n");
+	printf("  -p           - Append / indicator to directories\n");
+	printf("  -t           - Append most type indicators (one of / @ = | >)\n");
+	printf("  -F           - Append all type indicators (one of * / @ = | >)\n");
+	printf("\n");
+	printf("                   * executable\n");
+	printf("                   / directory\n");
+	printf("                   @ symlink\n");
+	printf("                   = socket\n");
+	printf("                   | fifo\n");
+	printf("                   > door (Solaris only)\n");
+	printf("\n");
+	printf("other column format options:\n");
+	printf("  -H or -HH    - Output sizes like 1.2K 34M 5.6G etc., implies -l\n");
+	printf("  -I or -II    - Like -H but with units of 1000, not 1024, implies -l\n");
+	printf("  -T           - Output mtime/atime/ctime in ISO format, implies -l\n");
+	printf("  -#           - Output numeric user/group IDs (not names), implies -l\n");
+	printf("\n");
+	printf("debug option:\n");
+	printf("  -? spec      - Output debug messages: spec can include any of:\n");
+	printf("                   cmdline, parser, traversal, exec, all, extra\n");
 
-	printf("\nbuilt-in symbols:\n");
-	for (i = 1, p = symbols; p; p = p->next, i++)
-		printf("%12s%s", p->name, ((i - 1) % 5 == 4 || !p->next) ? "\n" : " ");
+	printf("\nrh (rawhide) finds files using pretty C expressions.\n");
+	printf("See the rh(1) and rawhide.conf(5) manual entries for more information.\n");
 
 	printf("\nC operators:\n");
-	printf("  ! ~ - * / %% + < <= > >= == != & ^ | << >> && || ?:\n");
+	printf("  ?:  ||  &&  |  ^  &  == !=  < > <= >=  << >>  + -  * / %%  - ~ !\n");
 
-	printf("\nspecial operators:\n");
-	printf("  $username, $$, \"*.c\" , [yyyy/mm/dd]\n\n");
+	printf("\nRawhide tokens:\n");
+	printf("  \"pattern\"  \"pattern\".modifier  \"/path\".field  \"cmd\".sh\n");
+	printf("  123 0777 0xffff  1K 2M 3G  1k 2m 3g  $user @group  $$ @@\n");
+	printf("  [yyyy/mm/dd] [yyyy/mm/dd hh:mm:ss]\n");
+
+	printf("\nGlob pattern notation:\n");
+	printf("  ? * [abc] [!abc] [a-c] [!a-c]\n");
+	#ifdef FNM_EXTMATCH
+	printf("  ?(a|b|c) *(a|b|c) +(a|b|c) @(a|b|c) !(a|b|c)\n");
+	printf("  Ksh extended glob patterns are available here (see fnmatch(3))\n");
+	#endif
+
+	printf("\nPattern modifiers:\n");
+
+	for (i = 0, s = symbols; s; s = s->next)
+		if (s->type == PATMOD)
+			printf("  %-12s%s", s->name, (i++ % 5 == 4 || !s->next) ? "\n" : "");
+
+	#ifdef FNM_CASEFOLD
+	printf("  Case-insensitive glob matching is available here (i)\n");
+	#endif
+	#ifdef HAVE_PCRE2
+	printf("  Perl-compatible regular expressions are available here (re)\n");
+	#else
+	printf("  Perl-compatible regular expressions are not available here\n");
+	#endif
+	#ifdef HAVE_ACL
+	printf("  Access control lists are available here (acl)\n");
+	#endif
+	#ifdef HAVE_EA
+	printf("  Extended attributes are available here (ea)\n");
+	#endif
+
+	printf("\nBuilt-in symbols:\n");
+
+	for (i = 0, s = symbols; s; s = s->next)
+		if (s->type == FIELD || s->type == NUMBER)
+			printf("  %-12s%s", s->name, (i++ % 5 == 4 || !s->next || s->next->type == REFFILE) ? "\n" : "");
+
+	printf("\nReference file fields:\n");
+
+	for (i = 0, s = symbols; s; s = s->next)
+		if (s->type == REFFILE)
+			printf("  %-12s%s", s->name, (i++ % 5 == 4 || !s->next || s->next->type == PATMOD) ? "\n" : "");
+
+	printf("\nSystem-wide and user-specific functions can be defined here:\n");
+	printf("  %s          ~%s\n", RAWHIDE_CONF, RAWHIDE_RC);
+	printf("  %s.d/*      ~%s.d/*\n", RAWHIDE_CONF, RAWHIDE_RC);
+
+	printf("\n");
+	printf("Name: %s (%s)\n", RAWHIDE_PROG_NAME, RAWHIDE_NAME);
+	printf("Version: %s\n", RAWHIDE_VERSION);
+	printf("Date: %s\n", RAWHIDE_DATE);
+	printf("Authors: Ken Stauffer, raf <raf@raf.org>\n");
+	printf("URL: https://raf.org/rawhide\n");
+	printf("GIT: https://github.org/raforg/rawhide\n");
+	printf("\n");
+	printf("Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>\n");
+	printf("\n");
+	printf("This is free software released under the terms of the GPLv3+:\n");
+	printf("\n");
+	printf("    https://www.gnu.org/licenses\n");
+	printf("\n");
+	printf("There is no warranty; not even for merchantability or fitness\n");
+	printf("for a particular purpose.\n");
+	printf("\n");
+	printf("Report bugs to raf <raf@raf.org>\n");
+	exit(EXIT_SUCCESS);
 }
 
-/* ----------------------------------------------------------------------
- * execute:
- *	Execute the program contained in the StackProgram[]
- *	array. Each element of the StackProgram[] array contains
- *	a pointer to a function.
- *	Programs are NULL terminated.
- *	Returns the result of the expression.
- *
- */
+/*
 
-long execute(void)
+static void version_message(void);
+
+Output the version message, then exit.
+
+*/
+
+static void version_message(void)
 {
-	register long eval;
-	register void (*efunc)(long);
+	printf("%s-%s\n", RAWHIDE_PROG_NAME, RAWHIDE_VERSION);
+	exit(EXIT_SUCCESS);
+}
 
-	SP = 0;
+#ifndef NDEBUG
+/*
 
-	for (PC = startPC; (efunc = StackProgram[PC].func); PC++)
+static void debugf(const char *format, ...);
+
+Output a debug message to stderr.
+
+*/
+
+static void debugf(const char *format, ...)
+{
+	va_list args;
+
+	if (!(attr.debug_flags & DEBUG_CMDLINE))
+		return;
+
+	va_start(args, format);
+	fprintf(stderr, "%s: ", "cmdline");
+	vfprintf(stderr, format, args);
+	fprintf(stderr, "\n");
+	va_end(args);
+}
+#endif
+
+/*
+
+static void load_program_file(void);
+
+Compile the file expfname.
+
+*/
+
+static void load_program_file(void)
+{
+	struct stat statbuf[1];
+
+	if (stat(expfname, statbuf) == -1 || (statbuf->st_mode & S_IFMT) != S_IFREG)
+		error("%s is not a file", ok(expfname));
+	else if (!(expfile = fopen(expfname, "r")))
+		errorsys("%s", ok(expfname));
+	else
 	{
-		eval = StackProgram[PC].value;
-		(*efunc)(eval);
-
-		if (SP >= MAX_STACK_SIZE)
-		{
-			fprintf(stderr, "stack overflow\n");
-			exit(1);
-		}
-	}
-
-	return Stack[0];
-}
-
-/* ----------------------------------------------------------------------
- * exam1: exam2: exam3:
- *	One of these functions is called for every file that 'rh' examines.
- *	exam{1,2,3}() first calls execute to see if the
- *	expression is true, it then prints the file if the expression
- *	evaluated to true (non-zero).
- *
- */
-
-/* print file out by itself */
-
-void exam1(void)
-{
-	if (execute())
-		printf("%s\n", attr.fname);
-}
-
-/* long output of file */
-
-void exam2(void)
-{
-	if (execute())
-		printentry(attr.verbose, attr.buf, attr.fname);
-}
-
-/* do a system(3) call to desired command */
-
-void exam3(void)
-{
-	char command[2048 + 1];
-	char *p, *q, *r;
-	int rv;
-
-	if (execute())
-	{
-		p = command;
-		q = attr.command;
-
-		while (*q)
-		{
-			if (*q != '%')
-				*p++ = *q++;
-			else
-			{
-				q += 1;
-
-				if (*q == 's')
-				{
-					r = attr.fname;
-
-					while ((*p++ = *r++))
-						;
-
-					p -= 1;
-				}
-				else if (*q == 'S')
-				{
-					r = strrchr(attr.fname, '/');
-					r = (r) ? r + 1 : attr.fname;
-
-					while ((*p++ = *r++))
-						;
-
-					p -= 1;
-				}
-				else
-					*p++ = '%';
-
-				q += 1;
-			}
-		}
-
-		*p = '\0';
-		rv = system(command);
-
-		if (attr.verbose)
-			printf("%s exit(%d)\n", command, rv);
+		parse_program();
+		fclose(expfile);
+		expfile = NULL;
 	}
 }
 
-/* ----------------------------------------------------------------------
- * main:
- *	parse arguments.
- *	-l, -r, -h, -v options can occur as often as desired.
- *	-f,-x and -e can only occur once and MUST have an argument.
- *
- *	Read and "compile" the $HOME/.rhrc file, if it exists.
- *	Read and "compile" any -f filename, if present.
- *	Read and "compile" any -e expression, if present.
- *	If after all that no start expression is found then read from
- *	stdin for one.
- *	Perform the recursive hunt on remaining arguments.
- *
- */
+/*
+
+static void load_program_str(char *str);
+
+Compile str.
+
+*/
+
+static void load_program_str(char *str)
+{
+	expstr = str;
+	parse_program();
+	expstr = NULL;
+}
+
+/*
+
+static int env_flag(char *envname);
+
+Return 1 if the environment variable is "1". Return 0 otherwise.
+
+*/
+
+static int env_flag(char *envname)
+{
+	char *env;
+
+	return (env = getenv(envname)) && !strcmp(env, "1");
+}
+
+/*
+
+int main(int argc, char *argv[]);
+
+Parse the command line:
+
+The --help and --version options are supported (if first).
+The -f, -e, -x, -X, and -L options can only appear once.
+The -l, -0, -L, -x, -X, and -U options are mutually exclusive.
+
+Read /etc/rawhide.conf and /etc/rawhide.conf.d (unless -N).
+Read ~/.rhrc and ~/.rhrc.d (unless -n).
+Read -f file (if present).
+Read -e expr (if present).
+
+If no explicit -e expression is supplied, look among any
+remaining command line arguments for one that is not a
+file or directory (and doesn't look like it's supposed
+to be a file or directory), and assume that it is the
+file condition expression (an implicit -e option).
+
+If, after all that, a condition expression is still not
+found, then assume "1" to match all filesystem entries.
+
+Find matching files:
+
+Find matching files in directories specified by the
+remaining arguments (or in the current directory).
+The -rmMD1yY options alter traversal behaviour.
+By default, matching entry names are output.
+The -l option and other options include more details.
+There are many options to affect the formatting.
+The -0 option outputs nul characters rather than newlines.
+The -L option outputs info in a user-defined format.
+The -x option executes a shell command for each
+matching file instead.
+The -X option is the same but executes each command
+from the matching entry's parent directory to minimize
+race conditions.
+The -U option unlinks matching entries instead, and must
+be supplied three times.
+
+*/
 
 int main(int argc, char *argv[])
 {
-	char *dashe, *dashf, initfile[1024 + 1];
-	int i, r;
-	int dashr, dashh, dashl;
-	void (*examptr)(void);
-	long max_depth;
+	char *opt_e, *opt_f, *initfile, *initdir, *initpattern, *endptr;
+	int opt_h, opt_V, opt_l, opt_r, opt_N, opt_n, opt_U;
+	llong opt_m, opt_M, optarg_int, opt_e_expr = 0;
+	llong max_pathlen, pathbufsize;
+	glob_t glob_state[1];
+	int o, i, j, expr_index = 0, any = 0;
+	struct stat statbuf[1];
 
-	/* defaults */
-	dashe = NULL;			/* -e option */
-	dashl = 0;				/* -l */
-	dashf = NULL;			/* -f */
-	dashr = 1;				/* -r */
-	dashh = 0;				/* -h */
-	attr.verbose = 0;		/* -v */
-	attr.command = NULL;	/* -x */
-	examptr = exam1;		/* default output function */
+	setlocale(LC_ALL, "");
+	prog_name = argv[0];
 
-	while ((i = getopt(argc, argv, "hvlre:f:x:")) != -1)
+	/* Defaults */
+
+	opt_h = 0;                  /* -h (help) */
+	opt_V = 0;                  /* -V (version) */
+	opt_N = 0;                  /* -N (suppress /etc/rawhide.conf)*/
+	opt_n = 0;                  /* -n (suppress ~/.rhrc) */
+	opt_f = NULL;               /* -f fname (read code from file/stdin) */
+	opt_e = NULL;               /* -e expr (read code from arg) */
+
+	opt_r = 0;                  /* -r (only search 1 level down) */
+	opt_m = -1;                 /* -m (min depth) */
+	opt_M = -1;                 /* -M (max depth) */
+	attr.depth_first = 0;       /* -D (depth-first) */
+	attr.single_filesystem = 0; /* -1 (single filesystem) */
+	attr.follow_symlinks = 0;   /* -y -Y (follow symlinks) */
+
+	attr.command = NULL;        /* -x/-X cmd (execute cmd) */
+	attr.local = 0;             /* cmd executed locally (-X) */
+	opt_U = 0;                  /* -U (delete - but tell me three times) */
+	attr.unlink = 0;            /* -UUU (unlink) */
+
+	opt_l = 0;                  /* -l */
+	attr.dev_column = 0;        /* -d */
+	attr.ino_column = 0;        /* -i */
+	attr.blksize_column = 0;    /* -B */
+	attr.blocks_column = 0;     /* -s */
+	attr.space_column = 0;      /* -S */
+	attr.no_owner_column = 0;   /* -g */
+	attr.no_group_column = 0;   /* -o */
+	attr.atime_column = 0;      /* -a/-u */
+	attr.ctime_column = 0;      /* -c */
+	attr.verbose = 0;           /* -v */
+	attr.nul = 0;               /* -0 */
+	attr.format = NULL;         /* -L */
+
+	attr.quote_name = 0;        /* -Q */
+	attr.escape_name = 0;       /* -E/-b */
+	attr.mask_name = 0;         /* -q */
+	attr.dir_indicator = 0;     /* -p */
+	attr.most_indicators = 0;   /* -t */
+	attr.all_indicators = 0;    /* -F */
+
+	attr.human_units = 0;       /* -H (1=roundup 2=roundhalfup) */
+	attr.si_units = 0;          /* -I (1=roundup 2=roundhalfup) */
+	attr.iso_time = 0;          /* -T */
+	attr.numeric_ids = 0;       /* -# */
+
+	attr.visitf = visitf_default;
+	attr.exit_status = EXIT_SUCCESS;
+	attr.debug_flags = 0;
+
+	attr.tty = isatty(STDOUT_FILENO) || env_flag("RAWHIDE_TEST_TTY");
+	attr.ttyerr = isatty(STDERR_FILENO) || env_flag("RAWHIDE_TEST_TTY");
+
+	if (getenv("LANG") && strstr(getenv("LANG"), "UTF-8"))
+		attr.utf = !env_flag("RAWHIDE_PCRE2_NOT_UTF8_DEFAULT");
+	else
+		attr.utf = env_flag("RAWHIDE_PCRE2_UTF8_DEFAULT");
+
+	attr.report_broken_symlinks = env_flag("RAWHIDE_REPORT_BROKEN_SYMLINKS");
+	attr.report_cycles = !env_flag("RAWHIDE_DONT_REPORT_CYCLES");
+	attr.facl_solaris_no_trivial = env_flag("RAWHIDE_SOLARIS_ACL_NO_TRIVIAL");
+	attr.fea_solaris_no_sunwattr = env_flag("RAWHIDE_SOLARIS_EA_NO_SUNWATTR");
+	attr.fea_solaris_no_statinfo = env_flag("RAWHIDE_SOLARIS_EA_NO_STATINFO");
+	attr.fea_size = env_int("RAWHIDE_EA_SIZE", 1, -1, 0);
+
+	/* Parse cmdline options */
+
+	rawhide_init();
+
+	if (argc >= 2 && !strcmp(argv[1], "--help"))
+		help_message();
+
+	if (argc >= 2 && !strcmp(argv[1], "--version"))
+		version_message();
+
+	while ((o = getopt(argc, argv, ":hVNnf:e:rm:M:D1yYx:X:UldiBsSgoaucv0L:QEbqptFHIT#?:")) != -1)
 	{
-		switch (i)
+		switch (o)
 		{
 			case 'h':
 			{
-				dashh = 1;
+				opt_h = 1;
+
+				break;
+			}
+
+			case 'V':
+			{
+				opt_V = 1;
+
+				break;
+			}
+
+			case 'N':
+			{
+				opt_N = 1;
+
+				break;
+			}
+
+			case 'n':
+			{
+				opt_n = 1;
+
+				break;
+			}
+
+			case 'f':
+			{
+				if (!optarg || !*optarg)
+					fatal("missing -f option argument (see %s -h for help)", prog_name);
+
+				if (opt_f)
+					fatal("too many -f options");
+
+				opt_f = optarg;
+
+				break;
+			}
+
+			case 'e':
+			{
+				if (!optarg) /* The argument may be empty (valid syntax) */
+					fatal("missing -e option argument (see %s -h for help)", prog_name);
+
+				if (opt_e)
+					fatal("too many -e options");
+
+				opt_e = optarg;
+
+				break;
+			}
+
+			case 'r':
+			{
+				opt_r = 1;
+
+				break;
+			}
+
+			case 'm':
+			{
+				if (!optarg || !*optarg)
+					fatal("missing -m option argument (see %s -h for help)", prog_name);
+
+				errno = 0;
+				optarg_int = strtoll(optarg, &endptr, 10);
+
+				if ((endptr && *endptr) || optarg_int < 0 || errno == ERANGE)
+					fatal("invalid -m option argument: %s (must be a non-negative integer)", ok(optarg));
+
+				opt_m = optarg_int;
+
+				break;
+			}
+
+			case 'M':
+			{
+				if (!optarg || !*optarg)
+					fatal("missing -M option argument (see %s -h for help)", prog_name);
+
+				errno = 0;
+				optarg_int = strtoll(optarg, &endptr, 10);
+
+				if ((endptr && *endptr) || optarg_int < 0 || errno == ERANGE)
+					fatal("invalid -M option argument: %s (must be a non-negative integer)", ok(optarg));
+
+				opt_M = optarg_int;
+
+				break;
+			}
+
+			case 'D':
+			{
+				attr.depth_first = 1;
+
+				break;
+			}
+
+			case '1':
+			{
+				attr.single_filesystem = 1;
+
+				break;
+			}
+
+			case 'y':
+			{
+				attr.follow_symlinks = 1;
+
+				break;
+			}
+
+			case 'Y':
+			{
+				attr.follow_symlinks = 2;
+
+				break;
+			}
+
+			case 'x':
+			case 'X':
+			{
+				if (!optarg || !*optarg)
+					fatal("missing -%c option argument (see %s -h for help)", o, prog_name);
+
+				if (attr.command)
+				{
+					if (o == 'x' && !attr.local)
+						fatal("too many -x options");
+
+					if (o == 'X' && attr.local)
+						fatal("too many -X options");
+
+					if ((o == 'x' && attr.local) || (o == 'X' && !attr.local))
+						fatal("-x and -X options are mutually exclusive");
+				}
+
+				attr.command = optarg;
+				attr.local = (o == 'X');
+				attr.visitf = (attr.local) ? visitf_execute_local : visitf_execute;
+
+				break;
+			}
+
+			case 'U':
+			{
+				if (++opt_U == 3)
+				{
+					attr.depth_first = attr.unlink = 1;
+					attr.visitf = visitf_unlink;
+				}
+
+				break;
+			}
+
+			case 'l':
+			{
+				opt_l = 1;
+
+				break;
+			}
+
+			case 'd':
+			{
+				attr.dev_column = opt_l = 1;
+
+				break;
+			}
+
+			case 'i':
+			{
+				attr.ino_column = opt_l = 1;
+
+				break;
+			}
+
+			case 'B':
+			{
+				attr.blksize_column = opt_l = 1;
+
+				break;
+			}
+
+			case 's':
+			{
+				attr.blocks_column = opt_l = 1;
+
+				break;
+			}
+
+			case 'S':
+			{
+				attr.space_column = opt_l = 1;
+
+				break;
+			}
+
+			case 'g':
+			{
+				attr.no_owner_column = opt_l = 1;
+
+				break;
+			}
+
+			case 'o':
+			{
+				attr.no_group_column = opt_l = 1;
+
+				break;
+			}
+
+			case 'a':
+			case 'u':
+			{
+				attr.atime_column = opt_l = 1;
+
+				break;
+			}
+
+			case 'c':
+			{
+				attr.ctime_column = opt_l = 1;
 
 				break;
 			}
@@ -216,157 +667,548 @@ int main(int argc, char *argv[])
 				break;
 			}
 
-			case 'l':
+			case '0':
 			{
-				examptr = exam2;
-				dashl = 1;
+				attr.nul = 1;
 
 				break;
 			}
 
-			case 'r':
+			case 'L':
 			{
-				dashr = 0;
+				if (!optarg) /* The argument can be empty (no output) */
+					fatal("missing -L option argument (see %s -h for help)", prog_name);
+
+				if (attr.format)
+					fatal("too many -L options");
+
+				attr.format = optarg;
+				attr.visitf = visitf_format;
 
 				break;
 			}
 
-			case 'e':
+			case 'Q':
 			{
-				if (dashe)
+				attr.quote_name = 1;
+
+				break;
+			}
+
+			case 'E':
+			case 'b':
+			{
+				attr.escape_name = 1;
+
+				break;
+			}
+
+			case 'q':
+			{
+				attr.mask_name = 1;
+
+				break;
+			}
+
+			case 'p':
+			{
+				attr.dir_indicator = 1;
+
+				break;
+			}
+
+			case 't':
+			{
+				attr.most_indicators = 1;
+
+				break;
+			}
+
+			case 'F':
+			{
+				attr.all_indicators = 1;
+
+				break;
+			}
+
+			case 'H':
+			{
+				++attr.human_units;
+				opt_l = 1;
+
+				break;
+			}
+
+			case 'I':
+			{
+				++attr.si_units;
+				opt_l = 1;
+
+				break;
+			}
+
+			case 'T':
+			{
+				attr.iso_time = 1;
+				opt_l = 1;
+
+				break;
+			}
+
+			case '#':
+			{
+				attr.numeric_ids = 1;
+				opt_l = 1;
+
+				break;
+			}
+
+			case '?':
+			{
+				/* Invalid options are reported with '?' and optopt set */
+
+				if (optopt && optopt != '?') /* macOS puts ? in optopt even when it's in optstring */
+					fatal("invalid option: -%c (see %s -h for help)", optopt, prog_name);
+
+				/* Otherwise, the ? option was supplied */
+
+				if (!optarg || !*optarg)
+					fatal("missing -? option argument (see %s -h for help)", prog_name);
+
+				#ifndef NDEBUG
+				if (strstr(optarg, "all") || strstr(optarg, "cmdline"))
+					attr.debug_flags |= DEBUG_CMDLINE;
+
+				if (strstr(optarg, "all") || strstr(optarg, "parser"))
+					attr.debug_flags |= DEBUG_PARSER;
+
+				if (strstr(optarg, "all") || strstr(optarg, "traversal"))
+					attr.debug_flags |= DEBUG_TRAVERSAL;
+
+				if (strstr(optarg, "all") || strstr(optarg, "exec"))
+					attr.debug_flags |= DEBUG_EXEC;
+
+				if (strstr(optarg, "extra"))
+					attr.debug_flags |= DEBUG_EXTRA;
+
+				if (!attr.debug_flags)
+					fatal("invalid -? option argument: %s (needs: cmdline parser traversal exec all extra)", ok(optarg));
+
+				debug(("attr.debug_flags = 0x%x", attr.debug_flags));
+				#endif
+
+				break;
+			}
+
+			case ':':
+			{
+				fatal("missing -%c option argument (see %s -h for help)", optopt, prog_name);
+			}
+
+			default: /* Can't happen */
+			{
+				fatal("command line error (see %s -h for help)", prog_name);
+			}
+		}
+	}
+
+	if (attr.verbose && !opt_l && !attr.nul && !attr.command && !attr.unlink && !attr.format)
+		opt_l = 1;
+
+	if (attr.command && !attr.local && opt_l)
+		fatal("-x and -l options are mutually exclusive");
+
+	if (attr.command && !attr.local && attr.nul)
+		fatal("-x and -0 options are mutually exclusive");
+
+	if (attr.command && !attr.local && attr.format)
+		fatal("-x and -L options are mutually exclusive");
+
+	if (attr.command && attr.local && opt_l)
+		fatal("-X and -l options are mutually exclusive");
+
+	if (attr.command && attr.local && attr.nul)
+		fatal("-X and -0 options are mutually exclusive");
+
+	if (attr.command && attr.local && attr.format)
+		fatal("-X and -L options are mutually exclusive");
+
+	if (opt_l && attr.nul)
+		fatal("-l and -0 options are mutually exclusive");
+
+	if (opt_l && attr.format)
+		fatal("-l and -L options are mutually exclusive");
+
+	if (attr.unlink && attr.command && !attr.local)
+		fatal("-x and -U options are mutually exclusive");
+
+	if (attr.unlink && attr.command && attr.local)
+		fatal("-X and -U options are mutually exclusive");
+
+	if (attr.unlink && opt_l)
+		fatal("-l and -U options are mutually exclusive");
+
+	if (attr.unlink && attr.nul)
+		fatal("-0 and -U options are mutually exclusive");
+
+	if (attr.nul && attr.format)
+		fatal("-0 and -L options are mutually exclusive");
+
+	if (attr.unlink && attr.format)
+		fatal("-U and -L options are mutually exclusive");
+
+	if (attr.escape_name && attr.mask_name)
+		fatal("-E/-b and -q options are mutually exclusive");
+
+	if (attr.human_units && attr.si_units)
+		fatal("-H and -I options are mutually exclusive");
+
+	if (opt_r != 0 && opt_M != -1)
+		fatal("-r and -M options are mutually exclusive");
+
+	if (opt_r != 0 && opt_m != -1)
+		fatal("-r and -m options are mutually exclusive");
+
+	if (opt_U && !attr.unlink)
+		fatal("-U option only works if supplied three times");
+
+	if (opt_l)
+		attr.visitf = visitf_long;
+
+	if (opt_h)
+		help_message();
+
+	if (opt_V)
+		version_message();
+
+	/* For -X and "cmd".sh, remove cwd from $PATH (after debug config) */
+
+	if (remove_danger_from_path() == -1)
+		fatalsys("failed to remove cwd from path");
+
+	/* Create path buffers */
+
+	max_pathlen = pathconf("/", _PC_PATH_MAX);
+	max_pathlen = (max_pathlen == -1) ? 1024 : max_pathlen + 2;
+	max_pathlen = env_int("RAWHIDE_TEST_PATHLEN_MAX", 1, max_pathlen, max_pathlen);
+	pathbufsize = max_pathlen + 1;
+
+	if (!(initfile = malloc(pathbufsize)))
+		fatalsys("out of memory");
+
+	if (!(initdir = malloc(pathbufsize)))
+		fatalsys("out of memory");
+
+	if (!(initpattern = malloc(pathbufsize)))
+		fatalsys("out of memory");
+
+	/* Load /etc/rawhide.conf and /etc/rawhide.conf.d (unless -N) */
+
+	if (opt_N == 0)
+	{
+		char *conf, *env;
+
+		conf = (geteuid() && (env = getenv("RAWHIDE_CONFIG")) && *env) ? env : RAWHIDE_CONF;
+		expfname = initfile;
+
+		if (strlcpy(expfname, conf, pathbufsize) >= pathbufsize)
+			error("path is too long: %s", ok(conf));
+		else
+		{
+			if (stat(expfname, statbuf) != -1)
+				load_program_file();
+
+			strlcpy(initdir, initfile, pathbufsize);
+
+			if (strlcat(initdir, DOTDDIR, pathbufsize) >= pathbufsize)
+				error("path is too long: %s%s", ok(initfile), ok2(DOTDDIR));
+			else if (stat(initdir, statbuf) != -1)
+			{
+				if ((statbuf->st_mode & S_IFMT) != S_IFDIR)
+					error("%s is not a directory", ok(initdir));
+				else
 				{
-					fprintf(stderr, "%s: too many -e options\n", argv[0]);
-					exit(1);
+					strlcpy(initpattern, initdir, pathbufsize);
+
+					if (strlcat(initpattern, "/*", pathbufsize) >= pathbufsize)
+						error("path is too long: %s/*", ok(initdir));
+					else
+					{
+						if (glob(initpattern, 0, NULL, glob_state) == 0)
+						{
+							for (j = 0; j < glob_state->gl_pathc; j++)
+							{
+								if (strlcpy(expfname, glob_state->gl_pathv[j], pathbufsize) >= pathbufsize)
+									error("path is too long: %s", ok(glob_state->gl_pathv[j]));
+								else
+									load_program_file();
+							}
+						}
+
+						globfree(glob_state);
+					}
+				}
+			}
+		}
+	}
+
+	/* Load ~/.rhrc and ~/.rhrc.d (unless -n) */
+
+	if (opt_n == 0)
+	{
+		char *env, *rc = NULL, *home = NULL;
+		struct passwd *pwd;
+
+		if (geteuid() && (env = getenv("RAWHIDE_RC")) && *env)
+			rc = env;
+		else if ((pwd = getpwuid(getuid())))
+			home = pwd->pw_dir;
+
+		expfname = initfile;
+		*expfname = '\0';
+
+		if (rc && strlcpy(expfname, rc, pathbufsize) >= pathbufsize)
+			error("path is too long: %s", ok(rc));
+		else if (home && (strlcpy(expfname, home, pathbufsize) >= pathbufsize || strlcat(expfname, RAWHIDE_RC, pathbufsize) >= pathbufsize))
+			error("path is too long: %s%s", ok(home), ok2(RAWHIDE_RC));
+		else
+		{
+			if (stat(expfname, statbuf) != -1)
+				load_program_file();
+
+			strlcpy(initdir, initfile, pathbufsize);
+
+			if (strlcat(initdir, DOTDDIR, pathbufsize) >= pathbufsize)
+				error("path is too long: %s%s", ok(initfile), ok2(DOTDDIR));
+			else if (stat(initdir, statbuf) != -1)
+			{
+				if ((statbuf->st_mode & S_IFMT) != S_IFDIR)
+					error("%s is not a directory", ok(initdir));
+				else
+				{
+					strlcpy(initpattern, initdir, pathbufsize);
+
+					if (strlcat(initpattern, "/*", pathbufsize) >= pathbufsize)
+						error("path is too long: %s/*", ok(initdir));
+					else
+					{
+						if (glob(initpattern, 0, NULL, glob_state) == 0)
+						{
+							for (j = 0; j < glob_state->gl_pathc; j++)
+							{
+								if (strlcpy(expfname, glob_state->gl_pathv[j], pathbufsize) >= pathbufsize)
+									error("path is too long: %s", ok(glob_state->gl_pathv[j]));
+								else
+									load_program_file();
+							}
+						}
+
+						globfree(glob_state);
+					}
+				}
+			}
+		}
+	}
+
+	free(initfile);
+	initfile = NULL;
+
+	free(initdir);
+	initdir = NULL;
+
+	free(initpattern);
+	initpattern = NULL;
+
+	/* Load the -f file ("-" is stdin) */
+
+	if (opt_f)
+	{
+		debug(("explicit -f option: %s", opt_f));
+
+		if (!strcmp(opt_f, "-"))
+		{
+			expfname = "stdin";
+			expfile = stdin;
+			parse_program();
+			expfile = NULL;
+		}
+		else
+		{
+			expfname = opt_f;
+
+			if (!(expfile = fopen(expfname, "r")))
+				fatalsys("%s", ok(expfname));
+
+			parse_program();
+			fclose(expfile);
+			expfile = NULL;
+		}
+	}
+
+	/* Parse the -e argument */
+
+	if (opt_e)
+	{
+		debug(("explicit -e option: %s", opt_e));
+
+		opt_e_expr = startPC;
+		load_program_str(opt_e);
+		opt_e_expr = (startPC != opt_e_expr);
+	}
+
+	/* If no explicit expr, search arguments */
+
+	if (!opt_e_expr)
+	{
+		char *posp;
+		int posi;
+
+		debug(("checking remaining arguments for an expression"));
+
+		for (i = optind; i < argc; i++)
+		{
+			/* If it exists in the filesystem, it's a path */
+
+			if (lstat(argv[i], statbuf) != -1)
+			{
+				debug(("argv[%d] = %s (path, it exists)", i, argv[i]));
+
+				continue;
+			}
+
+			/* If it contains characters unlikely to be in a path, it's probably an expression */
+
+			if (!(posi = strcspn(argv[i], "?:|&^=!<>*%$\"\\[]{};\n")) || argv[i][posi] != '\0')
+			{
+				debug(("argv[%d] = %s (unlikely chars for a path, probably an expression)", i, argv[i]));
+
+				expr_index = i;
+
+				break;
+			}
+
+			/* If part of it exists in the filesystem (ancestors), it's probably an attempt at a path */
+
+			if ((posp = strrchr(argv[i], '/')))
+			{
+				char *tmp = strdup(argv[i]);
+
+				tmp[posp - argv[i]] = '\0';
+
+				debug(("argv[%d] = %s (checking if %s exists)", i, argv[i], tmp));
+
+				if (lstat(tmp, statbuf) != -1)
+				{
+					debug(("argv[%d] = %s (%s exists, it's an attempt at a path)", i, argv[i], tmp));
+					free(tmp);
+
+					continue;
 				}
 
-				dashe = optarg;
-
-				break;
-			}
-
-			case 'f':
-			{
-				if (dashf)
+				if ((posp = strrchr(tmp, '/')) && posp > tmp)
 				{
-					fprintf(stderr, "%s: too many -f options\n", argv[0]);
-					exit(1);
+					*posp = '\0';
+
+					debug(("argv[%d] = %s (checking if %s exists)", i, argv[i], tmp));
+
+					if (lstat(tmp, statbuf) != -1)
+					{
+						debug(("argv[%d] = %s (%s exists, it's an attempt at a path)", i, argv[i], tmp));
+						free(tmp);
+
+						continue;
+					}
+
+					if ((posp = strrchr(tmp, '/')) && posp > tmp)
+					{
+						*posp = '\0';
+
+						debug(("argv[%d] = %s (checking if %s exists)", i, argv[i], tmp));
+
+						if (lstat(tmp, statbuf) != -1)
+						{
+							debug(("argv[%d] = %s (%s exists, it's an attempt at a path)", i, argv[i], tmp));
+							free(tmp);
+
+							continue;
+						}
+					}
 				}
 
-				dashf = optarg;
-
-				break;
+				free(tmp);
 			}
 
-			case 'x': 
-			{
-				if (attr.command)
-				{
-					fprintf(stderr, "%s: too many -x options\n", argv[0]);
-					exit(1);
-				}
+			/* Assume it's an expression */
 
-				examptr = exam3;
-				attr.command = optarg;
+			debug(("argv[%d] = %s (assuming it's an expression)", i, argv[i]));
+			expr_index = i;
 
-				break;
-			}
-
-			default:
-			{
-				fprintf(stderr,"%s: unknown option -%c use -h for help\n", argv[0], (char)i);
-				fprintf(stderr, usage, argv[0]);
-				exit(1);
-			}
-		}
-
-		if (attr.command && dashl)
-		{
-			fprintf(stderr, "%s: cannot have both -x and -l options\n", argv[0]);
-			exit(1);
+			break;
 		}
 	}
 
-	PC = 0;
-	startPC = -1;
-
-	rhinit();
-
-	if (dashh)
+	if (expr_index)
 	{
-		printhelp(argv[0]);
-		exit(0);
+		debug(("implicit -e option: argv[%d] = %s", expr_index, argv[expr_index]));
+
+		load_program_str(argv[expr_index]);
 	}
 
-	expfname = getenv(HOMEENV);
-
-	if (expfname)
-	{
-		strncpy(initfile, expfname, 1024);
-		expfname = strncat(initfile, RHRC, 1024 - strlen(initfile));
-		initfile[1024] = '\0';
-
-		if ((expfile = fopen(expfname, "r")) != NULL )
-		{
-			expstr = NULL;
-			program();
-		}
-	}
-
-	if (dashf)
-	{
-		expstr = NULL;
-		expfname = dashf;
-
-		if ((expfile = fopen(expfname,"r")) == NULL)
-		{
-			fprintf(stderr,"%s: ", argv[0]);
-			perror(expfname);
-			exit(1);
-		}
-
-		program();
-	}
-
-	if (dashe)
-	{
-		expfile = NULL;
-		expstr = dashe;
-		program();
-	}
+	/* Default to "1" if no file test expression has been specified */
 
 	if (startPC == -1)
 	{
-		expstr = NULL;
-		expfname = "stdin";
-		expfile = stdin;
-		program();
+		debug(("default expression: 1"));
+
+		load_program_str("1");
 	}
 
-	if (startPC == -1)
+	/* Deallocate symbols */
+
+	rawhide_finish();
+
+	/* Initialize depth limits in the global attr runtime state */
+
+	attr.depth_limit = sysconf(_SC_OPEN_MAX) - 5; /* stdin, stdout, stderr, dot_fd/dirsize/attropen+1 */
+	attr.depth_limit = env_int("RAWHIDE_TEST_DEPTH_LIMIT", 1, attr.depth_limit, attr.depth_limit);
+
+	if (opt_m > attr.depth_limit + 1)
+		fatal("invalid -m option argument: %lld (must be no more than %lld)", opt_m, attr.depth_limit + 1);
+
+	if (opt_M > attr.depth_limit + 1)
+		fatal("invalid -M option argument: %lld (must be no more than %lld)", opt_M, attr.depth_limit + 1);
+
+	attr.min_depth = (opt_m != -1) ? opt_m : (opt_r) ? 1 : 0;
+	attr.max_depth = (opt_M != -1) ? opt_M : (opt_r) ? 1 : attr.depth_limit + 1; /* +1 so we're told when we reach it */
+
+	debug(("min_depth = %lld, max_depth = %lld, depth_limit = %lld", attr.min_depth, attr.max_depth, attr.depth_limit));
+
+	/* Initialize a search stack for filesystem cycle detection */
+
+	if (!(attr.search_stack = (point_t *)calloc(attr.max_depth + 1, sizeof(point_t))))
+		fatal("out of memory");
+
+	/* Find matches in the given directories or the current directory */
+
+	for (; optind < argc; optind++)
 	{
-		fprintf(stderr, "%s: no start expression specified\n", argv[0]);
-		exit(1);
+		if (optind == expr_index) /* Skip implicit expression */
+			continue;
+
+		if (rawhide_search(argv[optind]) == -1)
+			attr.exit_status = EXIT_FAILURE;
+
+		++any;
 	}
 
-	rhfinish();
-
-	max_depth = sysconf(_SC_OPEN_MAX);
-
-	if (optind >= argc)
+	if (!any)
 	{
-		r = ftrw(".", examptr, (dashr) ? max_depth : 1);
-		if (r == -1)
-			perror(".");
+		if (rawhide_search(".") == -1)
+			attr.exit_status = EXIT_FAILURE;
 	}
-	else
-		for (; optind<argc; optind++)
-		{
-			r = ftrw(argv[optind], examptr, (dashr) ? max_depth : 1);
-			if (r == -1)
-				perror(argv[optind]);
-		}
 
-    exit(0);
+	free(attr.search_stack);
+	exit(attr.exit_status);
 }
 
 /* vi:set ts=4 sw=4: */

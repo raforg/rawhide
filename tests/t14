@@ -1,0 +1,167 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+. tests/.common
+
+label="config files"
+
+RAWHIDE_TEST_ETCDIR=tests/$t.etc
+RAWHIDE_CONFIG=$RAWHIDE_TEST_ETCDIR/rawhide.conf
+export RAWHIDE_CONFIG
+RAWHIDE_HOME=tests/$t.home
+export RAWHIDE_HOME
+RAWHIDE_RC=$RAWHIDE_HOME/.rhrc
+export RAWHIDE_RC
+
+# Note: root can't use $RAWHIDE_CONFIG or $RAWHIDE_RC so many of these tests aren't possible
+
+[ "`whoami`" = root ] && root=1 || root=0
+
+# Test with no config files or .d directories
+
+test_rawhide "./rh -e 1     $d" "$d\n" ""                                                                                                                                 0 "no config needed"
+test_rawhide "./rh -e home  $d" ""     "./rh: command line: -e 'home': line 1 byte 5: expected '(' or '{', found eof (possible attempt to call an undefined function)\n"  1 "no config - func from ~/.rhrc undefined"
+test_rawhide "./rh -e homed $d" ""     "./rh: command line: -e 'homed': line 1 byte 6: expected '(' or '{', found eof (possible attempt to call an undefined function)\n" 1 "no config - func from ~/.rhrc.d/ undefined"
+test_rawhide "./rh -e etc   $d" ""     "./rh: command line: -e 'etc': line 1 byte 4: expected '(' or '{', found eof (possible attempt to call an undefined function)\n"   1 "no config - func from /etc/rawhide.conf undefined"
+test_rawhide "./rh -e etcd  $d" ""     "./rh: command line: -e 'etcd': line 1 byte 5: expected '(' or '{', found eof (possible attempt to call an undefined function)\n"  1 "no config - func from /etc/rawhide.conf.d/ undefined"
+
+# Test with config files but no .d directories
+
+mkdir $RAWHIDE_HOME
+mkdir $RAWHIDE_TEST_ETCDIR
+
+echo "home() { 1 }" > $RAWHIDE_RC
+echo "etc() { 1 }" > $RAWHIDE_CONFIG
+
+test_rawhide "./rh -e 1     $d" "$d\n" ""                                                                                                                                 0 "no config needed"
+[ $root = 0 ] &&
+test_rawhide "./rh -e home  $d" "$d\n" ""                                                                                                                                 0 "func from ~/.rhrc defined"
+test_rawhide "./rh -e homed $d" ""     "./rh: command line: -e 'homed': line 1 byte 6: expected '(' or '{', found eof (possible attempt to call an undefined function)\n" 1 "func from ~/.rhrc.d/ undefined"
+[ $root = 0 ] &&
+test_rawhide "./rh -e etc   $d" "$d\n" ""                                                                                                                                 0 "func from /etc/rawhide.conf defined"
+test_rawhide "./rh -e etcd  $d" ""     "./rh: command line: -e 'etcd': line 1 byte 5: expected '(' or '{', found eof (possible attempt to call an undefined function)\n"  1 "func from /etc/rawhide.conf.d/ undefined"
+
+# Test with config files and empty .d directories
+
+mkdir ${RAWHIDE_RC}.d
+mkdir ${RAWHIDE_CONFIG}.d
+
+test_rawhide "./rh -e 1     $d" "$d\n" ""                                                                                                                                 0 "no config needed"
+[ $root = 0 ] &&
+test_rawhide "./rh -e home  $d" "$d\n" ""                                                                                                                                 0 "func from ~/.rhrc defined"
+test_rawhide "./rh -e homed $d" ""     "./rh: command line: -e 'homed': line 1 byte 6: expected '(' or '{', found eof (possible attempt to call an undefined function)\n" 1 "func from ~/.rhrc.d/ undefined"
+[ $root = 0 ] &&
+test_rawhide "./rh -e etc   $d" "$d\n" ""                                                                                                                                 0 "func from /etc/rawhide.conf defined"
+test_rawhide "./rh -e etcd  $d" ""     "./rh: command line: -e 'etcd': line 1 byte 5: expected '(' or '{', found eof (possible attempt to call an undefined function)\n"  1 "func from /etc/rawhide.conf.d/ undefined"
+
+# Test with config files and non-empty .d directories
+
+echo "homed1() { home }" > "${RAWHIDE_RC}.d/d1"
+echo "homed2() { homed1 }" > "${RAWHIDE_RC}.d/d2"
+echo "homed3() { homed2 }" > "${RAWHIDE_RC}.d/d3"
+echo "etcd1() { etc }" > "${RAWHIDE_CONFIG}.d/d1"
+echo "etcd2() { etcd1 }" > "${RAWHIDE_CONFIG}.d/d2"
+echo "etcd3() { etcd2 }" > "${RAWHIDE_CONFIG}.d/d3"
+
+test_rawhide "./rh -e 1      $d" "$d\n" "" 0 "no config needed"
+[ $root = 0 ] &&
+test_rawhide "./rh -e home   $d" "$d\n" "" 0 "func from ~/.rhrc defined"
+[ $root = 0 ] &&
+test_rawhide "./rh -e homed1 $d" "$d\n" "" 0 "func from ~/.rhrc.d/d1 defined"
+[ $root = 0 ] &&
+test_rawhide "./rh -e homed2 $d" "$d\n" "" 0 "func from ~/.rhrc.d/d2 defined"
+[ $root = 0 ] &&
+test_rawhide "./rh -e homed3 $d" "$d\n" "" 0 "func from ~/.rhrc.d/d3 defined"
+[ $root = 0 ] &&
+test_rawhide "./rh -e etc    $d" "$d\n" "" 0 "func from /etc/rawhide.conf defined"
+[ $root = 0 ] &&
+test_rawhide "./rh -e etcd1  $d" "$d\n" "" 0 "func from /etc/rawhide.conf.d/d1 defined"
+[ $root = 0 ] &&
+test_rawhide "./rh -e etcd2  $d" "$d\n" "" 0 "func from /etc/rawhide.conf.d/d2 defined"
+[ $root = 0 ] &&
+test_rawhide "./rh -e etcd3  $d" "$d\n" "" 0 "func from /etc/rawhide.conf.d/d3 defined"
+
+# Test with no config files but with non-empty .d directories but broken deps
+
+rm $RAWHIDE_RC
+rm $RAWHIDE_CONFIG
+
+[ $root = 0 ] &&
+test_rawhide "./rh -e 1        $d" "" "./rh: tests/t14.etc/rawhide.conf.d/d1: line 1 byte 13: undefined identifier: identifier etc\n" 1 "no config needed (broken deps in config)"
+[ $root = 0 ] &&
+test_rawhide "./rh -e home     $d" "" "./rh: tests/t14.etc/rawhide.conf.d/d1: line 1 byte 13: undefined identifier: identifier etc\n" 1 "func from ~/.rhrc undefined (broken deps in config)"
+[ $root = 0 ] &&
+test_rawhide "./rh -e homed1   $d" "" "./rh: tests/t14.etc/rawhide.conf.d/d1: line 1 byte 13: undefined identifier: identifier etc\n" 1 "func from ~/.rhrc.d/d1 defined (broken deps in config)"
+[ $root = 0 ] &&
+test_rawhide "./rh -e homed2   $d" "" "./rh: tests/t14.etc/rawhide.conf.d/d1: line 1 byte 13: undefined identifier: identifier etc\n" 1 "func from ~/.rhrc.d/d2 defined (broken deps in config)"
+[ $root = 0 ] &&
+test_rawhide "./rh -e homed3   $d" "" "./rh: tests/t14.etc/rawhide.conf.d/d1: line 1 byte 13: undefined identifier: identifier etc\n" 1 "func from ~/.rhrc.d/d3 defined (broken deps in config)"
+[ $root = 0 ] &&
+test_rawhide "./rh -e etc      $d" "" "./rh: tests/t14.etc/rawhide.conf.d/d1: line 1 byte 13: undefined identifier: identifier etc\n" 1 "func from /etc/rawhide.conf undefined (broken deps in config)"
+[ $root = 0 ] &&
+test_rawhide "./rh -e etcd1    $d" "" "./rh: tests/t14.etc/rawhide.conf.d/d1: line 1 byte 13: undefined identifier: identifier etc\n" 1 "func from /etc/rawhide.conf.d/d1 defined (broken deps in config)"
+[ $root = 0 ] &&
+test_rawhide "./rh -e etcd2    $d" "" "./rh: tests/t14.etc/rawhide.conf.d/d1: line 1 byte 13: undefined identifier: identifier etc\n" 1 "func from /etc/rawhide.conf.d/d2 defined (broken deps in config)"
+[ $root = 0 ] &&
+test_rawhide "./rh -e etcd3    $d" "" "./rh: tests/t14.etc/rawhide.conf.d/d1: line 1 byte 13: undefined identifier: identifier etc\n" 1 "func from /etc/rawhide.conf.d/d3 defined (broken deps in config)"
+
+# Test -N and -n separately and together
+
+[ $root = 0 ] &&
+test_rawhide "./rh -N -e 1     $d" ""     "./rh: tests/t14.home/.rhrc.d/d1: line 1 byte 15: undefined identifier: identifier home\n"      1 "no config needed - broken deps - exclude etc - still broken"
+[ $root = 0 ] &&
+test_rawhide "./rh -n -e 1     $d" ""     "./rh: tests/t14.etc/rawhide.conf.d/d1: line 1 byte 13: undefined identifier: identifier etc\n" 1 "no config needed - broken deps - exclude home - still broken"
+test_rawhide "./rh -Nn -e 1    $d" "$d\n" ""                                                                                              0 "no config needed - broken deps - exclude home and etc - ok"
+
+# Test with no config files but with non-empty .d directories but no broken deps
+
+echo "homed1() { 1 }" > "${RAWHIDE_RC}.d/d1"
+echo "homed2() { homed1 }" > "${RAWHIDE_RC}.d/d2"
+echo "homed3() { homed2 }" > "${RAWHIDE_RC}.d/d3"
+echo "etcd1() { 1 }" > "${RAWHIDE_CONFIG}.d/d1"
+echo "etcd2() { etcd1 }" > "${RAWHIDE_CONFIG}.d/d2"
+echo "etcd3() { etcd2 }" > "${RAWHIDE_CONFIG}.d/d3"
+
+test_rawhide "./rh -e 1        $d" "$d\n" ""                                                                                                                                0 "no config needed"
+test_rawhide "./rh -e home     $d" ""     "./rh: command line: -e 'home': line 1 byte 5: expected '(' or '{', found eof (possible attempt to call an undefined function)\n" 1 "func from ~/.rhrc undefined"
+[ $root = 0 ] &&
+test_rawhide "./rh -e homed1   $d" "$d\n" ""                                                                                                                                0 "func from ~/.rhrc.d/d1 defined and no broken deps"
+[ $root = 0 ] &&
+test_rawhide "./rh -e homed2   $d" "$d\n" ""                                                                                                                                0 "func from ~/.rhrc.d/d2 defined and no broken deps"
+[ $root = 0 ] &&
+test_rawhide "./rh -e homed3   $d" "$d\n" ""                                                                                                                                0 "func from ~/.rhrc.d/d3 defined and no broken deps"
+test_rawhide "./rh -e etc      $d" ""     "./rh: command line: -e 'etc': line 1 byte 4: expected '(' or '{', found eof (possible attempt to call an undefined function)\n"  1 "func from /etc/rawhide.conf undefined"
+[ $root = 0 ] &&
+test_rawhide "./rh -e etcd1    $d" "$d\n" ""                                                                                                                                0 "func from /etc/rawhide.conf.d/d1 defined and no broken deps"
+[ $root = 0 ] &&
+test_rawhide "./rh -e etcd2    $d" "$d\n" ""                                                                                                                                0 "func from /etc/rawhide.conf.d/d2 defined and no broken deps"
+[ $root = 0 ] &&
+test_rawhide "./rh -e etcd3    $d" "$d\n" ""                                                                                                                                0 "func from /etc/rawhide.conf.d/d3 defined and no broken deps"
+
+rm -rf $RAWHIDE_TEST_ETCDIR
+rm -rf $RAWHIDE_HOME
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:

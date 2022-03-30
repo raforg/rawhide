@@ -1,0 +1,172 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+. tests/.common
+
+label="-r, -m and -M options"
+
+mkdir $d/d1-a
+mkdir $d/d1-a/d2-a.a
+mkdir $d/d1-a/d2-a.a/d3-a.a.a
+mkdir $d/d1-a/d2-a.a/d3-a.a.b
+mkdir $d/d1-a/d2-a.a/d3-a.a.c
+mkdir $d/d1-a/d2-a.b
+mkdir $d/d1-a/d2-a.b/d3-a.b.a
+mkdir $d/d1-a/d2-a.b/d3-a.b.b
+mkdir $d/d1-a/d2-a.b/d3-a.b.c
+mkdir $d/d1-a/d2-a.c
+mkdir $d/d1-a/d2-a.c/d3-a.c.a
+mkdir $d/d1-a/d2-a.c/d3-a.c.b
+mkdir $d/d1-a/d2-a.c/d3-a.c.c
+
+mkdir $d/d1-b
+mkdir $d/d1-b/d2-b.a
+mkdir $d/d1-b/d2-b.a/d3-b.a.a
+mkdir $d/d1-b/d2-b.a/d3-b.a.b
+mkdir $d/d1-b/d2-b.a/d3-b.a.c
+mkdir $d/d1-b/d2-b.b
+mkdir $d/d1-b/d2-b.b/d3-b.b.a
+mkdir $d/d1-b/d2-b.b/d3-b.b.b
+mkdir $d/d1-b/d2-b.b/d3-b.b.c
+mkdir $d/d1-b/d2-b.c
+mkdir $d/d1-b/d2-b.c/d3-b.c.a
+mkdir $d/d1-b/d2-b.c/d3-b.c.b
+mkdir $d/d1-b/d2-b.c/d3-b.c.c
+
+mkdir $d/d1-c
+mkdir $d/d1-c/d2-c.a
+mkdir $d/d1-c/d2-c.a/d3-c.a.a
+mkdir $d/d1-c/d2-c.a/d3-c.a.b
+mkdir $d/d1-c/d2-c.a/d3-c.a.c
+mkdir $d/d1-c/d2-c.b
+mkdir $d/d1-c/d2-c.b/d3-c.b.a
+mkdir $d/d1-c/d2-c.b/d3-c.b.b
+mkdir $d/d1-c/d2-c.b/d3-c.b.c
+mkdir $d/d1-c/d2-c.c
+mkdir $d/d1-c/d2-c.c/d3-c.c.a
+mkdir $d/d1-c/d2-c.c/d3-c.c.b
+mkdir $d/d1-c/d2-c.c/d3-c.c.c
+
+# Where possible (not Solaris), compare depth numbers with find's -mindepth -maxdepth
+if find_has_mindepth
+then
+	test_rawhide_pre_hook() { test_rh_find_pre_hook; }
+
+	test_rawhide_find "$rh $d"     "find $d"                         "no depth restriction"
+	test_rawhide_find "$rh -r $d"  "find $d -mindepth 1 -maxdepth 1" "-r"
+
+	test_rawhide_find "$rh -m0 $d" "find $d -mindepth 0" "-m0"
+	test_rawhide_find "$rh -m1 $d" "find $d -mindepth 1" "-m1"
+	test_rawhide_find "$rh -m2 $d" "find $d -mindepth 2" "-m2"
+	test_rawhide_find "$rh -m3 $d" "find $d -mindepth 3" "-m3"
+	test_rawhide_find "$rh -m4 $d" "find $d -mindepth 4" "-m4"
+
+	test_rawhide_find "$rh -M0 $d" "find $d -maxdepth 0" "-M0"
+	test_rawhide_find "$rh -M1 $d" "find $d -maxdepth 1" "-M1"
+	test_rawhide_find "$rh -M2 $d" "find $d -maxdepth 2" "-M2"
+	test_rawhide_find "$rh -M3 $d" "find $d -maxdepth 3" "-M3"
+	test_rawhide_find "$rh -M4 $d" "find $d -maxdepth 4" "-M4"
+
+	test_rawhide_find "$rh -m0 -M0 $d" "find $d -mindepth 0 -maxdepth 0" "-m0 -M0"
+	test_rawhide_find "$rh -m1 -M1 $d" "find $d -mindepth 1 -maxdepth 1" "-m1 -M1"
+	test_rawhide_find "$rh -m2 -M2 $d" "find $d -mindepth 2 -maxdepth 2" "-m2 -M2"
+	test_rawhide_find "$rh -m3 -M3 $d" "find $d -mindepth 3 -maxdepth 3" "-m3 -M3"
+	test_rawhide_find "$rh -m4 -M4 $d" "find $d -mindepth 4 -maxdepth 4" "-m4 -M4"
+
+	test_rawhide_find "$rh -m0 -M1 $d" "find $d -mindepth 0 -maxdepth 1" "-m0 -M1"
+	test_rawhide_find "$rh -m1 -M2 $d" "find $d -mindepth 1 -maxdepth 2" "-m1 -M2"
+	test_rawhide_find "$rh -m2 -M3 $d" "find $d -mindepth 2 -maxdepth 3" "-m2 -M3"
+	test_rawhide_find "$rh -m3 -M4 $d" "find $d -mindepth 3 -maxdepth 4" "-m3 -M4"
+	test_rawhide_find "$rh -m4 -M5 $d" "find $d -mindepth 4 -maxdepth 5" "-m4 -M5"
+
+	test_rawhide_find "$rh -m0 -M2 $d" "find $d -mindepth 0 -maxdepth 2" "-m0 -M2"
+	test_rawhide_find "$rh -m1 -M3 $d" "find $d -mindepth 1 -maxdepth 3" "-m1 -M3"
+	test_rawhide_find "$rh -m2 -M4 $d" "find $d -mindepth 2 -maxdepth 4" "-m2 -M4"
+	test_rawhide_find "$rh -m3 -M5 $d" "find $d -mindepth 3 -maxdepth 5" "-m3 -M5"
+	test_rawhide_find "$rh -m4 -M6 $d" "find $d -mindepth 4 -maxdepth 6" "-m4 -M6"
+
+	test_rawhide_pre_hook() { true; }
+fi
+
+# Solaris find can't do -mindepth -maxdepth and order isn't fixed, so can't test when any siblings
+rm -rf $d/d1-*
+mkdir $d/d1
+mkdir $d/d1/d2
+mkdir $d/d1/d2/d3
+
+test_rawhide "$rh $d"     "$d\n$d/d1\n$d/d1/d2\n$d/d1/d2/d3\n" "" 0 "no depth restriction"
+test_rawhide "$rh -r $d"  "$d/d1\n"                            "" 0 "-r"
+
+test_rawhide "$rh -m0 $d" "$d\n$d/d1\n$d/d1/d2\n$d/d1/d2/d3\n" "" 0 "-m0"
+test_rawhide "$rh -m1 $d" "$d/d1\n$d/d1/d2\n$d/d1/d2/d3\n"     "" 0 "-m1"
+test_rawhide "$rh -m2 $d" "$d/d1/d2\n$d/d1/d2/d3\n"            "" 0 "-m2"
+test_rawhide "$rh -m3 $d" "$d/d1/d2/d3\n"                      "" 0 "-m3"
+test_rawhide "$rh -m4 $d" ""                                   "" 0 "-m4"
+
+test_rawhide "$rh -M0 $d" "$d\n"                               "" 0 "-M0"
+test_rawhide "$rh -M1 $d" "$d\n$d/d1\n"                        "" 0 "-M1"
+test_rawhide "$rh -M2 $d" "$d\n$d/d1\n$d/d1/d2\n"              "" 0 "-M2"
+test_rawhide "$rh -M3 $d" "$d\n$d/d1\n$d/d1/d2\n$d/d1/d2/d3\n" "" 0 "-M3"
+test_rawhide "$rh -M4 $d" "$d\n$d/d1\n$d/d1/d2\n$d/d1/d2/d3\n" "" 0 "-M4"
+
+test_rawhide "$rh -m0 -M0 $d" "$d\n"                           "" 0 "-m0 -M0"
+test_rawhide "$rh -m1 -M1 $d" "$d/d1\n"                        "" 0 "-m1 -M1"
+test_rawhide "$rh -m2 -M2 $d" "$d/d1/d2\n"                     "" 0 "-m2 -M2"
+test_rawhide "$rh -m3 -M3 $d" "$d/d1/d2/d3\n"                  "" 0 "-m3 -M3"
+test_rawhide "$rh -m4 -M4 $d" ""                               "" 0 "-m4 -M4"
+
+test_rawhide "$rh -m0 -M1 $d" "$d\n$d/d1\n"                    "" 0 "-m0 -M1"
+test_rawhide "$rh -m1 -M2 $d" "$d/d1\n$d/d1/d2\n"              "" 0 "-m1 -M2"
+test_rawhide "$rh -m2 -M3 $d" "$d/d1/d2\n$d/d1/d2/d3\n"        "" 0 "-m2 -M3"
+test_rawhide "$rh -m3 -M4 $d" "$d/d1/d2/d3\n"                  "" 0 "-m3 -M4"
+test_rawhide "$rh -m4 -M5 $d" ""                               "" 0 "-m4 -M5"
+
+test_rawhide "$rh -m0 -M2 $d" "$d\n$d/d1\n$d/d1/d2\n"          "" 0 "-m0 -M2"
+test_rawhide "$rh -m1 -M3 $d" "$d/d1\n$d/d1/d2\n$d/d1/d2/d3\n" "" 0 "-m1 -M3"
+test_rawhide "$rh -m2 -M4 $d" "$d/d1/d2\n$d/d1/d2/d3\n"        "" 0 "-m2 -M4"
+test_rawhide "$rh -m3 -M5 $d" "$d/d1/d2/d3\n"                  "" 0 "-m3 -M5"
+test_rawhide "$rh -m4 -M6 $d" ""                               "" 0 "-m4 -M6"
+
+test_rawhide "$rh -m1    -r $d" "" "./rh: -r and -m options are mutually exclusive\n" 1 "-m1 -r (-m and -r invalid)"
+test_rawhide "$rh -M1    -r $d" "" "./rh: -r and -M options are mutually exclusive\n" 1 "-M1 -r (-M and -r invalid)"
+
+test_rawhide "$rh -m -3     $d" "" "./rh: invalid -m option argument: -3 (must be a non-negative integer)\n"     1 "invalid -m (negative)"
+test_rawhide "$rh -M -3     $d" "" "./rh: invalid -M option argument: -3 (must be a non-negative integer)\n"     1 "invalid -M (negative)"
+test_rawhide "$rh -m garble $d" "" "./rh: invalid -m option argument: garble (must be a non-negative integer)\n" 1 "invalid -m (not a number)"
+test_rawhide "$rh -M garble $d" "" "./rh: invalid -M option argument: garble (must be a non-negative integer)\n" 1 "invalid -M (not a number)"
+test_rawhide "$rh -m ''     $d" "" "./rh: missing -m option argument (see ./rh -h for help)\n"                   1 "invalid -m (empty arg)"
+test_rawhide "$rh -M ''     $d" "" "./rh: missing -M option argument (see ./rh -h for help)\n"                   1 "invalid -M (empty arg)"
+test_rawhide "$rh -m"           "" "./rh: missing -m option argument (see ./rh -h for help)\n"                   1 "invalid -m (no arg)"
+test_rawhide "$rh -M"           "" "./rh: missing -M option argument (see ./rh -h for help)\n"                   1 "invalid -M (no arg)"
+
+test_rawhide "RAWHIDE_TEST_DEPTH_LIMIT=3 $rh -m 5 $d" "" "./rh: invalid -m option argument: 5 (must be no more than 4)\n" 1 "invalid -m (more than depth limit)"
+test_rawhide "RAWHIDE_TEST_DEPTH_LIMIT=3 $rh -M 5 $d" "" "./rh: invalid -M option argument: 5 (must be no more than 4)\n" 1 "invalid -M (more than depth limit)"
+
+test_rawhide "RAWHIDE_TEST_DEPTH_LIMIT=3 $rh -m 4 $d" ""                                   "./rh: too many directory levels: $d/d1/d2/d3\n" 1 "valid -m (depth limit + 1 - ok - to show runtime error)"
+test_rawhide "RAWHIDE_TEST_DEPTH_LIMIT=3 $rh -M 4 $d" "$d\n$d/d1\n$d/d1/d2\n$d/d1/d2/d3\n" "./rh: too many directory levels: $d/d1/d2/d3\n" 1 "valid -M (depth limit + 1 - ok - to show runtime error)"
+
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:

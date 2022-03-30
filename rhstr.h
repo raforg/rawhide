@@ -21,27 +21,31 @@
 * 20220330 raf <raf@raf.org>
 */
 
-#ifndef RAWHIDE_RHDIR_H
-#define RAWHIDE_RHDIR_H
+#ifndef RAWHIDE_RHSTR_H
+#define RAWHIDE_RHSTR_H
 
-llong env_int(char *envname, llong min_value, llong max_value, llong default_value);
-int rawhide_search(char *fpath);
-int following_symlinks(void);
-const char *ytypecode(struct stat *statbuf);
-const char *modestr(struct stat *statbuf);
-const char *aclea(void);
-int fcntl_set_fdflag(int fd, int flag);
-void visitf_default(void);
-void visitf_long(void);
-void visitf_execute(void);
-void visitf_execute_local(void);
-void visitf_unlink(void);
-void visitf_format(void);
-int syscmd(const char *cmd);
-int remove_danger_from_path(void);
-int interpolate_command(const char *srccmd, char *command, int cmdbufsize);
-int chdir_local(int do_debug);
+#include <unistd.h> /* For ssize_t on Debian6 */
+#include <stddef.h>
+#include <ctype.h>
 
-#define CMDBUFSIZE 8192
+#ifndef strlcpy /* For macOS */
+size_t strlcpy(char *dst, const char *src, size_t size);
+#endif
+#ifndef strlcat /* For macOS */
+size_t strlcat(char *dst, const char *src, size_t size);
+#endif
+
+int ssnprintf(char *str, ssize_t size, const char *format, ...);
+int cescape(char *dst, ssize_t dstsize, const char *src, ssize_t srcsize, int options);
+const char *ok(const char *s);
+const char *ok2(const char *s);
+const char *oklen(const char *s, size_t len);
+
+#define CESCAPE_QUOTES 1
+#define CESCAPE_HEX    2
+#define CESCAPE_JSON   5
+#define CESCAPE_BIN    10
+
+#define isquotable(c) iscntrl(c)
 
 #endif

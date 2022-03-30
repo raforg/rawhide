@@ -1,0 +1,44 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+. tests/.common
+
+label="fstatat/openat/fdopendir/fchdir/chdir syscall errors"
+
+mkdir $d/d1
+mkdir $d/d1/d2
+
+test_rawhide "$rh $d"                                        "$d\n$d/d1\n$d/d1/d2\n" ""                                                      0 "no syscall failure"
+test_rawhide_post_hook() { test_rh_errno_post_hook; }
+test_rawhide "RAWHIDE_TEST_FSTATAT_FAILURE=$d  $rh $d"       ""                      "./rh: fstatat $d: Operation not permitted\n"   1 "simulate fstatat failure"
+test_rawhide "RAWHIDE_TEST_OPENAT_FAILURE=1    $rh $d"       "$d\n"                  "./rh: $d: Operation not permitted\n"           1 "simulate openat failure"
+test_rawhide "RAWHIDE_TEST_FDOPENDIR_FAILURE=1 $rh $d"       "$d\n"                  "./rh: fdopendir $d: Operation not permitted\n" 1 "simulate fdopendir failure"
+test_rawhide "RAWHIDE_TEST_CHDIR_FAILURE=1  $rh -X 'echo %s' $d" ""                  "./rh: chdir tests: Operation not permitted\n"          1 "simulate chdir failure"
+test_rawhide "RAWHIDE_TEST_FCHDIR_FAILURE=1 $rh -X 'echo %s' $d" "$d\n"              "./rh: fchdir $d: Operation not permitted\n"    1 "simulate fchdir failure"
+test_rawhide_post_hook() { true; }
+
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:

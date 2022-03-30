@@ -1,0 +1,156 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+. tests/.common
+
+label="glob/pcre/sh pattern modifiers"
+
+touch $d/f
+mkdir $d/d
+ln -s f $d/linkrel
+ln -s $d/f $d/linkabs
+
+test_rawhide_post_hook() { test_rh_sort_post_hook; }
+
+test_rawhide "$rh -e '\"*\"'        $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"*\""
+test_rawhide "$rh -e '\"*\".path'   $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"*\".path"
+test_rawhide "$rh -e '\"*\".link'   $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"*\".link"
+test_rawhide "$rh -e '\"$d*\"'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"$d*\" (assumes .path)"
+test_rawhide "$rh -e '\"$d*\".path' $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"$d*\".path"
+test_rawhide "$rh -e '\"$d*\".link' $d" "$d/linkabs\n"                             "" 0 "\"$d*\".link"
+test_rawhide "$rh -e '\"f\"'        $d" "$d/f\n"                                   "" 0 "\"f\""
+test_rawhide "$rh -e '\"f\".path'   $d" ""                                         "" 0 "\"f\".path"
+test_rawhide "$rh -e '\"f\".link'   $d" "$d/linkrel\n"                             "" 0 "\"f\".link"
+test_rawhide "$rh -e '\"*f\"'       $d" "$d/f\n"                                   "" 0 "\"*f\""
+test_rawhide "$rh -e '\"*f\".path'  $d" "$d/f\n"                                   "" 0 "\"*f\".path"
+test_rawhide "$rh -e '\"*f\".link'  $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"*f\".link"
+test_rawhide "$rh -e '\"F\"'        $d" ""                                         "" 0 "\"F\""
+test_rawhide "$rh -e '\"F\".path'   $d" ""                                         "" 0 "\"F\".path"
+test_rawhide "$rh -e '\"F\".link'   $d" ""                                         "" 0 "\"F\".link"
+test_rawhide "$rh -e '\"*F\"'       $d" ""                                         "" 0 "\"*F\""
+test_rawhide "$rh -e '\"*F\".path'  $d" ""                                         "" 0 "\"*F\".path"
+test_rawhide "$rh -e '\"*F\".link'  $d" ""                                         "" 0 "\"*F\".link"
+
+# Test i ipath ilink if available
+
+if $rh -h | grep -q '\.ipath'
+then
+	test_rawhide "$rh -e '\"*\".i'       $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"*\".i"
+	test_rawhide "$rh -e '\"*\".ipath'   $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"*\".ipath"
+	test_rawhide "$rh -e '\"*\".ilink'   $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"*\".ilink"
+	test_rawhide "$rh -e '\"$d*\".i'     $d" ""                                         "" 0 "\"$d*\".i"
+	test_rawhide "$rh -e '\"$d*\".ipath' $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"$d*\".ipath"
+	test_rawhide "$rh -e '\"$d*\".ilink' $d" "$d/linkabs\n"                             "" 0 "\"$d*\".ilink"
+	test_rawhide "$rh -e '\"f\".i'       $d" "$d/f\n"                                   "" 0 "\"f\".i"
+	test_rawhide "$rh -e '\"f\".ipath'   $d" ""                                         "" 0 "\"f\".ipath"
+	test_rawhide "$rh -e '\"f\".ilink'   $d" "$d/linkrel\n"                             "" 0 "\"f\".ilink"
+	test_rawhide "$rh -e '\"*f\".i'      $d" "$d/f\n"                                   "" 0 "\"*f\".i"
+	test_rawhide "$rh -e '\"*f\".ipath'  $d" "$d/f\n"                                   "" 0 "\"*f\".ipath"
+	test_rawhide "$rh -e '\"*f\".ilink'  $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"*f\".ilink"
+	test_rawhide "$rh -e '\"F\".i'       $d" "$d/f\n"                                   "" 0 "\"F\".i"
+	test_rawhide "$rh -e '\"F\".ipath'   $d" ""                                         "" 0 "\"F\".ipath"
+	test_rawhide "$rh -e '\"F\".ilink'   $d" "$d/linkrel\n"                             "" 0 "\"F\".ilink"
+	test_rawhide "$rh -e '\"*F\".i'      $d" "$d/f\n"                                   "" 0 "\"*F\".i"
+	test_rawhide "$rh -e '\"*F\".ipath'  $d" "$d/f\n"                                   "" 0 "\"*F\".ipath"
+	test_rawhide "$rh -e '\"*F\".ilink'  $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"*F\".ilink"
+fi
+
+# Test re repath relink rei reipath reilink if available
+
+if $rh -h | grep -q '\.repath'
+then
+	test_rawhide "$rh -e '\"\\w+\".re'         $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"\\w+\".re"
+	test_rawhide "$rh -e '\"+\".re'            $d" "" "./rh: invalid regex + at offset 0: quantifier does not follow a repeatable item\n" 1 "\"+\".re with invalid re and error message"
+
+	test_rawhide "$rh -e '\"^.*\$\".re'        $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"^.*\$\".re"
+	test_rawhide "$rh -e '\"^.*\$\".repath'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"^.*\$\".repath"
+	test_rawhide "$rh -e '\"^.*\$\".relink'    $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"^.*\$\".relink"
+	test_rawhide "$rh -e '\"^$d.*$\".re'       $d" ""                                         "" 0 "\"^$d.*\$\".re"
+	test_rawhide "$rh -e '\"^$d.*\$\".repath'  $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"^$d.*\$\".repath"
+	test_rawhide "$rh -e '\"^$d.*\$\".relink'  $d" "$d/linkabs\n"                             "" 0 "\"^$d.*\$\".relink"
+	test_rawhide "$rh -e '\"^f\$\".re'         $d" "$d/f\n"                                   "" 0 "\"^f\$\".re"
+	test_rawhide "$rh -e '\"^f\$\".repath'     $d" ""                                         "" 0 "\"^f\$\".repath"
+	test_rawhide "$rh -e '\"^f\$\".relink'     $d" "$d/linkrel\n"                             "" 0 "\"^f\$\".relink"
+	test_rawhide "$rh -e '\"^.*f\$\".re'       $d" "$d/f\n"                                   "" 0 "\"^.*f\$\".re"
+	test_rawhide "$rh -e '\"^.*f\$\".repath'   $d" "$d/f\n"                                   "" 0 "\"^.*f\$\".repath"
+	test_rawhide "$rh -e '\"^.*f\$\".relink'   $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"^.*f\$\".relink"
+	test_rawhide "$rh -e '\"^F\$\".re'         $d" ""                                         "" 0 "\"^F\$\".re"
+	test_rawhide "$rh -e '\"^F\$\".repath'     $d" ""                                         "" 0 "\"^F\$\".repath"
+	test_rawhide "$rh -e '\"^F\$\".relink'     $d" ""                                         "" 0 "\"^F\$\".relink"
+	test_rawhide "$rh -e '\"^.*F\$\".re'       $d" ""                                         "" 0 "\"^.*F\$\".re"
+	test_rawhide "$rh -e '\"^.*F\$\".repath'   $d" ""                                         "" 0 "\"^.*F\$\".repath"
+	test_rawhide "$rh -e '\"^.*F\$\".relink'   $d" ""                                         "" 0 "\"^.*F\$\".relink"
+
+	test_rawhide "$rh -e '\"^.*\$\".rei'       $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"^.*\$\".rei"
+	test_rawhide "$rh -e '\"^.*\$\".reipath'   $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"^.*\$\".reipath"
+	test_rawhide "$rh -e '\"^.*\$\".reilink'   $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"^.*\$\".reilink"
+	test_rawhide "$rh -e '\"^$d.*\$\".rei'     $d" ""                                         "" 0 "\"^$d.*\$\".rei"
+	test_rawhide "$rh -e '\"^$d.*\$\".reipath' $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"^$d.*\$\".reipath"
+	test_rawhide "$rh -e '\"^$d.*\$\".reilink' $d" "$d/linkabs\n"                             "" 0 "\"^$d.*\$\".reilink"
+	test_rawhide "$rh -e '\"^f\$\".rei'        $d" "$d/f\n"                                   "" 0 "\"^f\$\".rei"
+	test_rawhide "$rh -e '\"^f\$\".reipath'    $d" ""                                         "" 0 "\"^f\$\".reipath"
+	test_rawhide "$rh -e '\"^f\$\".reilink'    $d" "$d/linkrel\n"                             "" 0 "\"^f\$\".reilink"
+	test_rawhide "$rh -e '\"^.*f\$\".rei'      $d" "$d/f\n"                                   "" 0 "\"^.*f\$\".rei"
+	test_rawhide "$rh -e '\"^.*f\$\".reipath'  $d" "$d/f\n"                                   "" 0 "\"^.*f\$\".reipath"
+	test_rawhide "$rh -e '\"^.*f\$\".reilink'  $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"^.*f\$\".reilink"
+	test_rawhide "$rh -e '\"^F\$\".rei'        $d" "$d/f\n"                                   "" 0 "\"^F\$\".rei"
+	test_rawhide "$rh -e '\"^F\$\".reipath'    $d" ""                                         "" 0 "\"^F\$\".reipath"
+	test_rawhide "$rh -e '\"^F\$\".reilink'    $d" "$d/linkrel\n"                             "" 0 "\"^F\$\".reilink"
+	test_rawhide "$rh -e '\"^.*F\$\".rei'      $d" "$d/f\n"                                   "" 0 "\"^.*F\$\".rei"
+	test_rawhide "$rh -e '\"^.*F\$\".reipath'  $d" "$d/f\n"                                   "" 0 "\"^.*F\$\".reipath"
+	test_rawhide "$rh -e '\"^.*F\$\".reilink'  $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"^.*F\$\".reilink"
+fi
+
+# Test sh
+
+test_rawhide "$rh -e '\"false\".sh'           $d" ""                                         "" 0 ".sh false"
+test_rawhide "$rh -e '\"true\".sh'            $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 ".sh true"
+test_rawhide "$rh -e '\"[ str = other ]\".sh' $d" ""                                         "" 0 ".sh [ str = other ]"
+test_rawhide "$rh -e '\"[ str = str ]\".sh'   $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 ".sh [ str = str ]"
+test_rawhide "$rh -e '\"unexpected-executable 2>/dev/null\".sh' $d" "" "" 0 ".sh unexpected executable"
+
+test_rawhide "$rh 'd && \"[ \`$explicit_rh -m1 -M1 -ed -q %S | wc -l\` = 0 ]\".sh' $d" "$d/d\n" "" 0 ".sh directories with no sub-directories"
+test_rawhide "$rh 'd && \"[ \`$explicit_rh -m1 -M1     -q %S | wc -l\` = 0 ]\".sh' $d" "$d/d\n" "" 0 ".sh empty directories"
+
+test_rawhide_post_hook() { true; }
+test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".sh' /"         "/ ././.\n/\n"                    "" 0 ".sh in / root directory"
+test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".sh' /etc"      "/ ./etc.etc.\n/etc\n"            "" 0 ".sh in /etc directory (no trailing /)"
+test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".sh' /etc/"     "/ ./etc.etc.\n/etc\n"            "" 0 ".sh in /etc/ directory (with trailing /)"
+test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".sh' /usr/bin"  "/usr ./usr/bin.bin.\n/usr/bin\n" "" 0 ".sh in /usr/bin directory (no trailing /)"
+test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".sh' /usr/bin/" "/usr ./usr/bin.bin.\n/usr/bin\n" "" 0 ".sh in /usr/bin/ directory (with trailing /)"
+
+# Test the pcre compiled pattern cache
+
+if $rh -h | grep -q '\.re'
+then
+	touch $d/abcdefghi $d/1 $d/2 $d/3 $d/4 $d/5 $d/6 $d/7 $d/8 $d/9
+	test_rawhide "$rh -e '\"abc\".re'                             $d" "$d/abcdefghi\n" "" 0 "pcre cache 1 pattern"
+	test_rawhide "$rh -e '\"abc\".re && \"def\".re'               $d" "$d/abcdefghi\n" "" 0 "pcre cache 2 patterns"
+	test_rawhide "$rh -e '\"abc\".re && \"def\".re && \"ghi\".re' $d" "$d/abcdefghi\n" "" 0 "pcre cache 3 patterns"
+fi
+
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:

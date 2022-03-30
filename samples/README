@@ -1,0 +1,34 @@
+This samples directory contains:
+
+.rh.sh
+------
+Copy this to ~ and source it from your shell config (e.g., sh, ksh, zsh, bash)
+to define the functions rq rql rqv ri ril riv re rel rev rei reil reiv
+and the aliases rl rlr rv rvr rj r0 r1 r1l r1v ry ryl ryv rY rYl rYv.
+It also contains commented-out environment variables that affect rh.
+See rh(1) for details.
+
+    cp samples/.rh.sh ~
+    echo '. ~/.rh.sh' >> ~/.profile
+
+brevity.rh
+----------
+Copy this to ~/.rhrc.d to define the functions i n u g a m su sg nu ng
+r w x q sec mn hr dy wk mth yr. See rawhide.conf(5) for details.
+
+    cp samples/brevity.sh ~/.rhrc.d
+
+rawhide.conf-tiny
+-----------------
+This is a smaller version of /etc/rawhide.conf that excludes most of the
+longer alternative names for things. Longer alternative names for some
+built-ins remain. This might be preferable for resource-constrained systems.
+Consider replacing rawhide.conf with this, if you configure --static=tiny.
+You don't have to, but with --static=tiny, the default /etc/rawhide.conf
+will consume half of the data space, but that's probably fine.
+
+    cp -p samples/rawhide.conf-tiny ./rawhide.conf
+    ./configure --static=tiny
+    make
+    sudo make install
+

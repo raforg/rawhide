@@ -1,0 +1,484 @@
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+# tests/.common - Test helpers
+
+# Make sure that rh is compiled first (but not necessarily up to date)
+
+[ -x ./rh ] || make || exit 1
+
+umask 022
+
+# Erase any environment variables that affect rawhide
+
+unset RAWHIDE_CONFIG
+unset RAWHIDE_RC
+unset RAWHIDE_PCRE2_NOT_UTF8_DEFAULT
+unset RAWHIDE_PCRE2_UTF8_DEFAULT
+unset RAWHIDE_SOLARIS_ACL_NO_TRIVIAL
+unset RAWHIDE_SOLARIS_EA_NO_SUNWATTR
+unset RAWHIDE_SOLARIS_EA_NO_STATINFO
+unset RAWHIDE_EA_SIZE
+unset RAWHIDE_REPORT_BROKEN_SYMLINKS
+unset RAWHIDE_DONT_REPORT_CYCLES
+# Setting these to 1, rather than unsetting them, increases test coverage slightly
+RAWHIDE_COLUMN_WIDTH_DEV_MAJOR=1; export RAWHIDE_COLUMN_WIDTH_DEV_MAJOR
+RAWHIDE_COLUMN_WIDTH_DEV_MINOR=1; export RAWHIDE_COLUMN_WIDTH_DEV_MINOR
+RAWHIDE_COLUMN_WIDTH_INODE=1; export RAWHIDE_COLUMN_WIDTH_INODE
+RAWHIDE_COLUMN_WIDTH_BLKSIZE=1; export RAWHIDE_COLUMN_WIDTH_BLKSIZE
+RAWHIDE_COLUMN_WIDTH_BLOCKS=1; export RAWHIDE_COLUMN_WIDTH_BLOCKS
+RAWHIDE_COLUMN_WIDTH_SPACE=1; export RAWHIDE_COLUMN_WIDTH_SPACE
+RAWHIDE_COLUMN_WIDTH_SPACE_UNITS=1; export RAWHIDE_COLUMN_WIDTH_SPACE_UNITS
+RAWHIDE_COLUMN_WIDTH_NLINK=1; export RAWHIDE_COLUMN_WIDTH_NLINK
+RAWHIDE_COLUMN_WIDTH_USER=1; export RAWHIDE_COLUMN_WIDTH_USER
+RAWHIDE_COLUMN_WIDTH_GROUP=1; export RAWHIDE_COLUMN_WIDTH_GROUP
+RAWHIDE_COLUMN_WIDTH_SIZE=1; export RAWHIDE_COLUMN_WIDTH_SIZE
+RAWHIDE_COLUMN_WIDTH_SIZE_UNITS=1; export RAWHIDE_COLUMN_WIDTH_SIZE_UNITS
+RAWHIDE_COLUMN_WIDTH_RDEV_MAJOR=1; export RAWHIDE_COLUMN_WIDTH_RDEV_MAJOR
+RAWHIDE_COLUMN_WIDTH_RDEV_MINOR=1; export RAWHIDE_COLUMN_WIDTH_RDEV_MINOR
+
+# The default rh command for testing (and some other versions)
+
+saved_pwd="`pwd`"
+
+# Set VALGRIND=1 or vg=1 to produce valgrind.out (takes 40 minutes here)
+# Set VALGRIND_OPTIONS or vgopts to any additional valgrind options (e.g., --track-origins=yes)
+
+[ "x$vg" = x1 ] && VALGRIND=1
+[ -n "$vgopts" ] && VALGRIND_OPTIONS="$vgopts"
+
+if [ x"$VALGRIND" = x1 ]
+then
+	valgrind="`which valgrind 2>/dev/null`"
+
+	if [ -x "$valgrind" ]
+	then
+		valgrind="$valgrind --log-fd=9 --show-error-list=yes --leak-check=full --track-fds=yes --show-leak-kinds=all $VALGRIND_OPTIONS "
+		exec 9>>"$saved_pwd/valgrind.out"
+	else
+		echo "valgrind not found" >&1
+		exit 1
+	fi
+fi
+
+default_rh="${valgrind}./rh -Nn -f rawhide.conf"
+explicit_rh="${valgrind}$saved_pwd/rh -Nn -f $saved_pwd/rawhide.conf"
+builtin_rh="${valgrind}./rh -Nn"
+rh="$default_rh"
+
+# Prepare
+
+t="${0##*/}"
+d=tests/.$t
+errors=0
+tests=0
+fails=0
+
+rm -rf $d
+mkdir $d
+
+count_error()
+{
+	errors="`expr $errors + 1`"
+}
+
+count_test()
+{
+	tests="`expr $tests + 1`"
+}
+
+count_fail()
+{
+	fails="`expr $fails + 1`"
+}
+
+# Cleanup
+
+finish()
+{
+	rm -rf $d	
+	report
+}
+
+# Default hooks for test_rawhide()
+
+test_rawhide_pre_hook() { true; }
+test_rawhide_post_hook() { true; }
+
+# Run rh and check its outputs against expectations
+
+test_rawhide()
+{
+	cmd="$1"
+	expected_stdout="$2" # Used by printf
+	expected_stderr="$3" # Used by printf
+	expected_rc="$4"
+	desc="$5" # Used by echo
+
+	count_test
+	failed=0
+
+	stdout=tests/$t.out
+	stderr=tests/$t.err
+
+	[ -n "$expected_stdout" ] && printf "$expected_stdout" > $stdout.expected || touch $stdout.expected
+	[ -n "$expected_stderr" ] && printf "$expected_stderr" > $stderr.expected || touch $stderr.expected
+
+	test_rawhide_pre_hook
+
+	/bin/sh -c "$cmd" >$stdout 2>$stderr
+	rc=$?
+
+	test_rawhide_post_hook
+
+	if [ x"$DEBUG" = x1 ]
+	then
+		echo "===================="
+		[ -n "$find_cmd" ] && echo "$find_cmd [exit=$expected_rc]"
+		echo "$cmd [exit=$rc]"
+		echo "=== $stdout.expected"
+		cat $stdout.expected
+		echo "=== $stdout"
+		cat $stdout
+		echo "=== $stderr.expected"
+		cat $stderr.expected
+		echo "=== $stderr"
+		cat $stderr
+		echo "==="
+	fi
+
+	diff -u $stdout.expected $stdout >/dev/null
+	if [ $? != 0 ]
+	then
+		echo "TEST $t fail ($label - $desc - stdout)"
+		echo "$cmd"
+		diff -u $stdout.expected $stdout
+		errors=1
+		failed=1
+	else
+		[ x"$quiet" = x1 ] || echo "TEST $t pass ($label - $desc - stdout)"
+	fi
+
+	diff -u $stderr.expected $stderr >/dev/null
+	if [ $? != 0 ]
+	then
+		echo "TEST $t fail ($label - $desc - stderr)"
+		echo "$cmd"
+		diff -u $stderr.expected $stderr
+		errors=1
+		failed=1
+	else
+		[ x"$quiet" = x1 ] || echo "TEST $t pass ($label - $desc - stderr)"
+	fi
+
+	if [ $rc != $expected_rc ]
+	then
+		echo "TEST $t fail ($label - $desc - exit status)"
+		echo "$cmd"
+		echo "rc=$rc expected=$expected_rc"
+		errors=1
+		failed=1
+	else
+		[ x"$quiet" = x1 ] || echo "TEST $t pass ($label - $desc - exit status)"
+	fi
+
+	rm -r $stdout $stderr $stdout.expected $stderr.expected
+	[ "$failed" = 1 ] && count_fail
+}
+
+# Run rh and check its outputs against a choice of two expectations
+
+test_rawhide_either()
+{
+	cmd="$1"
+	expected_stdout="$2" # Used by printf
+	expected_stdout_2="$3" # Used by printf
+	expected_stderr="$4" # Used by printf
+	expected_rc="$5"
+	desc="$6" # Used by echo
+
+	count_test
+	failed=0
+
+	stdout=tests/$t.out
+	stderr=tests/$t.err
+
+	[ -n "$expected_stdout" ] && printf "$expected_stdout" > $stdout.expected || touch $stdout.expected
+	[ -n "$expected_stdout_2" ] && printf "$expected_stdout_2" > $stdout.expected_2 || touch $stdout.expected_2
+	[ -n "$expected_stderr" ] && printf "$expected_stderr" > $stderr.expected || touch $stderr.expected
+
+	test_rawhide_pre_hook
+
+	/bin/sh -c "$cmd" >$stdout 2>$stderr
+	rc=$?
+
+	test_rawhide_post_hook
+
+	if [ x"$DEBUG" = x1 ]
+	then
+		echo "===================="
+		[ -n "$find_cmd" ] && echo "$find_cmd [exit=$expected_rc]"
+		echo "$cmd [exit=$rc]"
+		echo "=== $stdout.expected"
+		cat $stdout.expected
+		echo "=== $stdout.expected_2"
+		cat $stdout.expected_2
+		echo "=== $stdout"
+		cat $stdout
+		echo "=== $stderr.expected"
+		cat $stderr.expected
+		echo "=== $stderr"
+		cat $stderr
+		echo "==="
+	fi
+
+	diff -u $stdout.expected $stdout >/dev/null
+	if [ $? != 0 ]
+	then
+		diff -u $stdout.expected_2 $stdout >/dev/null
+		if [ $? != 0 ]
+		then
+			echo "TEST $t fail ($label - $desc - stdout)"
+			echo "$cmd"
+			diff -u $stdout.expected $stdout
+			diff -u $stdout.expected_2 $stdout
+			errors=1
+			failed=1
+		else
+			[ x"$quiet" = x1 ] || echo "TEST $t pass ($label - $desc - stdout)"
+		fi
+	else
+		[ x"$quiet" = x1 ] || echo "TEST $t pass ($label - $desc - stdout)"
+	fi
+
+	diff -u $stderr.expected $stderr >/dev/null
+	if [ $? != 0 ]
+	then
+		echo "TEST $t fail ($label - $desc - stderr)"
+		echo "$cmd"
+		diff -u $stderr.expected $stderr
+		errors=1
+		failed=1
+	else
+		[ x"$quiet" = x1 ] || echo "TEST $t pass ($label - $desc - stderr)"
+	fi
+
+	if [ $rc != $expected_rc ]
+	then
+		echo "TEST $t fail ($label - $desc - exit status)"
+		echo "$cmd"
+		echo "rc=$rc expected=$expected_rc"
+		errors=1
+		failed=1
+	else
+		[ x"$quiet" = x1 ] || echo "TEST $t pass ($label - $desc - exit status)"
+	fi
+
+	rm -r $stdout $stderr $stdout.expected $stdout.expected_2 $stderr.expected
+	[ "$failed" = 1 ] && count_fail
+}
+
+# Report test success/failure
+
+report()
+{
+	if [ $errors = 0 ]
+	then
+		if [ $tests = 1 ]
+		then
+			echo "$t: The $tests test passed ($label)"
+		else
+			echo "$t: All $tests tests passed ($label)"
+		fi
+	else
+		echo "$t: $fails/$tests tests failed ($label)"
+	fi
+}
+
+# Hooks for comparing rh against find
+
+test_rh_find_pre_hook()
+{
+	/bin/sh -c "$find_cmd" >$stdout.expected 2>$stderr.expected
+	expected_rc=$?
+}
+
+test_rawhide_find()
+{
+	cmd="$1"
+	find_cmd="$2"
+	desc="$3"
+
+	expected_stdout=""
+	expected_stderr=""
+	expected_rc=""
+
+	test_rawhide "$cmd" "$expected_stdout" "$expected_stderr" "$expected_rc" "$desc"
+}
+
+# Hooks to cd into a directory and back out again
+
+test_rh_cd_pre_hook()
+{
+	saved_stdout=$stdout
+	saved_stderr=$stderr
+	stdout="$saved_pwd/$stdout"
+	stderr="$saved_pwd/$stderr"
+	cd ./$d
+}
+
+test_rh_cd_post_hook()
+{
+	stdout=$saved_stdout
+	stderr=$saved_stderr
+	cd "$saved_pwd"
+}
+
+# Post hook to sort stdout
+
+test_rh_sort_post_hook()
+{
+	LANG=C sort $stdout > $stdout.sorted
+	mv $stdout.sorted $stdout
+	LANG=C sort $stderr > $stderr.sorted
+	mv $stderr.sorted $stderr
+}
+
+# Post hook to smooth out differences in getopt error messages (no longer used)
+
+test_rh_getopt_errors_post_hook()
+{
+	sed \
+		-e "s/option requires an argument -- \(.\)$/option requires an argument -- '\1'/" \
+		-e "s/illegal option -- \(.\)/invalid option -- '\1'/" $stderr > $stderr.tmp && mv $stderr.tmp $stderr	
+
+}
+
+# Post hook to replace $stdout with just its first line
+
+test_rh_first_line_post_hook()
+{
+	head -1 < $stdout > $stdout.tmp && mv $stdout.tmp $stdout
+}
+
+# Post hook to translate errno text from Solaris's versions
+# to everywhere else's versions. Musl needs a translation as well.
+
+test_rh_errno_post_hook()
+{
+	sed \
+		-e 's/Not owner/Operation not permitted/' \
+		-e 's/Insufficient privileges/Operation not permitted/' \
+		-e 's/File exists/Directory not empty/' \
+		-e 's/Number of symbolic links encountered during path name traversal exceeds MAXSYMLINKS/Too many levels of symbolic links/' \
+		-e 's/Symbolic link loop/Too many levels of symbolic links/' \
+		$stderr > $stderr.tmp && mv $stderr.tmp $stderr
+}
+
+# Return whether or not the local find supports -mindepth (Solaris doesn't)
+
+find_has_mindepth()
+{
+	find --help 2>&1 | grep -q mindepth
+	return $?
+}
+
+test_rawhide_grep()
+{
+	cmd="$1"
+	expected_stdout_pattern="$2" # Used by grep
+	expected_stderr="$3" # Used by printf
+	expected_rc="$4"
+	desc="$5" # Used by echo
+
+	count_test
+	failed=0
+
+	stdout=tests/$t.out
+	stderr=tests/$t.err
+
+	[ -n "$expected_stderr" ] && printf "$expected_stderr" > $stderr.expected || touch $stderr.expected
+
+	test_rawhide_pre_hook
+
+	/bin/sh -c "$cmd" >$stdout 2>$stderr
+	rc=$?
+
+	test_rawhide_post_hook
+
+	if [ x"$DEBUG" = x1 ]
+	then
+		echo "===================="
+		[ -n "$find_cmd" ] && echo "$find_cmd [exit=$expected_rc]"
+		echo "$cmd [exit=$rc]"
+		echo "=== stdout.expected"
+		echo $expected_stdout_pattern
+		echo "=== $stdout"
+		cat $stdout
+		echo "=== $stderr.expected"
+		cat $stderr.expected
+		echo "=== $stderr"
+		cat $stderr
+		echo "==="
+	fi
+
+    [ -x /usr/xpg4/bin/grep ] && grep=/usr/xpg4/bin/grep || grep=grep # For Solaris
+	$grep -E -v "$expected_stdout_pattern" < $stdout >/dev/null
+	if [ $? = 0 ]
+	then
+		echo "TEST $t fail ($label - $desc - stdout)"
+		echo "$cmd"
+		echo "$expected_stdout_pattern"
+		grep -v "$expected_stdout_pattern" < $stdout
+		errors=1
+		failed=1
+	else
+		[ x"$quiet" = x1 ] || echo "TEST $t pass ($label - $desc - stdout)"
+	fi
+
+	diff -u $stderr.expected $stderr >/dev/null
+	if [ $? != 0 ]
+	then
+		echo "TEST $t fail ($label - $desc - stderr)"
+		echo "$cmd"
+		diff -u $stderr.expected $stderr
+		errors=1
+		failed=1
+	else
+		[ x"$quiet" = x1 ] || echo "TEST $t pass ($label - $desc - stderr)"
+	fi
+
+	if [ $rc != $expected_rc ]
+	then
+		echo "TEST $t fail ($label - $desc - exit status)"
+		echo "$cmd"
+		echo "rc=$rc expected=$expected_rc"
+		errors=1
+		failed=1
+	else
+		[ x"$quiet" = x1 ] || echo "TEST $t pass ($label - $desc - exit status)"
+	fi
+
+	rm -r $stdout $stderr $stderr.expected
+	[ "$failed" = 1 ] && count_fail
+}
+
+# vi:set ts=4 sw=4:

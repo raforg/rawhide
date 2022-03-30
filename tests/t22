@@ -1,0 +1,83 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+. tests/.common
+
+label="implicit -e expression heuristic"
+
+test_rawhide "$rh $d" "$d\n"          "" 0 "an existing path"
+test_rawhide "$rh $d/abc"             "" "./rh: fstatat $d/abc: No such file or directory\n" 1 "parent is a path"
+test_rawhide "$rh $d/abc/def"         "" "./rh: fstatat $d/abc/def: No such file or directory\n" 1 "grand parent is a path"
+test_rawhide "$rh $d/abc/def/ghi"     "" "./rh: fstatat $d/abc/def/ghi: No such file or directory\n" 1 "great grand parent is a path"
+test_rawhide "$rh $d/abc/def/ghi/jkl" "" "./rh: command line: -e '$d/abc/def/ghi/jkl': line 1 byte 6: expected '(' or '{', found '/' (possible attempt to call an undefined function)\n" 1 "great great grand parent is a path - too far up - assuming expression"
+test_rawhide "$rh '$d/?'"  "" "./rh: command line: -e '$d/?': line 1 byte 6: expected '(' or '{', found '/' (possible attempt to call an undefined function)\n"  1 "parent is a path but has non-pathy char '?'"
+test_rawhide "$rh '$d/:'"  "" "./rh: command line: -e '$d/:': line 1 byte 6: expected '(' or '{', found '/' (possible attempt to call an undefined function)\n"  1 "parent is a path but has non-pathy char ':'"
+test_rawhide "$rh '$d/|'"  "" "./rh: command line: -e '$d/|': line 1 byte 6: expected '(' or '{', found '/' (possible attempt to call an undefined function)\n"  1 "parent is a path but has non-pathy char '|'"
+test_rawhide "$rh '$d/&'"  "" "./rh: command line: -e '$d/&': line 1 byte 6: expected '(' or '{', found '/' (possible attempt to call an undefined function)\n"  1 "parent is a path but has non-pathy char '&'"
+test_rawhide "$rh '$d/^'"  "" "./rh: command line: -e '$d/^': line 1 byte 6: expected '(' or '{', found '/' (possible attempt to call an undefined function)\n"  1 "parent is a path but has non-pathy char '^'"
+test_rawhide "$rh '$d/='"  "" "./rh: command line: -e '$d/=': line 1 byte 6: expected '(' or '{', found '/' (possible attempt to call an undefined function)\n"  1 "parent is a path but has non-pathy char '='"
+test_rawhide "$rh '$d/!'"  "" "./rh: command line: -e '$d/!': line 1 byte 6: expected '(' or '{', found '/' (possible attempt to call an undefined function)\n"  1 "parent is a path but has non-pathy char '!'"
+test_rawhide "$rh '$d/<'"  "" "./rh: command line: -e '$d/<': line 1 byte 6: expected '(' or '{', found '/' (possible attempt to call an undefined function)\n"  1 "parent is a path but has non-pathy char '<'"
+test_rawhide "$rh '$d/>'"  "" "./rh: command line: -e '$d/>': line 1 byte 6: expected '(' or '{', found '/' (possible attempt to call an undefined function)\n"  1 "parent is a path but has non-pathy char '>'"
+test_rawhide "$rh '$d/*'"  "" "./rh: command line: -e '$d/*': line 1 byte 6: expected '(' or '{', found '/' (possible attempt to call an undefined function)\n"  1 "parent is a path but has non-pathy char '*'"
+test_rawhide "$rh '$d/%'"  "" "./rh: command line: -e '$d/%%': line 1 byte 6: expected '(' or '{', found '/' (possible attempt to call an undefined function)\n" 1 "parent is a path but has non-pathy char '%'"
+test_rawhide "$rh '$d/\$'" "" "./rh: command line: -e '$d/\$': line 1 byte 6: expected '(' or '{', found '/' (possible attempt to call an undefined function)\n" 1 "parent is a path but has non-pathy char '\$'"
+test_rawhide "$rh '$d/\"'" "" "./rh: command line: -e '$d/\"': line 1 byte 6: expected '(' or '{', found '/' (possible attempt to call an undefined function)\n" 1 "parent is a path but has non-pathy char '\"'"
+test_rawhide "$rh '$d/\"'" "" "./rh: command line: -e '$d/\"': line 1 byte 6: expected '(' or '{', found '/' (possible attempt to call an undefined function)\n" 1 "parent is a path but has non-pathy char '\\'"
+test_rawhide "$rh '$d/['"  "" "./rh: command line: -e '$d/[': line 1 byte 6: expected '(' or '{', found '/' (possible attempt to call an undefined function)\n"  1 "parent is a path but has non-pathy char '['"
+test_rawhide "$rh '$d/]'"  "" "./rh: command line: -e '$d/]': line 1 byte 6: expected '(' or '{', found '/' (possible attempt to call an undefined function)\n"  1 "parent is a path but has non-pathy char ']'"
+test_rawhide "$rh '$d/{'"  "" "./rh: command line: -e '$d/{': line 1 byte 6: expected '(' or '{', found '/' (possible attempt to call an undefined function)\n"  1 "parent is a path but has non-pathy char '{'"
+test_rawhide "$rh '$d/}'"  "" "./rh: command line: -e '$d/}': line 1 byte 6: expected '(' or '{', found '/' (possible attempt to call an undefined function)\n"  1 "parent is a path but has non-pathy char '}'"
+test_rawhide "$rh '$d/;'"  "" "./rh: command line: -e '$d/;': line 1 byte 6: expected '(' or '{', found '/' (possible attempt to call an undefined function)\n"  1 "parent is a path but has non-pathy char ';'"
+test_rawhide "$rh '$d/\n'" "" "./rh: command line: -e '$d/\\\\n': line 1 byte 6: expected '(' or '{', found '/' (possible attempt to call an undefined function)\n" 1 "parent is a path but has non-pathy char '\\\\n'"
+
+test_rawhide "$rh ' ' $d"  "$d\n" "" 0 "has non-pathy chars ' ' - expr - ok"
+test_rawhide "$rh '?' $d"  "" "./rh: command line: -e '?': line 1 byte 1: syntax error: '?'\n"                                      1 "has non-pathy chars '?' expr"
+test_rawhide "$rh ':' $d"  "" "./rh: command line: -e ':': line 1 byte 1: syntax error: ':'\n"                                      1 "has non-pathy chars ':' expr"
+test_rawhide "$rh '|' $d"  "" "./rh: command line: -e '|': line 1 byte 1: syntax error: '|'\n"                                      1 "has non-pathy chars '|' expr"
+test_rawhide "$rh '&' $d"  "" "./rh: command line: -e '&': line 1 byte 1: syntax error: '&'\n"                                      1 "has non-pathy chars '&' expr"
+test_rawhide "$rh '<' $d"  "" "./rh: command line: -e '<': line 1 byte 1: syntax error: '<'\n"                                      1 "has non-pathy chars '<' expr"
+test_rawhide "$rh '>' $d"  "" "./rh: command line: -e '>': line 1 byte 1: syntax error: '>'\n"                                      1 "has non-pathy chars '>' expr"
+test_rawhide "$rh '^' $d"  "" "./rh: command line: -e '^': line 1 byte 1: syntax error: '^'\n"                                      1 "has non-pathy chars '^' expr"
+test_rawhide "$rh '=' $d"  "" "./rh: command line: -e '=': line 1 byte 1: syntax error: '='\n"                                      1 "has non-pathy chars '=' expr"
+test_rawhide "$rh '!' $d"  "" "./rh: command line: -e '!': line 1 byte 2: syntax error: eof\n"                                      1 "has non-pathy chars '!' expr"
+test_rawhide "$rh '*' $d"  "" "./rh: command line: -e '*': line 1 byte 1: syntax error: '*'\n"                                      1 "has non-pathy chars '*' expr"
+test_rawhide "$rh '%' $d"  "" "./rh: command line: -e '%%': line 1 byte 1: syntax error: '%%'\n"                                    1 "has non-pathy chars '%' expr"
+test_rawhide "$rh '+' $d"  "" "./rh: command line: -e '+': line 1 byte 1: syntax error: '+'\n"                                      1 "has non-pathy chars '+' expr"
+test_rawhide "$rh '\$' $d" "" "./rh: command line: -e '\$': line 1 byte 1: no such user: \n"                                        1 "has non-pathy chars '\$' expr"
+test_rawhide "$rh '@' $d"  "" "./rh: command line: -e '@': line 1 byte 1: no such group: \n"                                        1 "has non-pathy chars '@' expr"
+test_rawhide "$rh '\"' $d" "" "./rh: command line: -e '\"': line 1 byte 2: invalid string literal (missing closing double quote)\n" 1 "has non-pathy chars '\"' expr"
+test_rawhide "$rh '[' $d"  "" "./rh: command line: -e '[': line 1 byte 2: expected year number, found eof\n"                        1 "has non-pathy chars '[' expr"
+test_rawhide "$rh ']' $d"  "" "./rh: command line: -e ']': line 1 byte 1: syntax error: ']'\n"                                      1 "has non-pathy chars ']' expr"
+test_rawhide "$rh '{' $d"  "" "./rh: command line: -e '{': line 1 byte 1: syntax error: '{'\n"                                      1 "has non-pathy chars '{' expr"
+test_rawhide "$rh '}' $d"  "" "./rh: command line: -e '}': line 1 byte 1: syntax error: '}'\n"                                      1 "has non-pathy chars '}' expr"
+test_rawhide "$rh ';' $d"  "" "./rh: command line: -e ';': line 1 byte 1: syntax error: ';'\n"                                      1 "has non-pathy chars ';' expr"
+
+test_rawhide "$rh file $d" ""     "" 0 "file: no expr chars and no non-pathy chars and not path - assume expr"
+test_rawhide "$rh dir  $d" "$d\n" "" 0 "dir: no expr chars and no non-pathy chars and not path - assume expr"
+
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:

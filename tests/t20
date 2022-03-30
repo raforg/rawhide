@@ -1,0 +1,84 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+. tests/.common
+
+label="cmdline option errors"
+
+# For -m -M see tests/t16
+# For -e -f see tests/t07
+
+test_rawhide "$rh -x 'echo 1' -x 'echo 2' $d" "" "./rh: too many -x options\n"                      1 "too many -x options"
+test_rawhide "$rh -X 'echo 1' -X 'echo 2' $d" "" "./rh: too many -X options\n"                      1 "too many -X options"
+test_rawhide "$rh -x 'echo 1' -X 'echo 2' $d" "" "./rh: -x and -X options are mutually exclusive\n" 1 "-x and -X options are mutually exclusive"
+test_rawhide "$rh -X 'echo 1' -x 'echo 2' $d" "" "./rh: -x and -X options are mutually exclusive\n" 1 "-x and -X options are mutually exclusive"
+test_rawhide "$rh -L '%f\n'   -L '%p\n'   $d" "" "./rh: too many -L options\n"                      1 "too many -L options"
+test_rawhide "$rh -? '' $d" "" "./rh: missing -? option argument (see ./rh -h for help)\n"          1 "missing -? option argument"
+test_rawhide "$rh -? 'wrong' $d" "" "./rh: invalid -? option argument: wrong (needs: cmdline parser traversal exec all extra)\n" 1 "-? wrong [OK to fail when NDEBUG]"
+test_rawhide "$rh -x 'echo 1' -l $d" "" "./rh: -x and -l options are mutually exclusive\n"          1 "-x and -l options are mutually exclusive"
+test_rawhide "$rh -l -x 'echo 1' $d" "" "./rh: -x and -l options are mutually exclusive\n"          1 "-x and -l options are mutually exclusive"
+test_rawhide "$rh -X 'echo 1' -l $d" "" "./rh: -X and -l options are mutually exclusive\n"          1 "-X and -l options are mutually exclusive"
+test_rawhide "$rh -l -X 'echo 1' $d" "" "./rh: -X and -l options are mutually exclusive\n"          1 "-X and -l options are mutually exclusive"
+test_rawhide "$rh -x 'echo 1' -0 $d" "" "./rh: -x and -0 options are mutually exclusive\n"          1 "-x and -0 options are mutually exclusive"
+test_rawhide "$rh -0 -x 'echo 1' $d" "" "./rh: -x and -0 options are mutually exclusive\n"          1 "-x and -0 options are mutually exclusive"
+test_rawhide "$rh -X 'echo 1' -0 $d" "" "./rh: -X and -0 options are mutually exclusive\n"          1 "-X and -0 options are mutually exclusive"
+test_rawhide "$rh -0 -X 'echo 1' $d" "" "./rh: -X and -0 options are mutually exclusive\n"          1 "-X and -0 options are mutually exclusive"
+test_rawhide "$rh -l -0 $d" "" "./rh: -l and -0 options are mutually exclusive\n"                   1 "-l and -0 options are mutually exclusive"
+test_rawhide "$rh -0 -l $d" "" "./rh: -l and -0 options are mutually exclusive\n"                   1 "-l and -0 options are mutually exclusive"
+
+test_rawhide "$rh -U           $d" "" "./rh: -U option only works if supplied three times\n"        1 "-U only once"
+test_rawhide "$rh -UU          $d" "" "./rh: -U option only works if supplied three times\n"        1 "-U only twice"
+test_rawhide "$rh -UUU -x echo $d" "" "./rh: -x and -U options are mutually exclusive\n"            1 "-U and -x"
+test_rawhide "$rh -UUU -X echo $d" "" "./rh: -X and -U options are mutually exclusive\n"            1 "-U and -X"
+test_rawhide "$rh -UUU -l      $d" "" "./rh: -l and -U options are mutually exclusive\n"            1 "-U and -l"
+test_rawhide "$rh -UUU -0      $d" "" "./rh: -0 and -U options are mutually exclusive\n"            1 "-U and -0"
+
+test_rawhide "$rh -E -q        $d" "" "./rh: -E/-b and -q options are mutually exclusive\n"         1 "-E and -q"
+test_rawhide "$rh -H -I        $d" "" "./rh: -H and -I options are mutually exclusive\n"            1 "-E and -q"
+
+test_rawhide "$rh -L"                     "" "./rh: missing -L option argument (see ./rh -h for help)\n" 1 "missing -L option argument"
+test_rawhide "$rh -L ''               $d" "" ""                                                          0 "empty -L option argument"
+test_rawhide "$rh -x 'echo 1' -L '%b' $d" "" "./rh: -x and -L options are mutually exclusive\n"          1 "-x and -L options are mutually exclusive"
+test_rawhide "$rh -L '%b' -x 'echo 1' $d" "" "./rh: -x and -L options are mutually exclusive\n"          1 "-x and -L options are mutually exclusive"
+test_rawhide "$rh -X 'echo 1' -L '%b' $d" "" "./rh: -X and -L options are mutually exclusive\n"          1 "-X and -L options are mutually exclusive"
+test_rawhide "$rh -L '%b' -X 'echo 1' $d" "" "./rh: -X and -L options are mutually exclusive\n"          1 "-X and -L options are mutually exclusive"
+test_rawhide "$rh -L '%b' -0          $d" "" "./rh: -0 and -L options are mutually exclusive\n"          1 "-L and -0 options are mutually exclusive"
+test_rawhide "$rh -0 -L '%b'          $d" "" "./rh: -0 and -L options are mutually exclusive\n"          1 "-L and -0 options are mutually exclusive"
+test_rawhide "$rh -L '%b' -UUU        $d" "" "./rh: -U and -L options are mutually exclusive\n"          1 "-U and -L"
+test_rawhide "$rh -UUU -L '%b'        $d" "" "./rh: -U and -L options are mutually exclusive\n"          1 "-U and -L"
+test_rawhide "$rh -L '%b' -l          $d" "" "./rh: -l and -L options are mutually exclusive\n"          1 "-l and -L"
+test_rawhide "$rh -l -L '%b'          $d" "" "./rh: -l and -L options are mutually exclusive\n"          1 "-l and -L"
+
+test_rawhide "$rh -r -M 0             $d" "" "./rh: -r and -M options are mutually exclusive\n"          1 "-r and -M"
+
+if [ "`whoami`" != root -a -e /etc/shadow ]
+then
+	test_rawhide "RAWHIDE_CONFIG=/etc/shadow ./rh -n $d" "$d\n" "./rh: /etc/shadow: Permission denied\n" 0 "unreadable RAWHIDE_CONF"
+	test_rawhide "RAWHIDE_RC=/etc/shadow     ./rh -N $d" "$d\n" "./rh: /etc/shadow: Permission denied\n" 0 "unreadable RAWHIDE_RC"
+fi
+
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:

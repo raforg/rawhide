@@ -1,0 +1,19 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: rawhide
+Upstream-Contact: raf <raf@raf.org>
+Source: https://raf.org/rawhide
+
+Files: *
+Copyright: 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+License: GPL-3.0-or-later
+
+Files: rhstr.c
+Copyright: 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+           1998 Todd C. Miller <Todd.Miller@courtesan.com>
+License: GPL-3.0-or-later and BSD-3-Clause
+
+Files: rh.1.pod
+Copyright: 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+           1990-2022 Free Software Foundation, Inc
+License: GPL-3.0-or-later
+

@@ -1,0 +1,2477 @@
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+=head1 NAME
+
+I<rh> - (I<rawhide>) find files using pretty I<C> expressions
+
+=head1 SYNOPSIS
+
+ usage: rh [options] [path...]
+ options:
+   -h --help    - Show this message, then exit
+   -V --version - Show the version message, then exit
+   -N           - Don't read system-wide config (/etc/rawhide.conf)
+   -n           - Don't read user-specific config (~/.rhrc)
+   -f fname     - Read functions and/or expression from a file/stdin
+  [-e] 'expr'   - Read functions and/or expression from the cmdline
+
+ traversal options:
+   -r           - Only search one level down (same as -m1 -M1)
+   -m #         - Override the default minimum depth (0)
+   -M #         - Override the default maximum depth (system limit)
+   -D           - Depth-first searching (contents before directory)
+   -1           - Single filesystem (don't cross filesystem boundaries)
+   -y           - Follow symlinks on the cmdline and in reference files
+   -Y           - Follow symlinks while searching as well
+
+ alternative action options:
+   -x 'cmd %s'  - Execute a shell command for each match (racy)
+   -X 'cmd %S'  - Like -x but run from each match's directory (safer)
+   -U -U -U     - Unlink matches (but tell me three times), implies -D
+
+ output action options:
+   -l           - Output matching entries like ls -l (but unsorted)
+   -d           - Include device column, implies -l
+   -i           - Include inode column, implies -l
+   -B           - Include block size column, implies -l
+   -s           - Include blocks column, implies -l
+   -S           - Include space column, implies -l
+   -g           - Exclude user/owner column, implies -l
+   -o           - Exclude group column, implies -l
+   -a           - Include atime rather than mtime column, implies -l
+   -u           - Same as -a (like ls(1))
+   -c           - Include ctime rather than mtime column, implies -l
+   -v           - Verbose: All columns, implies -ldiBsSac (unless -xXU0L)
+   -0           - Output null chars instead of newlines (for xargs -0)
+   -L format    - Output matching entries in a user-supplied format
+
+ path format options:
+   -Q           - Enclose paths in double quotes
+   -E           - Output C-style escapes for control characters
+   -b           - Same as -E (like ls(1))
+   -q           - Output ? for control characters (default if tty)
+   -p           - Append / indicator to directories
+   -t           - Append most type indicators (one of / @ = | >)
+   -F           - Append all type indicators (one of * / @ = | >)
+
+                    * executable
+                    / directory
+                    @ symlink
+                    = socket
+                    | fifo
+                    > door (Solaris only)
+
+ other column format options:
+   -H or -HH    - Output sizes like 1.2K 34M 5.6G etc., implies -l
+   -I or -II    - Like -H but with units of 1000, not 1024, implies -l
+   -T           - Output mtime/atime/ctime in ISO format, implies -l
+   -#           - Output numeric user/group IDs (not names), implies -l
+
+ debug option:
+   -? spec      - Output debug messages: spec can include any of:
+                    cmdline, parser, traversal, exec, all, extra
+
+ rh (rawhide) finds files using pretty C expressions.
+ See the rh(1) and rawhide.conf(5) manual entries for more information.
+
+ C operators:
+   ?:  ||  &&  |  ^  &  == !=  < > <= >=  << >>  + -  * / %  - ~ !
+
+ Rawhide tokens:
+   "pattern"  "pattern".modifier  "/path".field  "cmd".sh
+   123 0777 0xffff  1K 2M 3G  1k 2m 3g  $user @group  $$ @@
+   [yyyy/mm/dd] [yyyy/mm/dd hh:mm:ss]
+
+ Glob pattern notation:
+   ? * [abc] [!abc] [a-c] [!a-c]
+   ?(a|b|c) *(a|b|c) +(a|b|c) @(a|b|c) !(a|b|c)
+   Ksh extended glob patterns are available here (see fnmatch(3))
+
+ Pattern modifiers:
+   .i            .path         .ipath        .link         .ilink
+   .acl          .iacl         .ea           .iea          .re
+   .rei          .repath       .reipath      .relink       .reilink
+   .reacl        .reiacl       .reea         .reiea        .sh
+   Case-insensitive glob matching is available here (i)
+   Perl-compatible regular expressions are available here (re)
+   Access control lists are available here (acl)
+   Extended attributes are available here (ea)
+
+ Built-in symbols:
+   dev           major         minor         ino           mode
+   nlink         uid           gid           rdev          rmajor
+   rminor        size          blksize       blocks        atime
+   mtime         ctime         nouser        nogroup       readable
+   writable      executable    strlen        depth         prune
+   trim          exit          now           today         second
+   minute        hour          day           week          month
+   year          IFREG         IFDIR         IFLNK         IFCHR
+   IFBLK         IFSOCK        IFIFO         IFDOOR        IFMT
+   ISUID         ISGID         ISVTX         IRWXU         IRUSR
+   IWUSR         IXUSR         IRWXG         IRGRP         IWGRP
+   IXGRP         IRWXO         IROTH         IWOTH         IXOTH
+   texists       tdev          tmajor        tminor        tino
+   tmode         tnlink        tuid          tgid          trdev
+   trmajor       trminor       tsize         tblksize      tblocks
+   tatime        tmtime        tctime        tstrlen
+
+ Reference file fields:
+   .exists       .dev          .major        .minor        .ino
+   .mode         .type         .perm         .nlink        .uid
+   .gid          .rdev         .rmajor       .rminor       .size
+   .blksize      .blocks       .atime        .mtime        .ctime
+   .strlen       .inode        .nlinks       .user         .group
+   .sz           .accessed     .modified     .changed      .len
+
+ System-wide and user-specific functions can be defined here:
+   /etc/rawhide.conf          ~/.rhrc
+   /etc/rawhide.conf.d/*      ~/.rhrc.d/*
+
+=head1 INTRODUCTION
+
+I<Rawhide> (I<rh>) lets you search for files on the command line using
+expressions and user-defined functions in a mini-language inspired by
+I<C>. It's like I<find(1)>, but more fun to use. Search criteria can be very
+readable and self-explanatory and/or very concise and typeable, and you can
+create your own lexicon of search terms. The output can include lots of
+detail, like I<ls(1)>.
+
+=head1 DESCRIPTION
+
+I<Rawhide> (I<rh>) searches the filesystem, starting at each given I<path>,
+for files that make the given search criteria expression true. If no search
+paths are given, the current working directory is searched.
+
+The search criteria expression can come from the command line (with the
+C<-e> option), from a file (with the C<-f> option), or from standard input
+(I<stdin>) (with C<-f->). If there is no explicit C<-e> option expression,
+I<rh> looks for an implicit expression among any remaining command line
+arguments. If no expression is specified, the default search criteria is the
+expression C<1>, which matches all filesystem entries.
+
+An I<rh> expression is a I<C>-like expression that can call user-defined
+functions. These expressions can contain all of I<C>'s conditional, logical,
+relational, equality, arithmetic, and bit operators.
+
+Numeric constants can be decimal, octal, or hexadecimal integers. Decimal
+constants can have scale units (e.g., C<10K>).
+
+There are built-in symbols that represent each candidate file's inode
+metadata. These are the fields in the corresponding I<stat(2)> structure
+(e.g., C<st_mode>, C<st_uid>, C<st_size>, C<st_mtime>, ...). See I<stat(2)>
+for details. For convenience, the C<"st_"> prefix is omitted from the symbol
+names (e.g., C<st_mtime> is used as C<mtime>).
+
+Other built-in symbols represent the constants defined by I<C>'s
+C<< <sys/stat.h> >> header file. These are useful for interpreting the
+C<mode> in order to identify file types and permissions. The C<"S_"> prefix
+is omitted from the symbol names (e.g., C<S_IFMT> is used as C<IFMT>).
+
+Other built-in symbols represent various useful values and constants,
+control flow, more file information, and candidate symlink target inode
+metadata.
+
+File glob patterns and I<Perl>-compatible regular expressions (regexes) can
+be used to match files by their name, path, symlink target path, access
+control list, and extended attributes.
+
+Search criteria can also include comparisons with the inode metadata of
+arbitrary reference files, and the exit success status of arbitrary shell
+commands.
+
+Functions are a means of referring to an expression by name. They allow
+complex expressions to be composed of simpler ones. They also allow you to
+create your own lexicon of search terms for finding files.
+
+There is a default "standard" library of functions to start with. It
+provides a high-level interface to the built-in symbols mentioned above, and
+makes I<rh> easy to use. See I<rawhide.conf(5)> for details.
+
+=head1 OPTIONS
+
+=over 4
+
+=item C<-h>, C<--help>
+
+Display the help message, then exit. The C<--help> option must not be used
+with any other command line options or arguments.
+
+The help message summarizes the command line usage, and presents concise
+lists of the search criteria language operators, special tokens, glob
+pattern notation, pattern modifiers, built-in symbols, reference file
+fields, and the locations of configuration files.
+
+Some features are not available on all systems: I<Ksh> extended glob
+patterns, case-insensitive glob matching, I<Perl>-compatible regular
+expressions (regexes), access control lists, and extended attributes. The
+help message states which optional features are available on the local
+system.
+
+See the B<SYNOPSIS> section above for details.
+
+=item C<-V>, C<--version>
+
+Display the version message, then exit. The C<--version> option must not be
+used with any other command line options or arguments.
+
+=item C<-N>
+
+By default, I<rh> first reads system-wide configuration from
+C</etc/rawhide.conf> (or similar), and then (in lexicographic order) from
+any files in the C</etc/rawhide.conf.d> directory (or similar) whose names
+do not start with dot (C<".">). This option suppresses that behaviour.
+
+=item C<-n>
+
+By default, I<rh> then reads user-specific configuration from C<~/.rhrc>,
+and then (in lexicographic order) from any files in the C<~/.rhrc.d>
+directory whose names do not start with dot (C<".">). This option suppresses
+that behaviour.
+
+=item C<-f> I<fname>
+
+After reading any configuration files, this option causes I<rh> to read code
+from the file specified by I<fname>. If I<fname> is C<"-">, then code is
+read from standard input (I<stdin>). It is an error to supply the C<-f>
+option more than once.
+
+The file can contain zero or more function definitions, and/or a trailing
+file test expression. If the file does contain a trailing file test
+expression, it is used to match files, unless a file test expression is
+supplied via the C<-e> option, or in any remaining command line arguments.
+
+=item C<-e> C<'>I<expr>C<'>
+
+Read code from the I<expr> argument itself. It is an error to supply the
+C<-e> option more than once.
+
+The I<expr> argument can contain zero or more function definitions, and/or a
+trailing file test expression. The C<-e> option is processed after the C<-f>
+option, and so can make use of any functions defined via the C<-f>
+option. If the I<expr> argument contains a file test expression (which is expected),
+it overrides any default file test expression from a configuration file or
+C<-f> option file.
+
+Normally, the C<-e> option argument supplies the file test expression that
+will be used for the file search. Since many of the operators are also shell
+meta-characters, and since I<rh> expressions can contain spaces, it is
+strongly recommended that I<expr> generally be enclosed in single quotes
+(C<"'">).
+
+If no explicit file test expression is supplied via the C<-e> option, then
+any remaining command line arguments are examined to identify any implicit
+file test expression.
+
+If a command line argument is a path that exists in the filesystem, it is
+interpreted as a filesystem entry to search. Otherwise, if it contains any
+characters that are likely to appear in an expression, but that are unlikely
+to appear in many filesystem paths (i.e., C<< "?:|&^=!<>*%$\"\\[]{};\n" >>),
+it is interpreted as a file test expression. Otherwise, if it looks like a
+filesystem path (i.e., if it contains a slash character (C<"/">), and an
+apparent ancestor directory does exist in the filesystem), it is interpreted
+as a filesystem entry (that happens not to exist). Otherwise, it is
+interpreted as a file test expression. Only the first suitable command line
+argument will be interpreted as a file test expression. Any other command
+line arguments will all be interpreted as search paths.
+
+This makes it almost always possible to not actually need to type the C<-e>
+option itself. It also makes it possible to supply search paths before
+and/or after the file test expression. e.g.:
+
+    $ rh -e 'expr' dir1 dir2
+    $ rh 'expr' dir1 dir2
+    $ rh dir1 'expr' dir2
+    $ rh dir1 dir2 'expr'
+
+The C<-e> option only really needs to be explicitly included when the file
+test expression might happen to be the same as an existing filesystem entry
+relative to the current working directory (e.g., S<C<touch file; rh -e
+'file' path>>), or (less likely) when the expression starts with a minus
+sign (C<"-">), and would otherwise be mistaken for a command line option.
+
+You can also need an explicit C<-e> option if you want the file test
+expression to appear to the left of any command line options on (most)
+systems where all non-option command line arguments must appear to the right
+of all command line options and their arguments (e.g., S<C<rh -e 'expr' -X
+'cmd %S' dir>>). This doesn't apply to I<Linux> with I<GNU glibc>, which
+provides more flexible command line option parsing.
+
+If no file test expression is supplied anywhere, the default file test
+expression is C<1>, which matches all filesystem entries.
+
+=back
+
+=head2 Traversal options
+
+=over 4
+
+=item C<-r>
+
+This option causes I<rh> to only report (or act on) the immediate contents
+of the starting search directories. The starting search directories
+themselves are excluded, and the contents of any sub-directories of the
+starting search directories are not searched. This is the same as S<C<-m1
+-M1>> (see next).
+
+This option and the C<-m> option are mutually exclusive.
+
+This option and the C<-M> option are mutually exclusive.
+
+=item C<-m> I<#>
+
+Override the default minimum search depth to report (or act on). By default,
+the minimum search depth is zero, which means that the starting search
+directories are reported (or acted on) if they satisfy the file test
+expression.
+
+For example, setting the minimum search depth to C<1> suppresses reporting
+(or acting on) the starting search directories if they match, and only
+reports (or acts on) the matching entries among those directories' entries
+and their descendants.
+
+Note that this option does not prevent file test evaluation above the
+minimum search depth. It only prevents reporting (or acting on) matching
+entries. This matters when the search criteria involves the C<prune>,
+C<trim>, or C<exit> built-ins (see I<rawhide.conf(5)>), because they have
+control flow side-effects when they are evaluated. This makes it possible to
+skip sub-directories, or terminate a search, before anything is reported (or
+acted on).
+
+This option and the C<-r> option are mutually exclusive.
+
+=item C<-M> I<#>
+
+Override the default maximum search depth to examine. By default, the
+maximum search depth is a very large system-imposed limit (e.g., C<1019>).
+
+For example, setting the maximum search depth to C<1> prevents searching
+below the immediate children of the starting search directories. And setting
+the maximum search depth to C<0> prevents searching below the starting
+search paths themselves.
+
+This option and the C<-r> option are mutually exclusive.
+
+=item C<-D>
+
+Perform a depth-first search. This means that directories are examined and
+reported (or acted on) after their descendants, rather than before them.
+
+This option is incompatible with the C<prune> and C<trim> built-ins (see
+I<rawhide.conf(5)>). When this option is used, C<prune> and C<trim> will not
+work. They will not prevent searching in sub-directories.
+
+The C<-U> option implies this option (see below).
+
+=item C<-1>
+
+Limit the search to each starting search directory's filesystem only. This
+prevents descending into directories that are mountpoints for other
+filesystems.
+
+=item C<-y>
+
+By default, I<rh> does not follow symlinks. This option causes I<rh> to
+follow any symlinks supplied as command line arguments or reference
+files. But any candidate symlinks encountered while searching are still not
+followed.
+
+Note: When a followed symlink is broken/dangling, rather than reporting this
+as an error, the resulting I<stat(2)> structure fields will be those of the
+symlink itself. This might or might not be desirable behaviour. This is done
+for compatibility with the familiar behaviour of I<find(1)>. If you would
+prefer that an attempt to follow a broken symlink be reported as an error,
+set the environment variable C<RAWHIDE_REPORT_BROKEN_SYMLINKS=1>. The
+resulting I<stat(2)> structure fields will still be those of the symlink
+itself, and searching will still continue, but there will be an error
+message, and the eventual exit status will be non-zero to indicate failure.
+
+This option is compatible with the symlink target-related built-ins (see
+I<rawhide.conf(5)>), and the S<C<-L %Y>> format conversion (see below),
+except for any symlinks on the command line. For them, the symlink
+target-related built-ins and the S<C<-L %Y>> format conversion will only
+ever get to see symlinks that are broken.
+
+=item C<-Y>
+
+By default, I<rh> does not follow symlinks. This option causes I<rh> to
+follow any symlinks supplied as command line arguments or reference files,
+and any candidate symlinks encountered while searching.
+
+Note: When a followed symlink is broken/dangling, rather than reporting this
+as an error, the resulting I<stat(2)> structure fields will be those of the
+symlink itself. This might or might not be desirable behaviour. This is done
+for compatibility with the familiar behaviour of I<find(1)>. If you would
+prefer that an attempt to follow a broken symlink be reported as an error,
+set the environment variable C<RAWHIDE_REPORT_BROKEN_SYMLINKS=1>. The
+resulting I<stat(2)> structure fields will still be those of the symlink
+itself, and searching will still continue, but there will be an error
+message, and the eventual exit status will be non-zero to indicate failure.
+
+This option is incompatible with the symlink target-related built-ins (see
+I<rawhide.conf(5)>), and the S<C<-L %Y>> format conversion (see below). The
+only symlinks they will ever get to see are broken ones.
+
+=back
+
+=head2 Alternative action options
+
+By default, I<rh> outputs each matching filesystem entry's full path
+starting from the search directory. These options provide alternative
+actions. They, and the C<-l>, C<-0>, and C<-L> options, are all mutually
+exclusive.
+
+=over 4
+
+=item C<-x> C<'>I<cmd>C<'>
+
+Execute the shell command specified by I<cmd> via I<system(3)> (i.e., via
+C</bin/sh>) for each matching entry. It is an error to supply the C<-x>
+option more than once.
+
+The I<cmd> argument can contain C<%s> which will be replaced with the
+matching entry's full path starting from the search directory. It can also
+contain C<%S> which will be replaced with the matching entry's base name (or
+with C<"/"> when the matching entry is the root directory (C</>) which has
+no base name). For example, given the matching file C</etc/passwd>, C<%s>
+and C<%S> would be replaced with C<"/etc/passwd"> and C<"passwd">,
+respectively. To include a literal per cent sign (C<"%">) in the shell
+command, use C<%%>. It is an error if C<%> is not followed by C<s>, C<S>, or
+C<%>.
+
+Any shell meta-characters in the interpolated path or base name are quoted
+with preceding backslash characters (C<"\">) to prevent shell command
+injection, so there is no need to place any quote characters around C<%s> or
+C<%S>.
+
+For this option, the C<%s> interpolation is more likely to be useful than
+the C<%S> interpolation.
+
+If any command exits with a non-zero exit status, I<rh> itself will
+continue, but it will eventually exit with a non-zero exit status.
+
+This is similar to the C<-exec> action in I<POSIX> I<find(1)>. And it
+suffers from the same large number of path-based race conditions as
+C<-exec>. This is insecure on hosts with malicious local actors that have
+write access to the directory tree being searched, and so should not
+generally be used. It is much safer to use the C<-X> option instead (see
+next). Note that piping the default output to a program like I<xargs(1)> is
+also insecure in the same way.
+
+Note: If the user's C<$PATH> environment variable includes the current
+working directory, or any other non-absolute paths, they are automatically
+removed first. This is done for consistency with the C<-X> option (see next)
+and the C<">I<cmd>C<".sh> "pattern" modifier (see I<rawhide.conf(5)>), where
+this is needed for security. This means that you can't rely on C<$PATH> to
+find an executable that is in the current directory. An explicit path would
+be needed instead (e.g., S<C<-x './>I<cmd>C< %s'>>).
+
+This option, and the C<-l>, C<-0>, C<-L>, C<-X>, and C<-U> options, are all
+mutually exclusive.
+
+=item C<-X> C<'>I<cmd>C<'>
+
+Execute the shell command specified by I<cmd> via I<system(3)> (i.e., via
+C</bin/sh>) for each matching entry. It is an error to supply the C<-X>
+option more than once.
+
+This is like the C<-x> option (see above), except that the shell command is
+executed after safely changing the current working directory to the
+directory containing each matching entry. This minimizes the number of
+path-based race conditions.
+
+The I<cmd> argument can contain C<%s> which will be replaced with the
+matching entry's full path starting from the search directory. It can also
+contain C<%S> which will be replaced with the matching entry's base name (or
+with C<"/"> when the matching entry is the root directory (C</>) which has
+no base name). For example, given the matching file C</etc/passwd>, C<%s>
+and C<%S> would be replaced with C<"/etc/passwd"> and C<"passwd">,
+respectively. To include a literal per cent sign (C<"%">) in the shell
+command, use C<%%>. It is an error if C<%> is not followed by C<s>, C<S>, or
+C<%>.
+
+Any shell meta-characters in the interpolated path or base name are quoted
+with preceding backslash characters (C<"\">) to prevent shell command
+injection, so there is no need to place any quote characters around C<%s> or
+C<%S>.
+
+For this option, the C<%S> interpolation is more likely to be useful than
+the C<%s> interpolation.
+
+If any command exits with a non-zero exit status, I<rh> itself will
+continue, but it will eventually exit with a non-zero exit status.
+
+This is similar to the C<-execdir> action in I<GNU find(1)>, and so does not
+suffer from the same large number of path-based race conditions as the
+C<-exec> action in I<POSIX> I<find(1)>. It is much safer than the C<-x>
+option, and should generally be used in preference.
+
+And if the user's C<$PATH> environment variable includes the current working
+directory, or any other non-absolute paths, that could be dangerous, so they
+are automatically removed first.
+
+Note: Since the shell commands are executed from the directory containing
+each matching entry, if they do require the matching entry's full path
+starting from the search directory (i.e., C<%s>), then it's best if the
+starting search paths are all absolute paths, so that C<%s> is always an
+absolute path. Otherwise, the shell command might need to change its current
+working directory back to the initial working directory. Also note that
+C<%s> suffers from many path-based race conditions, which is insecure on
+hosts with malicious local actors that have write access to the directory
+tree being searched, and so should not generally be used.
+
+This option, and the C<-l>, C<-0>, C<-L>, C<-x>, and C<-U> options, are all
+mutually exclusive.
+
+=item C<-U -U -U>
+
+Unlink/Remove/Delete matching filesystem entries. Due to the destructive
+nature of this option, and the ease with which a single letter can be
+mistyped, this option must be supplied three times in order for it to take
+effect. It is an error to supply the C<-U> option once or twice.
+
+This option implies the use of the C<-D> option (see above) to ensure that
+each matching directory's matching entries are removed before it
+is. Directories can only be removed when they are empty.
+
+If I<rh> fails to remove any matching entry, it will continue, but it will
+eventually exit with a non-zero exit status.
+
+This option is incompatible with the C<prune> and C<trim> built-ins (see
+I<rawhide.conf(5)>). When this option is used, C<prune> and C<trim> will not
+work. They will not prevent unlinkage/removal/deletion in sub-directories.
+
+When this option is used with the C<-y> or C<-Y> option (see above), and a
+symlink to a directory is followed, the symlink's ultimate target
+directory's contents are searched, and any matches found there are removed,
+but the target directory itself is never removed. It isn't possible to
+remove a filesystem entry via a symlink to it. If the target directory
+itself matches the search criteria, the symlink to it is removed. Similarly,
+when a symlink to a non-directory is followed, and the symlink's ultimate
+target matches the search criteria, the symlink is removed, not the ultimate
+target.
+
+This option, and the C<-l>, C<-0>, C<-L>, C<-x>, and C<-X> options, are all
+mutually exclusive.
+
+=back
+
+=head2 Output action options
+
+=over 4
+
+=item C<-l>
+
+By default, I<rh> outputs each matching path on a line by itself. This
+option includes more details in a format similar to that of S<C<ls -l>> (but
+unsorted). The details included are the file type, permissions, existence of
+an access control list and/or extended attributes, number of hard links,
+user/owner, group, size (or comma-separated C<rdev> major and minor device
+numbers), modified time, and path. For symlinks, the target path is also
+included at the end (preceded by S<C<< " -> " >>>).
+
+Note that, unlike S<C<ls -l>>, for readable directories, the reported size
+is the number of entries they contain (excluding C<.> and C<..>). For
+unreadable directories, it is the usual (undocumented) C<st_size> field of
+the corresponding I<stat(2)> structure.
+
+If a file has a non-trivial access control list (ACL), this is indicated by
+a plus sign (C<"+">) at the end of the file type and permissions column
+(e.g., C<-rw-rw-r--+>). If a file has any extended attributes (EA), this is
+indicated by an at sign (C<"@">) (e.g., C<-rw-rw-r--@>). Note that this
+doesn't include the EAs that are used on I<Linux> for ACLs and I<selinux(8)>
+contexts, because they are not interesting enough (ACLs are already
+indicated by C<"+">, and I<selinux(8)> contexts are ubiquitous, and they are
+indicated by C<"."> (see below)). If a file has both a (non-trivial) ACL and
+any (interesting) EAs, this is indicated by an asterisk character (C<"*">)
+(e.g., C<-rw-rw-r--*>). If a file has neither, but it does have an
+I<selinux(8)> context, this is indicated by a dot character (C<".">) (e.g.,
+C<-rw-rw-r--.>). If a file has none of the above, there's just a space
+character (S<C<" ">>) at the end of the file type and permissions column.
+
+This option, and the C<-0>, C<-L>, C<-x>, C<-X>, and C<-U> options, are all
+mutually exclusive.
+
+=item C<-d>
+
+Include the device column. Implies the C<-l> option.
+
+This is the comma-separated major and minor device numbers of the
+device/filesystem that the matching file resides on.
+
+This column is first.
+
+=item C<-i>
+
+Include the inode number column. Implies the C<-l> option.
+
+This column is after any device column, and before any block size column.
+
+=item C<-B>
+
+Include the block size column. Implies the C<-l> option.
+
+This column is after any inode number column, and before any blocks column.
+
+Note that this is just the preferred block size for efficient I/O on the
+matching file's filesystem. On some filesystems (e.g., I<zfs>), this is
+specific to each file, rather than to the whole filesystem.
+
+Note that this is unrelated to the blocks column (see next).
+
+=item C<-s>
+
+Include the blocks column. Implies the C<-l> option.
+
+This column is after any block size column, and before any space column.
+
+Note that the number of blocks always refers to standardized 512-byte
+blocks, even when the filesystem's real block size is something else.
+
+=item C<-S>
+
+Include the space column. Implies the C<-l> option.
+
+The space occupied by a file is the number of 512-byte blocks multiplied by
+512. This is usually larger than the size in bytes, but it can be smaller in
+the case of files with holes (and on filesystems with transparent
+compression).
+
+This column is after any blocks column, and before the file type and
+permissions column.
+
+=item C<-g>
+
+Exclude the user/owner column. Implies the C<-l> option.
+
+=item C<-o>
+
+Exclude the group column. Implies the C<-l> option.
+
+=item C<-a>
+
+Include the accessed time column in place of the modified time
+column. Implies the C<-l> option.
+
+If the C<-a>/C<-u> and C<-c> options are both supplied, then both columns
+appear in place of the modified time column (with the accessed time column
+appearing before the inode changed time column).
+
+=item C<-u>
+
+Same as the C<-a> option (like I<ls(1)>).
+
+=item C<-c>
+
+Include the inode changed time column in place of the modified time
+column. Implies the C<-l> option.
+
+If the C<-a>/C<-u> and C<-c> options are both supplied, then both columns
+appear in place of the modified time column (with the accessed time column
+appearing before the inode changed time column).
+
+=item C<-v>
+
+Turn on verbose mode. With the C<-l> option, this option includes all
+possible columns (i.e., device, inode number, block size, number of blocks,
+space, file type, permissions, existence of an access control list and/or
+extended attributes, number of hard links, user/owner, group, size (or
+comma-separated C<rdev> major and minor device numbers), modified time,
+accessed time, inode changed time, and path).
+
+With the C<-x> or C<-X> option, this option outputs each command before it
+is executed. When standard output (I<stdout>) is a terminal, C<"?"> is
+output in place of any control characters to prevent terminal escape
+injection.
+
+With the C<-U> option, this option outputs each matching path before it is
+removed. When standard output (I<stdout>) is a terminal, C<"?"> is output in
+place of any control characters to prevent terminal escape injection.
+
+With the C<-0> option, this option has no effect.
+
+With the C<-L> option, this option makes the C<%z> format conversion on
+I<FreeBSD> and I<Solaris> output the non-compact form of I<NFSv4> access
+control lists (ACLs), rather than the default compact form.
+
+Without any of the above options, this option behaves as though the C<-l>
+option had been supplied, and includes all possible columns.
+
+=item C<-0>
+
+Output the null character (C<"\0">) after each matching path, rather than
+the newline character (C<"\n">). This is useful in combination with C<xargs
+-0> to handle matching entries whose paths contain troublesome characters
+(like newlines).
+
+But note that, due to a large number of path-based race conditions, piping
+the output to a program like I<xargs(1)> is insecure on hosts with malicious
+local actors that have write access to the directory tree being searched,
+and so should not generally be done. It is much safer to use the C<-X>
+option instead (see above).
+
+This option, and the C<-l>, C<-L>, C<-x>, C<-X>, and C<-U> options, are all
+mutually exclusive.
+
+=item C<-L> I<format>
+
+Output selected information about matching entries according to the
+user-supplied I<format>, which is similar to I<C>'s I<printf(3)> and
+I<strftime(3)> format strings. It is an error to supply the C<-L> option
+more than once.
+
+Unlike the C<-l> and C<-0> options, no newline or null character is appended
+automatically. An empty C<-L> option argument (i.e., S<C<-L ''>>) will
+produce no output.
+
+This option, and the C<-l>, C<-0>, C<-x>, C<-X>, and C<-U> options, are all
+mutually exclusive.
+
+The supported backslash escape sequences are:
+
+=over 4
+
+=item C<\a>   Alert or Bell (I<BEL>)
+
+=item C<\b>   Backspace (I<BS>)
+
+=item C<\c>   Stop processing this format string and flush the output
+
+=item C<\f>   Form feed (I<FF>)
+
+=item C<\n>   Newline or Line feed (I<LF>)
+
+=item C<\r>   Carriage return (I<CR>)
+
+=item C<\t>   Horizontal tab (I<HT>)
+
+=item C<\v>   Vertical tab (I<VT>)
+
+=item C<\0>   Null byte (I<NUL>)
+
+=item C<\\>   A literal backslash (C<"\">)
+
+=item C<\>I<NNN> The byte whose numeric value is I<NNN> (1-3 octal digits)
+
+=back
+
+A backslash character followed by any other character is treated as an
+ordinary character, and both characters are output.
+
+The following C<%> format conversion specifiers are available:
+
+=over 4
+
+=item C<%%>
+
+A literal per cent sign (C<"%">).
+
+=item C<%p>
+
+The path including the starting search directory.
+
+When standard output (I<stdout>) is a terminal, C<"?"> is output in place of
+any control characters to prevent terminal escape injection.
+
+=item C<%P>
+
+The path excluding the starting search directory.
+
+When standard output (I<stdout>) is a terminal, C<"?"> is output in place of
+any control characters to prevent terminal escape injection.
+
+=item C<%f>
+
+The base name (the path excluding any leading directories and final slash
+character (C<"/">)). As a special case, for the root directory (C</>) which
+has no base name, this is C<"/">.
+
+When standard output (I<stdout>) is a terminal, C<"?"> is output in place of
+any control characters to prevent terminal escape injection.
+
+=item C<%h>
+
+The directory (the path excluding the last slash character (C<"/">) and the
+base name). As a special case, for paths in the current working directory
+(with no slash), this is C<".">. Note that, for the root directory (C</>)
+and its immediate children, this is the empty string.
+
+When standard output (I<stdout>) is a terminal, C<"?"> is output in place of
+any control characters to prevent terminal escape injection.
+
+=item C<%l>
+
+The target path of a symlink. For non-symlinks, this is the empty string.
+
+When standard output (I<stdout>) is a terminal, C<"?"> is output in place of
+any control characters to prevent terminal escape injection.
+
+=item C<%H>
+
+The starting search directory.
+
+When standard output (I<stdout>) is a terminal, C<"?"> is output in place of
+any control characters to prevent terminal escape injection.
+
+=item C<%d>
+
+The depth relative to the starting search directory (C<depth>).
+
+=item C<%D>
+
+The device number of the device/filesystem that the file resides on
+(C<dev>). See the related C<%V> and C<%v> format conversions (next) for the
+major and minor device numbers of the device/filesystem that the file
+resides on.
+
+=item C<%V>
+
+The major device number of the device/filesystem that the file resides on
+(C<major>, part of C<dev>).
+
+=item C<%v>
+
+The minor device number of the device/filesystem that the file resides on
+(C<minor>, part of C<dev>).
+
+=item C<%i>
+
+The inode number (C<ino>).
+
+=item C<%M>
+
+The file type and permissions in symbolic form (like in S<C<ls -l>>)
+(C<mode>).
+
+=item C<%y>
+
+The file type (like in S<C<ls -l>>, but with C<"f"> for regular files,
+rather than C<"-">).
+
+=item C<%Y>
+
+The file type (like C<%y>), but show the type of symlink targets instead of
+the symlinks themselves. Symlink-related errors are indicated with C<"N">
+for non-existence, C<"L"> for loops, and C<"?"> for any other error.
+
+Note: The C<-Y> option is incompatible with this format conversion. The only
+symlinks seen will be broken ones.
+
+=item C<%m>
+
+The file permissions in octal (S<C<mode & ~IFMT>>).
+
+=item C<%n>
+
+The number of hard links (C<nlink>).
+
+=item C<%u>
+
+The user name (based on C<uid>), or the numeric user ID if the user has no
+name.
+
+=item C<%g>
+
+The group name (based on C<gid>), or the numeric group ID if the group has
+no name.
+
+=item C<%U>
+
+The numeric user ID (C<uid>).
+
+=item C<%G>
+
+The numeric group ID (C<gid>).
+
+=item C<%E>
+
+The device number of the file (C<rdev>). This is only meaningful for
+character devices and block devices. See the related C<%R> and C<%r> format
+conversions (next) for the major and minor device numbers of the file.
+
+=item C<%R>
+
+The major device number of the file (C<rmajor>, part of C<rdev>). This is
+only meaningful for character devices and block devices.
+
+=item C<%r>
+
+The minor device number of the file (C<rminor>, part of C<rdev>). This is
+only meaningful for character devices and block devices.
+
+=item C<%s>
+
+For regular files, this is the size in bytes (C<size>). For symlinks (that
+are not followed with the C<-y> or C<-Y> option), this is the length in
+bytes of the target path. For readable directories, this is the number of
+entries they contain (excluding C<.> and C<..>). For unreadable directories
+(and everything else), this is the usual (undocumented) C<st_size> field of
+the corresponding I<stat(2)> structure.
+
+=item C<%S>
+
+The file "sparseness". This is only meaningful for regular files. This is
+defined as S<C<(blocks * 512) / size>> when the file size is non-zero, or as
+C<1> otherwise. Values above 1 indicate files that haven't filled up their
+last block. The value 1 indicates files that have filled up their last
+block, and empty files. Values below 1 indicate files with holes (or a
+filesystem with transparent compression). The value 0 indicates files that
+are not real files on disk (e.g., kernel parameters exposed as virtual
+files).
+
+=item C<%B>
+
+The preferred block size for efficient I/O on the file's filesystem
+(C<blksize>). On some filesystems (e.g., I<zfs>), this is specific to each
+file, rather than to the whole filesystem.
+
+=item C<%b>
+
+The amount of disk space occupied by the file in standardized 512-byte
+blocks (C<blocks>).
+
+=item C<%k>
+
+The amount of disk space occupied by the file in units of 1KiB
+"blocks". This is defined as S<C<(blocks + blocks % 2) / 2>>. Note that
+elsewhere, reported blocks are always 512 bytes, and that real blocks on
+modern filesystems are often larger (e.g., 4KiB).
+
+=item C<%a>
+
+The accessed time (C<atime>) in the format returned by the I<C> I<ctime(3)>
+function (excluding its terminating newline).
+
+=item C<%A>I<k>
+
+The accessed time (C<atime>) in the format specified by I<k>, which is
+either the at sign (C<"@">), for the number of seconds since the I<UNIX>
+epoch, or a conversion specifier character for the I<C> I<strftime(3)>
+function. See I<strftime(3)> for details.
+
+=item C<%t>
+
+The modified time (C<mtime>) in the format returned by the I<C> I<ctime(3)>
+function (excluding its terminating newline).
+
+=item C<%T>I<k>
+
+The modified time (C<mtime>) in the format specified by I<k>, which is
+either the at sign (C<"@">), for the number of seconds since the I<UNIX>
+epoch, or a conversion specifier character for the I<C> I<strftime(3)>
+function. See I<strftime(3)> for details.
+
+=item C<%c>
+
+The inode changed time (C<ctime>) in the format returned by the I<C>
+I<ctime(3)> function (excluding its terminating newline).
+
+=item C<%C>I<k>
+
+The inode changed time (C<ctime>) in the format specified by I<k>, which is
+either the at sign (C<"@">), for the number of seconds since the I<UNIX>
+epoch, or a conversion specifier character for the I<C> I<strftime(3)>
+function. See I<strftime(3)> for details.
+
+=item C<%z>
+
+The access control list (ACL) as a comma-separated list of items. This is
+available on I<Linux>, I<FreeBSD>, I<macOS>, I<Solaris>, and I<Cygwin>. On
+systems without supported ACLs, this is the empty string.
+
+I<FreeBSD> and I<Solaris> have I<NFSv4> ACLs with two forms of ACL text. By
+default, the compact form will be output. With the C<-v> option, the
+non-compact form will be output. For I<"POSIX"> ACLs (I<Linux> and
+I<Cygwin>) and I<macOS> ACLs, the C<-v> option has no effect.
+
+On I<Solaris>, ACLs are always present by default, even if they are
+trivially identical to the file permission bits. This can be convenient, but
+if it seems like noise, it can be silenced (but only on I<Solaris>) by
+setting the environment variable C<RAWHIDE_SOLARIS_ACL_NO_TRIVIAL=1>.
+
+=item C<%x>
+
+The extended attributes (EA) as a comma-separated list. This is available on
+I<Linux>, I<FreeBSD>, I<macOS>, I<Solaris>, and I<Cygwin>. On systems
+without supported EAs, this is the empty string.
+
+Note that any control characters (i.e., I<ASCII> 0-31, 127) in extended
+attribute names or values, and any non-I<ASCII> bytes (i.e., 128-255) in the
+values, will be presented as I<C>-like backslash escape sequences such as
+C<"\n"> for the newline character, and C<"\0"> for the null character, or as
+hexadecimal escape sequences such as C<"\x1b"> for the escape character. Any
+backslash characters are quoted with a preceding backslash. Note that commas
+are not quoted.
+
+On I<FreeBSD>, extended attributes in the I<user> namespace are presented
+with C<"user."> as a prefix to their actual name, and those in the I<system>
+namespace are presented with C<"system."> as a name prefix. On I<FreeBSD>,
+only the C<root> user may see extended attributes in the I<system>
+namespace.
+
+On most systems with extended attributes, the values are typically only up
+to a few hundred bytes in size. But on I<Solaris>, extended attributes take
+the form of regular files in a special extended attributes directory
+"hidden" inside each real file. Entire files can be copied into that special
+directory, and they become extended attributes. So extended attributes could
+tend to be larger on I<Solaris>.
+
+The default maximum total size for (encoded) extended attributes is 4KiB on
+most systems, and 64KiB on I<Solaris>. If this is not enough, extended
+attributes will be silently truncated. This affects extended attribute
+searching (C<ea>) (see I<rawhide.conf(5)>), and the S<C<-L %x>> format
+conversion. To prevent truncation, set the environment variable
+C<RAWHIDE_EA_SIZE> to a positive integer value that is large enough for your
+needs. Note that the value must be the size in bytes. Scale units are not
+supported.
+
+On I<Solaris>, every file's extended attributes directory contains the
+I<SUNWattr_ro> and I<SUNWattr_rw> extended attributes. By default, they are
+included for every file that has any other extended attributes. They can be
+excluded by setting the environment variable
+C<RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1>.
+
+Also on I<Solaris>, since extended attributes are files (of a sort), they
+each have their own I<stat(2)> information. By default, this information is
+represented as an artificial extended attribute whose name is the name of
+the corresponding real extended attribute followed by C<"/stat">. These
+artificial extended attributes can be suppressed by setting the environment
+variable C<RAWHIDE_SOLARIS_EA_NO_STATINFO=1>.
+
+=item C<%Z>
+
+The I<selinux(8)> context. This is available on I<Linux> systems with
+I<selinux(8)> enabled. On other systems, this is the empty string.
+
+=item C<%X>
+
+The access control list/extended attributes (ACL/EA) indicator (like in C<rh
+-l>). When a (non-trivial) ACL is present, this is a plus sign
+(C<"+">). When any (interesting) EAs are present, this is an at sign (C<"@">). When
+both are present, this is an asterisk character (C<"*">). When neither is
+present, but there is an I<selinux(8)> context, this is a dot character
+(C<".">). When none of the above are present, this is a space character
+(S<C<" ">>).
+
+=item C<%j>
+
+All of the file information in I<JSON> format, representing an object with
+the following possible attributes:
+
+=over 4
+
+=item C<path> (string) (same as C<%p>)
+
+=item C<name> (string) (same as C<%f>)
+
+=item C<target> (string) (same as C<%l>) (only for symlinks)
+
+=item C<start> (string) (same as C<%H>)
+
+=item C<depth> (integer) (same as C<%d>)
+
+=item C<dev> (integer) (same as C<%D>)
+
+=item C<major> (integer) (same as C<%V>)
+
+=item C<minor> (integer) (same as C<%v>)
+
+=item C<ino> (integer) (same as C<%i>)
+
+=item C<mode> (integer) (like C<%M>, but in the underlying numeric form)
+
+=item C<modestr> (string) (same as C<%M>)
+
+=item C<type> (string) (same as C<%y>)
+
+=item C<perm> (integer) (same as C<%m>, but in decimal)
+
+=item C<nlink> (integer) (same as C<%n>)
+
+=item C<user> (string) (same as C<%u>) (only if a name is available)
+
+=item C<group> (string) (same as C<%g>) (only if a name is available)
+
+=item C<uid> (integer) (same as C<%U>)
+
+=item C<gid> (integer) (same as C<%G>)
+
+=item C<rdev> (integer) (same as C<%E>)
+
+=item C<rmajor> (integer) (same as C<%R>)
+
+=item C<rminor> (integer) (same as C<%r>)
+
+=item C<size> (integer) (same as C<%s>)
+
+=item C<blksize> (integer) (same as C<%B>)
+
+=item C<blocks> (integer) (same as C<%b>)
+
+=item C<atime> (string) (like C<%a>/C<%A@>, but in ISO format)
+
+=item C<mtime> (string) (like C<%t>/C<%T@>, but in ISO format)
+
+=item C<ctime> (string) (like C<%c>/C<%C@>, but in ISO format)
+
+=item C<atime_unix> (integer) (same as C<%A@>)
+
+=item C<mtime_unix> (integer) (same as C<%T@>)
+
+=item C<ctime_unix> (integer) (same as C<%C@>)
+
+=item C<access_control_list> (string) (like C<%z> without the C<-v> option, but not reformatted as a comma-separated list) (only if present)
+
+=item C<access_control_list_verbose> (string) (like C<%z> with the C<-v> option, but not reformatted as a comma-separated list) (only if present)
+
+=item C<extended_attributes> (string) (like C<%x>, but not reformatted as a comma-separated list) (only if present)
+
+=item C<selinux_context> (string) (same as C<%Z>) (only if present)
+
+=item C<acl_ea_indicator> (string) (same as C<%X>)
+
+=back
+
+Note that any extended attributes are formatted and encoded as described for
+the C<ea> pattern modifier (see I<rawhide.conf(5)>), before being encoded
+again as a I<JSON> string literal.
+
+Also note that C<%j> should not be used in conjunction with other format
+conversions, especially C<%x>. If C<%x> appears before C<%j> in the C<-L>
+I<format> argument, the C<extended_attributes> value will be reformatted as
+a comma-separated list. But this is unlikely to be a problem. The C<%j>
+format conversion probably needs to be used by itself if the output is to be
+interpreted as valid I<JSON> by other software.
+
+Also note that this only works in locales that use I<UTF-8>.
+
+=back
+
+It is an error if C<%> is followed by any other character, or if it is the
+last character in the format string.
+
+All of the ISO I<C printf(3)> conversion flags are available (i.e., C<"#">,
+C<"0">, C<"-">, S<C<" ">>, and C<"+">), as well as field width and precision
+specifiers. These behave differently depending on the type of underlying
+I<printf(3)> conversion that they are applied to. See I<printf(3)> for
+details.
+
+The above conversions that output text use an underlying I<printf(3)> C<%s>
+string conversion. Those that output an integer use an underlying C<%d> or
+C<%o> integer conversion. The C<%S> (sparseness) conversion uses an
+underlying C<%g> floating point number conversion.
+
+Note that, when the C<%u> (user) or C<%g> (group) conversions are forced to
+output a numeric user or group ID because the user or group has no name, it
+is still output using an underlying C<%s> string conversion, rather than
+changing to an underlying C<%d> integer conversion. This is to prevent any
+surprises relating to the use of conversion flags or precisions. Also note
+that the C<%A@>, C<%C@>, and C<%T@> conversions output integers, so they use
+an underlying C<%d> integer conversion, but all other C<%A>I<k>, C<%C>I<k>,
+and C<%T>I<k> conversions use an underlying C<%s> string conversion (because
+I<strftime(3)> produces strings).
+
+This option is mostly but not entirely compatible with I<GNU find(1)>'s
+C<-printf> action. I<rh> doesn't do I<find(1)>'s C<%F> (filesystem type),
+and I<find(1)> doesn't do I<rh>'s
+C<%z> (access control list),
+C<%x> (extended attributes),
+C<%X> (ACL/EA indicator),
+C<%V> (C<dev> major device number),
+C<%v> (C<dev> minor device number),
+C<%E> (C<rdev> device number),
+C<%R> (C<rdev> major device number),
+C<%r> (C<rdev> minor device number),
+C<%B> (block size),
+or
+C<%j> (I<JSON>).
+
+And for most of the format conversions that output an integer, I<rh> and
+I<find(1)> use different underlying I<printf(3)> conversions (I<rh> uses
+C<%d>, and I<find(1)> uses C<%s>), so conversion flags or precisions would
+behave differently. This difference applies to all (non-I<strftime(3)>)
+conversions that output integers except C<%m> (file permissions in octal)
+and C<%d> (C<depth>), which I<rh> and I<find(1)> both treat as integers. But
+if conversion flags and precisions are not used, there is no difference.
+
+And I<rh>'s C<%s> (size) conversion outputs the size of readable directories
+as the number of entries they contain (excluding C<.> and C<..>), rather
+than the usual (undocumented) C<st_size> field of the corresponding
+I<stat(2)> structure. This is arguably compatible, but not identical. This
+also makes the output of the C<%S> (sparseness) conversion different for
+readable directories (but it isn't meaningful for directories, so that
+shouldn't matter).
+
+=back
+
+=head2 Path format options
+
+=over 4
+
+=item C<-Q>
+
+Enclose matching paths in double quotes (C<""">). Any double quote or
+backslash characters (C<"\">) in a path will be quoted with a preceding
+backslash.
+
+=item C<-E>
+
+Output I<C>-style escape sequences in place of any control characters in
+matching paths. Some control characters have single-letter backslashed
+encodings (i.e., C<"\a\b\t\n\v\f\r">, which are I<ASCII> 7 (I<BEL>), 8
+(I<BS>), 9 (I<HT>), 10 (I<LF>), 11 (I<VT>), 12 (I<FF>), and 13 (I<CR>),
+respectively). The remaining ones will be output as backslashed octal
+numbers (e.g., C<"\033">, which is I<ASCII> 27 (I<ESC>)). Any backslash
+characters (C<"\">) in a path will be quoted with a preceding backslash.
+
+This option and the C<-q> option are mutually exclusive.
+
+=item C<-b>
+
+Same as the C<-E> option (like I<ls(1)>).
+
+=item C<-q>
+
+Output C<"?"> in place of any control characters in matching paths. This is
+the default if standard output (I<stdout>) is a terminal, and the
+C<-E>/C<-b> option has not been supplied, so as to prevent terminal escape
+injection.
+
+This option and the C<-E>/C<-b> option are mutually exclusive.
+
+=item C<-p>
+
+Output C<"/"> after matching directory paths so as to indicate that they are
+directories.
+
+=item C<-t>
+
+Output most of the type indicators after matching paths (i.e., one of
+C<"/">, C<"@">, C<"=">, C<"|">, or C<< ">" >>).
+
+=item C<-F>
+
+Output all of the type indicators after matching paths (i.e., one of C<"*">,
+C<"/">, C<"@">, C<"=">, C<"|">, or C<< ">" >>).
+
+The type indicators have the following meanings:
+
+    * executable
+    / directory
+    @ symlink
+    = socket
+    | fifo
+    > door (Solaris only)
+
+=back
+
+=head2 Other column format options
+
+=over 4
+
+=item C<-H> or C<-HH>
+
+For the block size, space, and size columns, use "human readable"
+traditional computer storage units, based on 1024 bytes, rather than just
+numbers of bytes. This is like the C<-h> option in I<GNU ls(1)>. Implies the
+C<-l> option.
+
+If the size is below 1024, it is output in the usual way as a number of
+bytes. Otherwise, the appropriate scale is determined (i.e., C<K>, C<M>,
+C<G>, C<T>, C<P>, C<E>). If the scaled number is less than ten, a decimal
+place is included. Otherwise, an integer is output. For the block size and
+space columns, a decimal place is not included if it is zero. The size is
+rounded up. This gives the property that the actual size is never larger
+than the reported size.
+
+When this option is supplied twice (i.e., C<-HH>), then instead of always
+rounding up (like I<ls(1)>), the reported size is rounded half up. This
+gives more accurate figures than always rounding up.
+
+This option and the C<-I> option are mutually exclusive.
+
+=item C<-I> or C<-II>
+
+For the block size, space, and size columns, use the International System of
+Units (SI) prefixes, based on 1000 bytes, rather than just numbers of
+bytes. This is like the C<--si> option in I<GNU ls(1)>. Implies the C<-l> option.
+
+If the size is below 1000, it is output in the usual way as a number of
+bytes. Otherwise, the appropriate scale is determined (i.e., C<k>, C<m>,
+C<g>, C<t>, C<p>, C<e>). If the scaled number is less than ten, a decimal
+place is included. Otherwise, an integer is output. For the block size and
+space columns, a decimal place is not included if it is zero. The size is
+rounded up. This gives the property that the actual size is never larger
+than the reported size.
+
+When this option is supplied twice (i.e., C<-II>), then instead of always
+rounding up (like I<ls(1)>), the reported size is rounded half up. This
+gives more accurate figures than always rounding up.
+
+Like I<ls(1)>, a lower case C<k> is used to represent KB. Unlike I<ls(1)>
+(and unlike real SI prefixes), lower case letters are used to represent all
+of the other SI prefixes as well. This is to avoid any ambiguity.
+
+This option and the C<-H> option are mutually exclusive.
+
+=item C<-T>
+
+For the modified time, accessed time, and inode changed time columns, use
+ISO date/time format (C<"YYYY-MM-DD HH:MM:SS +HHMM">), rather than the
+default format (C<"MMM DD HH:MM:SS YYYY">). Implies the C<-l> option.
+
+=item C<-#>
+
+For the user/owner and group columns, use numeric user and group IDs,
+rather than user and group names. Implies the C<-l> option.
+
+=back
+
+=head2 Debug option
+
+=over 4
+
+=item C<-?> I<spec>
+
+Output debug messages to standard error (I<stderr>). The I<spec> argument is
+scanned for one or more of the following labels:
+
+    cmdline, parser, traversal, exec, all, extra
+
+The first four labels relate to different aspects of I<rh>. C<all> implies
+all four of them. C<extra> outputs additional debug messages for C<parser>
+and/or C<traversal> when they are also included. There are no debug messages
+for C<exec>.
+
+Note that debug messages are not sanitized against terminal escape
+injection. So it is safest to direct debug output (i.e., I<stderr>) to a
+file (e.g., S<C<< rh -? all,extra 2>rh.dbg >>>).
+
+Note that if I<rh> has been compiled without support for debug messages,
+this option will still be accepted, but there will be no debug messages.
+
+=back
+
+=head1 SEARCH CRITERIA LANGUAGE
+
+See I<rawhide.conf(5)> for details on the search criteria language used in
+system-wide and user-specific configuration files, C<-f> option files, and
+C<-e> option arguments. It also includes details on the "standard" library
+that builds on the language, and makes I<rh> easy to use. Now would be a
+good time to read it. The rest of this manual entry should make more
+sense. But here's a brief introduction.
+
+There are expressions and functions. Expressions look like I<C>
+expressions. The only data type is integer. These I<C> operators are available (presented
+in groups of increasing precedence):
+
+    ?:  Conditional (i.e., condition-expr ? if-expr : else-expr)
+
+    ||  Logical or
+
+    &&  Logical and
+
+    |   Bit or
+
+    ^   Bit exclusive or
+
+    &   Bit and
+
+    ==  Equals
+    !=  Not equals
+
+    <   Less than
+    >   Greater than
+    <=  Less than or equal to
+    >=  Greater than or equal to
+
+    <<  Bit shift left
+    >>  Bit shift right
+
+    +   Addition
+    -   Subtraction
+
+    *   Multiplication
+    /   Division
+    %   Modulo (remainder)
+
+    -   Minus (unary)
+    ~   Bit not (unary)
+    !   Logical not (unary)
+
+Parentheses override operator precedence (e.g., S<C<(1 + 2) * 3>>).
+
+Integer constants can be decimal, octal (starting with C<0>), or hexadecimal
+(starting with C<0x>). Decimal integers can have scale units (e.g., C<1K>,
+C<2M>, C<3G>, ... for traditional storage units (KiB, MiB, GiB, ...), and
+C<1k>, C<2m>, C<3g>, ... for SI-style units (KB, MB, GB, ...)).
+
+There are special tokens to represent various things:
+
+    "pattern"             - file glob pattern matches
+    "pattern".modifier    - modified pattern matches
+    "/path".field         - reference files for comparison
+    "cmd".sh              - external shell commands
+    $user @group          - user and group IDs
+    $$ @@                 - current user's user ID and primary group ID
+    [yyyy/mm/dd]          - dates
+    [yyyy/mm/dd hh:mm:ss] - date/times
+
+See I<rawhide.conf(5)> for all the details.
+
+Functions can have parameters. Functions that don't have parameters can be
+defined and called with or without parentheses. Function bodies can only
+contain a return statement or an expression.
+
+Every source/configuration file, C<-f> option file, and C<-e> option
+argument can contain zero or more function definitions, optionally followed
+by a file test expression, which is optionally terminated by a semicolon
+(C<";">).
+
+There are built-in symbols that represent the inode metadata (i.e.,
+I<stat(2)> structure fields) of candidate files (e.g., C<mode>, C<uid>,
+C<size>, C<mtime>, ...), other useful file information (e.g., C<nouser>,
+C<nogroup>, C<readable>, C<writable>, ...), control flow (i.e., C<prune>,
+C<trim>, C<exit>), useful values and constants (e.g., C<now>, C<today>,
+C<minute>, C<hour>, C<day>, ...), and more constants from I<C>'s
+C<< <sys/stat.h> >> header file (e.g., C<IFMT>, C<IFDIR>, C<IRUSR>,
+...). There are also built-in symbols that represent the inode metadata of
+candidate symlink targets (e.g., C<tmode>, C<tuid>, C<tsize>, C<tmtime>,
+...).
+
+There is also a "standard" library of functions in C</etc/rawhide.conf> (or
+similar). It contains both readable and concise functions for various things
+like: file types (e.g., C<file>, C<f>, C<directory>, C<dir>, C<d>,
+C<symlink>, C<link>, C<l>, ...); file permissions (e.g., C<user_readable>,
+C<ur>, C<group_writable>, C<gw>, C<other_executable>, C<ox>, C<setuid>,
+C<suid>, C<all_readable>, C<allr>, C<all()>, C<any()>, C<none()>, ...);
+aliases for I<stat(2)> structure fields and other built-ins (e.g., C<inode>,
+C<user>, C<group>, C<modified>, C<accessed>, C<imayread>, C<ir>,
+C<imaywrite>, C<iw>, ...); size units (e.g., C<KiB>, C<MiB>, C<GiB>, C<KB>,
+C<MB>, C<GB>, ...); and miscellaneous helper functions (e.g., C<ago()>,
+C<old()>, C<past()>, C<empty>, C<roots>, C<mine>, C<broken>, C<gmtoday>,
+...).
+
+By default, string literals (C<">I<pattern>C<">) represent a file glob
+pattern match against the file name. Pattern modifiers
+(C<">I<pattern>C<".>I<modifier>) change the interpretation of string
+literals to let you choose how to match text (i.e., glob pattern or
+I<Perl>-compatible regular expression (regex), and case-sensitive or
+case-insensitive), and which text to match against (i.e., file name, path,
+symlink target path, access control list, or extended attributes).
+
+There are other string literal suffixes that represent the inode metadata
+(i.e., I<stat(2)> structure fields) of arbitrary reference files
+(C<">I</path>C<".>I<field>) for comparison purposes. And the C<sh> string
+literal suffix lets you execute an arbitrary shell command
+(C<">I<cmd>C<".sh>), and use its exit success status in the search criteria.
+
+See I<rawhide.conf(5)> for all the details. See below for some examples.
+
+=head1 EXPRESSION EXAMPLES
+
+The following are examples of I<rh> expressions. Where multiple versions are
+given, the first one only uses built-in symbols, and the rest usually make
+use of the "standard" library in C</etc/rawhide.conf> (or similar) as
+well. See I<rawhide.conf(5)> for details.
+
+Find files that are owned by the user C<drew>, and are writable by other
+people:
+
+    (uid == $drew) && (mode & 022) # uid and mode are built-in
+    (uid == $drew) && (gw | ow)    # gw and ow are in /etc/rawhide.conf
+
+Find files that are owned by C<root>, have the setuid bit set, and are
+world-writable:
+
+    !uid && (mode & ISUID) && (mode & 02) # uid, mode, ISUID: built-in
+    roots && setuid && other_writable     # the rest: /etc/rawhide.conf
+    roots && setuid && world_writable
+    roots && suid && ow
+    roots && suid && ww
+
+Find executable files that are larger than 10KiB, and have not been executed
+in the last 24 hours:
+
+    (mode & 0111) && (size > 10 * 1024) && (atime < now - 24 * hour)
+    any(0111) && (size > 10 * KiB) && accessed < ago(24 * hours)
+    anyx && sz > 10K && atime < ago(day)
+
+Find I<C> source files that are smaller than 4KiB, and other files that are
+smaller than 32KiB:
+
+    size < ("*.c" ? 4K : 32K)     # size: built-in
+    size < ("*.c" ? 4 : 32) * KiB # KiB: /etc/rawhide.conf
+
+Find files that are an exact multiple of 1KiB in size:
+
+    (size % 1024) == 0
+    !(sz % 1K)
+
+Find files that were last modified during March, 1982:
+
+    mtime >= [1982/3/1] && mtime < [1982/4/1]
+    modified >= [1982/3/1] && modified < [1982/4/1]
+
+Find files that have been read since they were last written:
+
+    atime > mtime
+    accessed > modified
+
+Find files whose names are between 4 and 10 bytes in length:
+
+    strlen >= 4 && strlen <= 10
+    len >= 4 && len <= 10
+
+Find files that are at a relative depth of 3 or more below the starting
+search directory:
+
+    depth >= 3
+
+This expression finds C<*.c> files. However, it will not search in any
+directories named C<bin> or C<tmp>. If these file names are encountered, the
+C<prune> built-in is evaluated, preventing the current path from matching,
+and preventing further searching below the current path.
+
+    ("tmp" || "bin") ? prune : "*.c"
+    ("tmp" || "bin") && prune || "*.c"
+
+Find files that were modified after another file was last modified:
+
+    mtime > "/otherfile".mtime
+    modified > "/otherfile".modified
+
+Find files that are larger than one file and smaller than another file:
+
+    size > "/somefile".size && size < "/otherfile".size
+    sz > "/somefile".sz && sz < "/otherfile".sz
+
+Find files with holes (for filesystems without transparent compression):
+
+    (mode & IFMT) == IFREG && size && blocks && (blocks * 512) < size
+    file && size && blocks && space < size
+
+Find regular files with multiple hard links:
+
+    (mode & IFMT) == IFREG && nlink > 1
+    file && nlinks > 1
+    f && nlink > 1
+
+Find all hard links to a particular file:
+
+    (dev == "/path".dev) && (ino == "/path".ino)
+    (dev == "/path".dev) && (ino == "".ino) # Implicit 2nd reference
+
+Find devices with the same device driver as C</dev/tty>:
+
+    rmajor == "/dev/tty".rmajor
+
+Find symlinks whose target paths are relative:
+
+    "[!/]*".link
+
+Find symlinks whose ultimate targets are on a different filesystem:
+
+    (mode & IFMT) == IFLNK && texists && tdev != dev
+    symlink && target_exists && target_dev != dev
+    l && texists && tdev != dev
+    texists && tdev != dev
+
+Find symlinks whose ultimate targets don't exist:
+
+    (mode & IFMT) == IFLNK && !texists
+    symlink && !target_exists
+    link && !texists
+    l && !texists
+    dangling
+    broken
+
+Find mountpoints under the current directory:
+
+    $ rh -1 'dev != ".".dev'
+
+Find directories with no sub-directories (fast, for most filesystems, but
+not I<btrfs>):
+
+    $ rh 'd && nlink == 2'
+
+The same, but works for I<btrfs> (slow-ish, but demonstrates shell commands):
+
+    $ rh 'd && "[ `rh -red %S | wc -l` = 0 ]".sh'
+    $ rh 'd && "[ -z \"`rh -red %S`\" ]".sh'
+
+Find empty (readable) directories (fast-ish, and works for I<btrfs>):
+
+    $ rh 'd && empty'
+
+Find symlinks whose immediate targets are also symlinks:
+
+    $ rh -l 'l && "[ -L \"`rh -L%%l %S`\" ]".sh'
+    $ rh -l 'l && "[ -L \"`readlink %S`\" ]".sh'
+
+Find all hard links to all regular files that have multiple hard links (very
+slow):
+
+    # rh -e 'f && nlink > 1' \
+         -X 'rh / "(dev == \"%S\".dev) && (ino == \"\".ino)"; echo' \
+         /
+
+The same, but for a single filesystem only (shorter, less slow, but still
+very slow):
+
+    # rh -1 -e 'f && nlink > 1' -X 'rh -1 / "ino == \"%S\".ino"; echo' /
+
+Find files using a I<Perl>-compatible regular expression (regex):
+
+    $ rh '"^[a-zA-Z0-9_]+[0-9][0-9][0-9]?\..*[a-cz]$".re'
+    $ rh '"^\w+\d{2,3}\..*[a-cz]$".re'
+
+See I<perlre(1)>, I<pcre2pattern(3)>, and I<pcre2syntax(3)> for details.
+
+The same, but with documentation:
+
+    $ rh '"
+      ^         # Anchor the match to the start of the base name 
+      \w+       # Starts with at least one word character
+      \d{2,3}   # Followed by two or three digits
+      \.        # Followed by a literal dot
+      .*        # Followed by anything (or nothing)
+      [ a-c z ] # Ends with a, b, c, or z
+      $         # Anchor the match to the end of the base name
+    ".re'
+
+Case-insensitive search (anything with C<abc> in the name):
+
+    $ rh '"*ABC*".i' # Case-insensitive glob of base name
+    $ rh '"ABC".rei' # Case-insensitive regex of base name
+
+Find files by their full path starting from the search directory (anything
+under an C<abc> directory):
+
+    $ rh '"*/abc/*".path'  # Glob of full path
+    $ rh '"/abc/".repath'  # Regex of full path
+    $ rh '"*/ABC/*".ipath' # Case-insensitive glob of full path
+    $ rh '"/ABC/".reipath' # Case-insensitive regex of full path
+
+Find symlinks by their target path (symlinks to anything under an C<abc>
+directory):
+
+    $ rh -l '"*/abc/*".link'  # Glob of symlink target path
+    $ rh -l '"/abc/".relink'  # Regex of symlink target path
+    $ rh -l '"*/ABC/*".ilink' # Case-insensitive glob of symlink target
+    $ rh -l '"/ABC/".reilink' # Case-insensitive regex of symlink target
+
+Find files with I<"POSIX"> ACLs (I<Linux> and I<Cygwin>) that grant write
+access to the user C<drew>:
+
+    $ rh '(uid == $drew) ? "*user::?w?*".acl   : "*user:drew:?w?*".acl'
+    $ rh '(uid == $drew) ? "^user::.w.$".reacl : "^user:drew:.w.$".reacl'
+
+Find files with I<NFSv4> ACLs (I<FreeBSD> and I<Solaris>) that grant write
+access to the user C<drew>:
+
+    $ rh '(uid == $drew)
+        ?    "*owner@:?w????????????:???????:allow*".acl
+        : "*user:drew:?w????????????:???????:allow*".acl
+    '
+
+    $ rh '(uid == $drew)
+        ?    "owner@:.w.{12}:.{7}:allow".reacl
+        : "user:drew:.w.{12}:.{7}:allow".reacl
+    '
+
+    $ rh '(uid == $drew)
+        ?    "owner@:[^:]+/write_data/[^:]+(:[^:]*)?:allow".reacl
+        : "user:drew:[^:]+/write_data/[^:]+(:[^:]*)?:allow".reacl
+    '
+
+Note that, with I<NFSv4> ACLs, you can search for ACLs using either the
+compact form, or the non-compact form. But be warned that the permission
+names in the non-compact form do not always appear in the same order (at
+least on I<Solaris>).
+
+Find files on I<macOS> with ACLs that grant write access to the user
+C<drew>:
+
+    $ rh '(uid == $drew) ? uw : "user:[^:]+:drew:\d+:allow:write".reacl'
+
+Find files with non-trivial access control lists (ACL):
+
+    $ rh '"*mask::*".acl'        # "POSIX" ACLs (Linux, Cygwin)
+    $ rh '"(user|group):".reacl' # NFSv4 ACLs (FreeBSD, Solaris)
+    $ rh '"?*".acl'              # macOS ACLs
+
+Find files with extended attributes (EA):
+
+    $ rh '"?*".ea'
+    $ rh '".".reea'
+
+Find files on I<Linux> by their I<selinux(8)> context (any):
+
+    $ rh '"*security.selinux: *_u:*_r:*_t:s[0-3]*".ea'
+    $ rh '"^security\.selinux:\ .*_u:.*_r:.*_t:s[0-3]".reea'
+
+Find files on I<Solaris> with setuid executable extended attributes (silly):
+
+    $ rh / '"*/stat: -rws*".ea'
+    $ rh / '"/stat:\ -rws".reea'
+
+=head1 FUNCTION EXAMPLES
+
+The following are examples of function definition and usage.
+
+This defines a function that returns true if the current candidate file is a
+directory, and false otherwise:
+
+    dir()
+    {
+        return (mode & IFMT) == IFDIR;
+    }
+
+And this defines a function that returns whether or not the current
+candidate file is owned by the current user:
+
+    mine()
+    {
+        return uid == $$;
+    }
+
+Then this expression matches directories that are not owned by the user:
+
+    dir() && !mine();
+
+Since C<dir> and C<mine> take no arguments, they can be called without
+parentheses:
+
+    dir && !mine;
+
+Parentheses can also be omitted when defining a function that has no
+parameters. For example, this defines a function named C<drews> that returns
+true when the current candidate file is owned by the user C<drew>:
+
+    drews
+    {
+        return uid == $drew;
+    }
+
+Functions can also have parameters. An alternative to the functions C<mine>
+and C<drews> could be:
+
+    owner(who)
+    {
+        return uid == who;
+    }
+
+Then this expression would be true for any file owned by the users C<alex>
+or C<drew>:
+
+    owner($alex) || owner($drew);
+
+Since functions can only ever contain a return statement, the C<return>
+keyword and the trailing semicolon (C<";">) are optional.
+
+The above functions can be defined as:
+
+    dir        { (mode & IFMT) == IFDIR }
+    mine       { uid == $$ }
+    drews      { uid == $drew }
+    owner(who) { uid == who }
+
+=head1 COMMAND LINE EXAMPLES
+
+The C<-e> option argument usually supplies the file test expression. But it
+isn't usually necessary to actually include the C<-e> option itself. If no
+explicit file test expression is supplied via the C<-e> option, then any
+remaining command line arguments are examined to identify any implicit file
+test expression. The file test expression and search paths can appear in any
+order. The following examples are equivalent:
+
+    $ rh -e 'expr' dir1 dir2
+    $ rh 'expr' dir1 dir2
+    $ rh dir1 'expr' dir2
+    $ rh dir1 dir2 'expr'
+
+List the current directory in detail (like S<C<ls -lA>>, but unsorted):
+
+    $ rh -rl
+
+List the current directory in greater detail (all I<stat(2)> details, and
+all type indicators):
+
+    $ rh -rvF
+
+List the current directory in detail, sorted by name (by cheating):
+
+    $ rh -lM0 .* *
+
+Delete old backup files:
+
+    $ rh -UUU '"*.bak" && modified <= ago(month)'
+    $ rh -UUU '"*.bak" && old(month)'
+
+I<grep(1)> for something only in recent files:
+
+    $ rh -e 'f && modified >= ago(hour)' -x 'grep -H something %s'
+    $ rh -e 'f && past(hour)'            -x 'grep -H something %s'
+
+The same, but just list the files where I<grep(1)> found something:
+
+    $ rh 'f && modified >= ago(hour) && "grep -q something %S".sh'
+    $ rh 'f && past(hour)            && "grep -q something %S".sh'
+
+Show all access control lists:
+
+    $ rh -L '%p\n%z\n' '"?*".acl'
+
+Show all extended attributes:
+
+    $ rh -L '%p\n%x\n' '"?*".ea'
+
+Find the block device that the current directory resides on:
+
+    $ rh -l /dev 'b && rdev == ".".dev'
+
+Note: This doesn't work for filesystems like I<devtmpfs> that don't appear
+in C</dev>.
+
+Find regular files whose sizes are prime numbers (so silly):
+
+    $ rh -l '
+    prime1(n, i) { (i * i > n) ? 1 : !(n % i) ? 0 : prime1(n, i + 2) }
+    prime(n) { (n < 2) ? 0 : !(n % 2) ? n == 2 : prime1(n, 3) }
+    file && prime(size)
+    '
+
+Sum the sizes of all regular files in the current directory (with I<jq(1)>):
+
+    $ rh -r -L '%j\n' f | jq .size | jq -s add
+    $ rh -r -L '%s\n' f | jq -s add
+
+Some command line shell syntactic sugar to save keystrokes:
+
+    # rq - rh with automatic "" around the first argument
+    # usage: rq pattern [options] [path...]
+    # e.g.:  rq '*.c' instead of rh '"*.c"'
+    rq() { rq_pat="$1"; shift && rh -e "\"$rq_pat\"" "$@"; }
+    
+    # rql - rh -l with automatic "" around the first argument
+    # usage: rql pattern [options] [path...]
+    # e.g.:  rql '*.c' instead of rh -l '"*.c"'
+    rql() { rql_pat="$1"; shift && rh -le "\"$rql_pat\"" "$@"; }
+    
+    # rqv - rh -v with automatic "" around the first argument
+    # usage: rqv pattern [options] [path...]
+    # e.g.:  rqv '*.c' instead of rh -v '"*.c"'
+    rqv() { rqv_pat="$1"; shift && rh -ve "\"$rqv_pat\"" "$@"; }
+    
+    
+    # ri - rh with automatic "".i around the first argument
+    # usage: ri pattern [options] [path...]
+    # e.g.:  ri '*.c' instead of rh '"*.c".i'
+    ri() { ri_pat="$1"; shift && rh -e "\"$ri_pat\".i" "$@"; }
+    
+    # ril - rh -l with automatic "".i around the first argument
+    # usage: ril pattern [options] [path...]
+    # e.g.:  ril '*.c' instead of rh -l '"*.c".i'
+    ril() { ril_pat="$1"; shift && rh -le "\"$ril_pat\".i" "$@"; }
+    
+    # riv - rh -v with automatic "".i around the first argument
+    # usage: riv pattern [options] [path...]
+    # e.g.:  riv '*.c' instead of rh -v '"*.c".i'
+    riv() { riv_pat="$1"; shift && rh -ve "\"$riv_pat\".i" "$@"; }
+    
+    
+    # re - rh with automatic "".re around the first argument
+    # usage: re pattern [options] [path...]
+    # e.g.:  re '\.c$' instead of rh '"\.c$".re'
+    re() { re_pat="$1"; shift && rh -e "\"$re_pat\".re" "$@"; }
+    
+    # rel - rh -l with automatic "".re around the first argument
+    # usage: rel pattern [options] [path...]
+    # e.g.:  rel '\.c$' instead of rh -l '"\.c$".re'
+    rel() { rel_pat="$1"; shift && rh -le "\"$rel_pat\".re" "$@"; }
+    
+    # rev - rh -v with automatic "".re around the first argument
+    # usage: rev pattern [options] [path...]
+    # e.g.:  rev '\.c$' instead of rh -v '"\.c$".re'
+    rev() { rev_pat="$1"; shift && rh -ve "\"$rev_pat\".re" "$@"; }
+    
+    
+    # rei - rh with automatic "".rei around the first argument
+    # usage: rei pattern [options] [path...]
+    # e.g.:  rei '\.c$' instead of rh '"\.c$".rei'
+    rei() { rei_pat="$1"; shift && rh -e "\"$rei_pat\".rei" "$@"; }
+    
+    # reil - rh -l with automatic "".rei around the first argument
+    # usage: reil pattern [options] [path...]
+    # e.g.:  reil '\.c$' instead of rh -l '"\.c$".rei'
+    reil() { reil_pat="$1"; shift && rh -le "\"$reil_pat\".rei" "$@"; }
+    
+    # reiv - rh -v with automatic "".rei around the first argument
+    # usage: reiv pattern [options] [path...]
+    # e.g.:  reiv '\.c$' instead of rh -v '"\.c$".rei'
+    reiv() { reiv_pat="$1"; shift && rh -ve "\"$reiv_pat\".rei" "$@"; }
+    
+    
+    alias rl='rh -rl' # rh -l version of ls -lA
+    alias rlr='rh -l' # rh -l version of ls -lAR
+    
+    alias rv='rh -rv' # rh -v version of ls -lA
+    alias rvr='rh -v' # rh -v version of ls -lAR
+
+    alias rj='rh -L "%j\n"'
+    
+    alias r0='rh -0'
+    
+    alias r1='rh -1'
+    alias r1l='rh -1l'
+    alias r1v='rh -1v'
+    
+    alias ry='rh -y'
+    alias ryl='rh -yl'
+    alias ryv='rh -yv'
+    
+    alias rY='rh -Y'
+    alias rYl='rh -Yl'
+    alias rYv='rh -Yv'
+
+=head1 FIND(1) COMPARISON EXAMPLES
+
+The following subsections are the examples from the I<GNU find(1)> manual
+entry.
+
+  find - search for files in a directory hierarchy
+  Copyright (C) 1990-2022 Free Software Foundation, Inc
+  License GPLv3+: GNU GPL version 3 or later
+  https://www.gnu.org/software/findutils
+  https://www.gnu.org/licenses/gpl.html
+
+Each example is followed by one or more equivalent I<rh> commands, for the
+purpose of comparison. Multiple alternative I<rh> commands typically use
+different functions from C</etc/rawhide.conf> (or similar). See
+I<rawhide.conf(5)> for details.
+
+=head2 Simple `find | xargs` approach
+
+Find files named C<core> in or below the directory C</tmp> and delete them.
+
+  $ find /tmp -name core -type f -print | xargs /bin/rm -f
+
+  $ rh /tmp '"core" && file' | xargs /bin/rm -f
+  $ rh /tmp '"core" && f' | xargs /bin/rm -f
+
+=head2 Safer `find -print0 | xargs -0` approach
+
+Find files named C<core> in or below the directory C</tmp> and delete them,
+processing file names in such a way that file or directory names containing
+single or double quotes, spaces or newlines are correctly handled.
+
+  $ find /tmp -name core -type f -print0 | xargs -0 /bin/rm -f
+
+  $ rh -0 /tmp '"core" && file' | xargs -0 /bin/rm -f
+  $ rh -0 /tmp '"core" && f' | xargs -0 /bin/rm -f
+
+=head2 Executing a command for each file
+
+Run I<file(1)> on every file in or below the current directory.
+
+  $ find . -type f -exec file '{}' \;
+
+  $ rh -x 'file %s' file
+  $ rh -x 'file %s' f
+
+=head2 Traversing the filesystem just once - for two different actions
+
+Traverse the filesystem just once, listing set-user-ID files and directories
+into C</root/suid.txt> and large files into C</root/big.txt>.
+
+  $ find / \
+    \( -perm -4000 -fprintf /root/suid.txt '%#m %u %p\n' \) , \
+    \( -size +100M -fprintf /root/big.txt '%-10s %p\n' \)
+
+  # rh -L '' / '
+    (setuid && "rh -M0 -L \"%%#m %%u %%p\n\" %s >> /root/suid.txt".sh) +
+    (size > 100M && "rh -M0 -L \"%%-10s %%p\n\" %s >> /root/big.txt".sh)
+  '
+
+=head2 Searching files by age
+
+Search for files in your home directory which have been modified in the last
+twenty-four hours.
+
+  $ find $HOME -mtime 0
+
+  $ rh $HOME 'mtime >= now - 24 * hour'
+  $ rh $HOME 'mtime >= ago(24 * hours)'
+  $ rh $HOME 'modified >= ago(day)'
+  $ rh $HOME 'past(day)'
+
+=head2 Searching files by permissions
+
+Search for files which are executable but not readable for the current user.
+
+  $ find /sbin /usr/sbin -executable \! -readable -print
+
+  $ rh /sbin /usr/sbin 'executable && !readable'
+  $ rh /sbin /usr/sbin 'imayexec && !imayread'
+  $ rh /sbin /usr/sbin 'ix && !ir'
+
+Search for files which have read and write permission for their owner, and
+group, but which other users can read but not write to. Files which meet
+these criteria but have other permission bits set (for example if someone
+can execute the file) will not be matched.
+
+  $ find . -perm 664
+
+  $ rh 'perm == 0664'
+
+Search for files which have read and write permission for their owner and
+group, and which other users can read, without regard to the presence of
+any extra permission bits (for example the executable bit). This will match
+a file which has mode C<0777>, for example.
+
+  $ find . -perm -664
+
+  $ rh '(perm & 0664) == 0664'
+  $ rh 'all(0664)'
+
+Search for files which are writable by somebody (their owner, or their
+group, or anybody else).
+
+  $ find . -perm /222
+
+  $ rh 'perm & 0222'
+  $ rh 'any(0222)'
+  $ rh 'user_writable || group_writable || other_writable'
+  $ rh 'uw || gw || ow'
+  $ rh 'uw | gw | ow'
+  $ rh uw+gw+ow
+  $ rh any_writable
+  $ rh anyw
+
+Search for files which are writable by either their owner or their group.
+
+  $ find . -perm /220
+  $ find . -perm /u+w,g+w
+  $ find . -perm /u=w,g=w
+
+  $ rh 'perm & 0220'
+  $ rh 'any(0220)'
+  $ rh 'user_writable || group_writable'
+  $ rh 'uw || gw'
+  $ rh 'uw | gw'
+  $ rh uw+gw
+
+Search for files which are writable by both their owner and their group.
+
+  $ find . -perm -220
+  $ find . -perm -g+w,u+w
+
+  $ rh '(perm & 0220) == 0220'
+  $ rh 'all(0220)'
+  $ rh 'uw && gw'
+
+A more elaborate search on permissions. These two commands both search for
+files that are readable for everybody (S<C<-perm -444>> or S<C<-perm -a+r>>),
+have at least one write bit set (S<C<-perm /222>> or S<C<-perm /a+w>>) but are not
+executable for anybody (S<C<! -perm /111>> or S<C<! -perm /a+x>> respectively).
+
+  $ find . -perm -444 -perm /222 \! -perm /111
+  $ find . -perm -a+r -perm /a+w \! -perm /a+x
+
+  $ rh '(perm & 0444) == 0444 && (perm & 0222) && !(perm & 0111)'
+  $ rh 'all(0444) && any(0222) && none(0111)'
+  $ rh '(ur && gr && or) && (uw || gw || ow) && !(ux || gx || ox)'
+  $ rh 'all_readable && any_writable && none_executable'
+  $ rh 'allr && anyw && nonex'
+
+=head2 Pruning - omitting files and subdirectories
+
+Copy the contents of C</source-dir> to C</dest-dir>, but omit files and
+directories named C<.snapshot> (and anything in them). It also omits files
+or directories whose names end in C<"~">, but not their contents.
+
+  $ cd /source-dir
+  $ find . -name .snapshot -prune -o \( \! -name '*~' -print0 \) | \
+      cpio -pmd0 /dest-dir
+
+  $ rh -0 '".snapshot" ? prune : !"*~"' | cpio -pmd0 /dest-dir
+  $ rh -0 '".snapshot" && prune || !"*~"' | cpio -pmd0 /dest-dir
+
+Given the following directory of projects and their associated SCM
+administrative directories, perform an efficient search for the projects'
+roots:
+
+  $ find repo/ \
+      \( -exec test -d '{}/.svn' \; \
+      -or -exec test -d '{}/.git' \; \
+      -or -exec test -d '{}/CVS' \; \
+      \) -print -prune
+
+  $ rh repo 'd && "[ -d %S/.svn -o -e %S/.git -o -d %S/CVS ]".sh && trim'
+
+Sample directories:
+
+  repo/project1/CVS
+  repo/gnu/project2/.svn
+  repo/gnu/project3/.svn
+  repo/gnu/project3/src/.svn
+  repo/project4/.git
+
+Sample output:
+
+  repo/project1
+  repo/gnu/project2
+  repo/gnu/project3
+  repo/project4
+
+Note: These examples highlight an interesting difference in pruning with
+I<rh> and I<find(1)>. In the first example, the pruned paths themselves are
+not output. In the second example, they are. Both behaviours are
+useful. I<find(1)> has a single C<-prune> action for both, and the decision whether
+or not to output the pruned path itself is determined by whether and where
+C<-print> (or certain other actions) appears on the command line. It's
+complicated. For simplicity, I<rh> has separate C<prune> and C<trim>
+built-ins for these two behaviours. C<prune> prevents the current candidate
+path from matching. C<trim> doesn't. They both prevent searching below the
+current candidate path. So C<prune> is used when the current candidate path
+itself needs to be excluded, and C<trim> is used when it needs to be
+included. You can think of C<trim> as a light C<prune>.
+
+=head2 Other useful examples
+
+Search for several file types.
+
+  $ find /tmp \( -type f -o -type d -o -type l \)
+  $ find /tmp -type f,d,l
+
+  $ rh /tmp 'file || dir || link'
+  $ rh /tmp 'f || d || l'
+  $ rh /tmp 'f | d | l'
+  $ rh /tmp f+d+l
+
+Search for files with the particular name C<needle> and stop immediately
+when we find the first one.
+
+  $ find / -name needle -print -quit
+
+  $ rh / '"needle" ? exit : 0'
+  $ rh / '"needle" && exit'
+  $ rh / '"needle" && quit'
+
+Demonstrate the interpretation of the C<%f> and C<%h> format directives of
+the C<-printf> action for some corner cases. Here is an example including
+some output.
+
+  $ find . .. / /tmp /tmp/TRACE compile compile/64/tests/find \
+      -maxdepth 0 -printf '[%h][%f]\n'
+
+  $ rh -M0 -L '[%h][%f]\n' \
+      . .. / /tmp /tmp/TRACE compile compile/64/tests/find
+
+Sample output:
+
+  [.][.]
+  [.][..]
+  [][/]
+  [][tmp]
+  [/tmp][TRACE]
+  [.][compile]
+  [compile/64/tests][find]
+
+=head1 CAVEAT
+
+Don't expect too much from the search criteria language. It is a very little
+language.
+
+A function can only be called if its definition has already been encountered
+by the parser. So recursive functions are possible, but mutually recursive
+functions are not.
+
+Function parameters (temporarily) share the same namespace as the functions
+themselves. This means that function parameter names can't be the same as
+the names of any existing functions or built-in symbols.
+
+Locale support is peculiar. The only supported locales are those that use
+I<UTF-8> or an I<ASCII>-compatible single-byte character encoding like
+I<ISO-8859-*> (but the S<C<-L %j>> (I<JSON>) conversion is only supported
+with I<UTF-8> locales). All non-I<ASCII> characters are considered to be
+"letters" when parsing the names of functions, parameters, users, and
+groups. This means that all languages and scripts, and even emojis, can be
+used in names, but non-I<ASCII> digits and numbers in other scripts cannot
+be used in numeric constants. Other multi-byte character encodings are not
+supported (e.g., I<UTF-16>, I<GB 18030>, I<Big5>, I<Shift JIS>, and
+I<EUC-*>). This limitation lets I<rh> enjoy most of the benefits of
+I<Unicode> without needing to expend any time or energy decoding and
+encoding characters.
+
+If the user's C<$PATH> environment variable includes the current working
+directory, or any other non-absolute paths, they are automatically
+removed. This is important for security when the C<-X> option is used, and when the
+C<">I<cmd>C<".sh> "pattern" modifier is used. But it isn't important when
+they are not used. But it always happens anyway, for consistency. So this
+affects the C<-x> option as well, whether or not the C<">I<cmd>C<".sh>
+"pattern" modifier is also used. This ensures that a change in the search
+criteria expression won't inadvertently change the behaviour of the C<-x>
+option command.
+
+When following symlinks with the C<-Y> option, it's possible to encounter
+filesystem cycles. When this happens, I<rh> will output an "error" message
+to indicate that it is skipping an already encountered directory because of
+the filesystem cycle, but this won't result in a non-zero exit status,
+because it's not really an error. If you would prefer that filesystem cycle
+detection not be reported at all, set the environment variable
+C<RAWHIDE_DONT_REPORT_CYCLES=1>.
+
+When using the C<-l> option to output multiple columns of extra information
+for matching entries, the ideal width of each column is not known at the
+start. Small default widths are used, and columns are widened as
+necessary. This results in less than perfectly tidy columns. This is the result of
+wanting to use as little memory as possible, and wanting to avoid columns
+that look too wide. If you prefer columns that start already wide enough,
+and you know how wide they need to be, you can override the default initial
+column widths by setting environment variables whose names start with
+C<"RAWHIDE_COLUMN_WIDTH_">. See the B<ENVIRONMENT> section below for
+details.
+
+Invalid values in environment variables (see below) are silently ignored.
+
+The spaces for the virtual code, data, and stack have fixed sizes. So they
+could conceivably run out. But it would take megabytes of search criteria
+source code, or over ten thousand patterns, or hundreds of thousands of
+nested function calls. These thresholds are reduced if I<rh> is configured
+with a C<small> or C<tiny> static size at compile time, but it would still
+be unlikely to be a problem.
+
+If you have a pathologically deep directory tree (i.e., thousands of
+directories deep), you might want to rethink that, or you might need to
+increase the limit on the number of open files, with something like:
+S<C<ulimit -n 2048>>. This is because an open file descriptor is required
+for each directory level.
+
+Filesystems can be mounted with options such as I<noatime>, I<nodiratime>,
+and I<relatime>, which suppress or limit the updating of accessed times (to
+improve read performance). The I<ro> mount option also suppresses
+updates. See I<mount(8)> for details. On I<Linux>, the I<relatime> mount option is
+the default. The altered semantics affects the C<atime> and C<tatime>
+built-in symbols, and the C<atime> reference file field (see
+I<rawhide.conf(5)>).
+
+A file's inode changed time (or status changed time) is not updated when its
+accessed time is changed. It is only updated for other changes to the
+inode. This relates to the C<ctime> and C<tctime> built-in symbols, and the
+C<ctime> reference file field (see I<rawhide.conf(5)>).
+
+=head1 BUGS
+
+Every filesystem has its own maximum path length. The maximum path length is
+determined for each starting search path, but if a search crosses a
+filesystem boundary (i.e., enters a mountpoint for another filesystem), the
+new filesystem's maximum path length is not taken into account. So it's
+conceivable that a valid path could be incorrectly determined to be too
+long. But it's unlikely that any real path will approach the maximum path
+length of any filesystem.
+
+=head1 EXIT STATUS
+
+I<rh>'s exit status is zero upon success, or non-zero upon failure. Possible
+reasons for failure are: invalid command line options or arguments; search
+criteria syntax errors; permission/existence errors while searching;
+permission/existence errors while unlinking; C<-x> or C<-X> commands exiting
+with a non-zero exit status; failure to change the current working
+directory; attempt to use a I<stat(2)> structure field of a reference file
+that does not exist or cannot be reached; failure to follow a symlink (but
+not by default); failure to obtain an access control list; failure to obtain
+extended attributes; traversing too deeply; paths being longer than their
+filesystem claims to support; failure to allocate memory; C<-x>, C<-X>, or
+C<">I<cmd>C<".sh> commands being too large; attempt to divide by zero; too
+much code; too much data (i.e., patterns, reference file paths, and shell
+commands); stack overflow.
+
+=head1 ENVIRONMENT
+
+The location of the main system-wide configuration file
+(C</etc/rawhide.conf>, or similar) can be overridden with the environment
+variable C<RAWHIDE_CONFIG>. This is only available to non-C<root> users (as
+it could be dangerous for C<root>). The directory containing any additional
+system-wide configuration files is derived from it by appending C<".d">.
+
+The location of the main user-specific configuration file (C<~/.rhrc>) can
+be overridden with the environment variable C<RAWHIDE_RC>. This is only
+available to non-C<root> users (as it could be dangerous for C<root>). The
+directory containing any additional user-specific configuration files is
+derived from it by appending C<".d">.
+
+The following environment variables can be set to override the default
+initial column widths for the C<-l> option:
+
+    RAWHIDE_COLUMN_WIDTH_DEV_MAJOR   (device column (major), default 1)
+    RAWHIDE_COLUMN_WIDTH_DEV_MINOR   (device column (minor), default 1)
+    RAWHIDE_COLUMN_WIDTH_INODE       (inode number column, default 6)
+    RAWHIDE_COLUMN_WIDTH_BLKSIZE     (block size column, default 1)
+    RAWHIDE_COLUMN_WIDTH_BLOCKS      (blocks column, default 2)
+    RAWHIDE_COLUMN_WIDTH_SPACE       (space column, default 6)
+    RAWHIDE_COLUMN_WIDTH_SPACE_UNITS (space column (-H/-I), default 4)
+    RAWHIDE_COLUMN_WIDTH_NLINK       (nlink column, default 1)
+    RAWHIDE_COLUMN_WIDTH_USER        (user/owner column, default 3)
+    RAWHIDE_COLUMN_WIDTH_GROUP       (group column, default 3)
+    RAWHIDE_COLUMN_WIDTH_SIZE        (size column, default 6)
+    RAWHIDE_COLUMN_WIDTH_SIZE_UNITS  (size column (-H/-I), default 4)
+    RAWHIDE_COLUMN_WIDTH_RDEV_MAJOR  (rdev column (major), default 2)
+    RAWHIDE_COLUMN_WIDTH_RDEV_MINOR  (rdev column (minor), default 3)
+
+Their values must be integers between C<1> and C<99>, inclusive.
+
+Setting the environment variable C<RAWHIDE_REPORT_BROKEN_SYMLINKS=1> causes
+an error message (and an eventual non-zero exit status), when attempting to
+follow a symlink whose ultimate target does not exist or cannot be
+reached. By default, when following symlinks with the C<-y> or C<-Y> option, a broken
+symlink is not interpreted as an error. The broken symlink is just processed
+as though the C<-y> or C<-Y> option had not been supplied. This is done for
+compatibility with the familiar behaviour of I<find(1)>.
+
+Setting the environment variable C<RAWHIDE_DONT_REPORT_CYCLES=1> suppresses
+the "error" message whenever a filesystem cycle is detected and
+skipped. This can happen when following symlinks with the C<-Y> option. It's not
+really an error, and is just reported by default for compatibility with the
+familiar behaviour of I<find(1)>.
+
+Setting the environment variable C<RAWHIDE_PCRE2_NOT_UTF8_DEFAULT=1>
+suppresses the assumption that regex patterns, and the file names, paths,
+symlink target paths, access control lists, and extended attributes that
+they match against, are encoded as I<UTF-8>. When this environment variable
+is set, individual regex patterns can still enable I<UTF-8> interpretation
+with a leading C<(*UTF)>. This I<UTF-8> assumption is made when the locale
+uses I<UTF-8> (i.e., when the C<$LANG> environment variable includes
+C<"UTF-8">). When the locale doesn't use I<UTF-8>, and you want I<rh> to
+assume that everything is I<UTF-8> anyway, set the environment variable
+C<RAWHIDE_PCRE2_UTF8_DEFAULT=1>.
+
+On I<Solaris>, setting the environment variable
+C<RAWHIDE_SOLARIS_ACL_NO_TRIVIAL=1> suppresses trivial access control lists
+(ACLs). By default on I<Solaris>, ACLs are always present, even if they are
+trivially identical to the file permission bits. This can be convenient, but
+if it seems like noise, it can be silenced (but only on I<Solaris>). This
+affects access control list searching (C<acl>) (see I<rawhide.conf(5)>), and
+the S<C<-L %z>> format conversion (see above).
+
+On I<Solaris>, setting the environment variable
+C<RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1> suppresses the inclusion of the
+ubiquitous I<SUNWattr_ro> and I<SUNWattr_rw> extended attributes. This
+affects extended attribute searching (C<ea>) (see I<rawhide.conf(5)>), and
+the S<C<-L %x>> format conversion (see above).
+
+On I<Solaris>, setting the environment variable
+C<RAWHIDE_SOLARIS_EA_NO_STATINFO=1> suppresses the artificial extended
+attributes that are included by default to represent the I<stat(2)>
+information relating to real extended attributes, which take the form of
+regular files in a special extended attributes directory "hidden" inside
+each real file. This affects extended attribute searching (C<ea>) (see
+I<rawhide.conf(5)>), and the S<C<-L %x>> format conversion (see above).
+
+The environment variable C<RAWHIDE_EA_SIZE> can be set to a positive integer
+value to override the default buffer size used for (encoded) extended
+attributes. Note that the value must be the size in bytes. Scale units are
+not supported. On most systems, the default buffer size is 4KiB. On
+I<Solaris>, the default buffer size is 64KiB. This can be used to increase
+the buffer size if needed to prevent extended attributes from being silently
+truncated. This affects extended attribute searching (C<ea>) (see
+I<rawhide.conf(5)>), and the S<C<-L %x>> format conversion (see above).
+
+=head1 FILES
+
+The following source/configuration files are read by default:
+
+    /etc/rawhide.conf     - main system-wide configuration
+    /etc/rawhide.conf.d/* - additional system-wide configuration
+    ~/.rhrc               - main user-specific configuration
+    ~/.rhrc.d/*           - additional user-specific configuration
+
+The location of the system-wide configuration might be somewhere else,
+depending on the operating system preferences (e.g., C</usr/local/etc>,
+C</opt/local/etc>, C</usr/pkg/etc>).
+
+The output of S<C<rh --help>> states where the system-wide configuration
+files are on the local system.
+
+The location of the main system-wide configuration file
+(C</etc/rawhide.conf>, or similar) can be overridden with the environment
+variable C<RAWHIDE_CONFIG>. This is only available to non-C<root> users (as
+it could be dangerous for C<root>). The directory containing any additional
+system-wide configuration files is derived from it by appending C<".d">.
+
+The location of the main user-specific configuration file (C<~/.rhrc>) can
+be overridden with the environment variable C<RAWHIDE_RC>. This is only
+available to non-C<root> users (as it could be dangerous for C<root>). The
+directory containing any additional user-specific configuration files is
+derived from it by appending C<".d">.
+
+=head1 HISTORY
+
+On the 18th of February 1990, Ken Stauffer of the University of Calgary
+published the source code to I<Rawhide VERSION 2> on the I<Usenet>
+I<comp.sources.unix> newsgroup. It was posted as a multi-part I<shar(1)>
+archive (as was the custom at the time). I think a previous version must
+date back to 1982 or earlier.
+
+It was a lovely alternative to I<find(1)> that let you define your own
+functions for file search criteria in a mini-language inspired by I<C>
+("because most I<Unix> users already know I<C>"). I remember liking it at
+the time, and I've often wished that it hadn't subsequently vanished into
+the ether.
+
+One day, while looking through a dusty old archive tarball, I came across
+the source code in my old C<~/News/Comp.sources.unix> file. After 32 years,
+it only took an hour or so to get it compiling and working again. Yay! But
+of course, that wasn't enough. It had a bug or two, and so many security
+flaws (it actually was 1990, after all), and so many missing features that
+were needed to make it a viable modern alternative to I<GNU find(1)> for all
+my file-finding needs. So I spent the next month or so fixing it all up,
+enhancing it in many fun ways, testing it ruthlessly, and documenting it
+thoroughly. It now has a lean flexible command line interface, many new
+capabilities (and even some novel ones), and a "standard" library of
+functions to make it really pretty, and easy to use, and easy to remember.
+
+=head1 TRIVIA
+
+In the 7th Edition I<UNIX> programmer's manual (1979), the I<find(1)> manual
+entry has a B<BUGS> section which just says:
+
+    The syntax is painful.
+
+=head1 SEE ALSO
+
+I<rawhide.conf(5)>, I<find(1)>, I<xargs(1)>, I<ls(1)>, I<stat(1)>, I<jq(1)>,
+I<stat(2)>, I<fnmatch(3)>, I<glob(7)>, I<perlre(1)>, I<pcre2pattern(3)>,
+I<pcre2syntax(3)>, I<system(3)>, I<sh(1)>, I<printf(3)>, I<strftime(3)>,
+I<ctime(3)>, I<acl(2)> or I<acl(3)> or I<acl(5)>, I<xattr(1)> or I<xattr(7)>
+or I<extattr(2)> or I<fsattr(7)>, I<chmod(1)>, I<setfacl(1)>, I<getfacl(1)>,
+I<setfattr(1)>, I<getfattr(1)>, I<selinux(8)>, I<runat(1)>, I<mount(8)>,
+I<The C programming language>.
+
+=head1 AUTHORS
+
+19900218 Ken Stauffer (University of Calgary)
+
+20220330 raf <raf@raf.org>
+
+=cut
+

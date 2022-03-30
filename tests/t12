@@ -1,0 +1,313 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+. tests/.common
+
+label="parser error messages"
+
+rh="$builtin_rh"
+test_rawhide "$rh -e 'mtime { 1 }'"               "" "./rh: command line: -e 'mtime { 1 }': line 1 byte 7: expected ';' or EOF after final condition expression, found '{' (possible attempt to redefine an existing function)\n"   1 "redefine func without parenthese"
+test_rawhide "$rh -e 'mtime() { 1 }'"             "" "./rh: command line: -e 'mtime() { 1 }': line 1 byte 6: expected ';' or EOF after final condition expression, found '(' (possible attempt to redefine an existing function)\n" 1 "redefine func with parentheses"
+test_rawhide "$rh -e 'newtestfunc() 1'"           "" "./rh: command line: -e 'newtestfunc() 1': line 1 byte 15: expected '{' to start a function body, found number 1\n"                                                            1 "func definition without opening brace"
+test_rawhide "$rh -e 'newtestfunc() { 1'"         "" "./rh: command line: -e 'newtestfunc() { 1': line 1 byte 18: expected '}' to end a function body, found eof\n"                                                                 1 "func definition without closing brace"
+test_rawhide "$rh -e 'newtestfunc == 1'"          "" "./rh: command line: -e 'newtestfunc == 1': line 1 byte 14: expected '(' or '{', found eq == (possible attempt to call an undefined function)\n"                               1 "looking for params, find call to undefined func"
+test_rawhide "$rh -e 'newtestfunc(0) { 1 }'"      "" "./rh: command line: -e 'newtestfunc(0) { 1 }': line 1 byte 13: expected identifier (parameter name), found number 0\n"                                               1 "looking for params, find number"
+test_rawhide "$rh -e 'newtestfunc(+) { 1 }'"      "" "./rh: command line: -e 'newtestfunc(+) { 1 }': line 1 byte 13: expected identifier (parameter name), found '+'\n"                                                    1 "looking for params, find +"
+test_rawhide "$rh -e 'newtestfunc(a,) { 1 }'"     "" "./rh: command line: -e 'newtestfunc(a,) { 1 }': line 1 byte 15: expected identifier (parameter name), found ')'\n"                                                   1 "looking for params, find (a,)"
+test_rawhide "$rh -e 'newtestfunc(,a) { 1 }'"     "" "./rh: command line: -e 'newtestfunc(,a) { 1 }': line 1 byte 13: expected identifier (parameter name), found ','\n"                                                   1 "looking for params, find (,a)"
+test_rawhide "$rh -e 'newtestfunc(,) { 1 }'"      "" "./rh: command line: -e 'newtestfunc(,) { 1 }': line 1 byte 13: expected identifier (parameter name), found ','\n"                                                    1 "looking for params, find (,)"
+test_rawhide "$rh -e 'newtestfunc(a) 1'"          "" "./rh: command line: -e 'newtestfunc(a) 1': line 1 byte 16: expected '{' to start a function body, found number 1\n"                                                           1 "function definition with params but no opening brace"
+test_rawhide "$rh -e 'newtestfunc(a { 1 }'"       "" "./rh: command line: -e 'newtestfunc(a { 1 }': line 1 byte 15: expected ')' (end of parameters) or ',' (before next parameter), found '{'\n"                                   1 "parameters with missing closing parentheses"
+test_rawhide "$rh -e 'mtime ? 1'"                 "" "./rh: command line: -e 'mtime ? 1': line 1 byte 10: expected ':' after '?' (ternary operator), found eof\n"                                                                   1 "ternary operator missing colon"
+test_rawhide "$rh -e '(1'"                        "" "./rh: command line: -e '(1': line 1 byte 3: expected ')', found eof\n"                                                                                                        1 "parenthesised expr missing closing parenthesis"
+test_rawhide "$rh -e '[1990/2/18'"                "" "./rh: command line: -e '[1990/2/18': line 1 byte 11: expected ']', found eof\n"                                                                                               1 "date without closing bracket"
+test_rawhide "$rh -e '(unknown'"                  "" "./rh: command line: -e '(unknown': line 1 byte 8: undefined identifier: identifier unknown\n"                                                                                 1 "use of undefined identifier in factor"
+test_rawhide "$rh -e ']'"                         "" "./rh: command line: -e ']': line 1 byte 1: syntax error: ']'\n"                                                                                                               1 "syntax error (stray right bracket)"
+
+test_rawhide "$rh -e 'newtestfunc(newtestfunc_a) { 0 } newtestfunc'"      "" "./rh: command line: -e 'newtestfunc(newtestfunc_a) { 0 } newtestfunc': line 1 byte 45: expected '(' in function call (1 argument is required), found eof\n" 1 "func call missing '(' but 1 arg needed"
+test_rawhide "$rh -e 'newtestfunc(newtestfunc_a) { 0 } newtestfunc('"     "" "./rh: command line: -e 'newtestfunc(newtestfunc_a) { 0 } newtestfunc(': line 1 byte 46: syntax error: eof\n"                                                1 "func call with only '(' (missing ')')"
+test_rawhide "$rh -e 'newtestfunc(newtestfunc_a) { 0 } newtestfunc()'"    "" "./rh: command line: -e 'newtestfunc(newtestfunc_a) { 0 } newtestfunc()': line 1 byte 46: syntax error: ')'\n"                                               1 "func call with () args but 1 needed"
+test_rawhide "$rh -e 'newtestfunc(newtestfunc_a) { 0 } newtestfunc(,'"    "" "./rh: command line: -e 'newtestfunc(newtestfunc_a) { 0 } newtestfunc(,': line 1 byte 46: syntax error: ','\n"                                               1 "func call with \"(,\" but 1 needed"
+test_rawhide "$rh -e 'newtestfunc(newtestfunc_a) { 0 } newtestfunc(1'"    "" "./rh: command line: -e 'newtestfunc(newtestfunc_a) { 0 } newtestfunc(1': line 1 byte 47: expected ')' or ',' in function argument list, found eof\n"        1 "func call with \"(1\" args but 1 needed"
+test_rawhide "$rh -e 'newtestfunc(newtestfunc_a) { 0 } newtestfunc(1,'"   "" "./rh: command line: -e 'newtestfunc(newtestfunc_a) { 0 } newtestfunc(1,': line 1 byte 48: syntax error: eof\n"                                              1 "func call with \"(1,\" args but 1 needed"
+test_rawhide "$rh -e 'newtestfunc(newtestfunc_a) { 0 } newtestfunc(1,)'"  "" "./rh: command line: -e 'newtestfunc(newtestfunc_a) { 0 } newtestfunc(1,)': line 1 byte 48: syntax error: ')'\n"                                             1 "func call with \"(1,)\" args but 1 needed"
+test_rawhide "$rh -e 'newtestfunc(newtestfunc_a) { 0 } newtestfunc(1,1)'" "" "./rh: command line: -e 'newtestfunc(newtestfunc_a) { 0 } newtestfunc(1,1)': line 1 byte 50: wrong number of function arguments: expected 1, found 2\n"      1 "func call with \"(1,1)\" args but 1 needed"
+
+test_rawhide "$rh -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc'"        "" "./rh: command line: -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc': line 1 byte 60: expected '(' in function call (2 arguments are required), found eof\n" 1 "func call missing '(' but 2 args needed"
+test_rawhide "$rh -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc('"       "" "./rh: command line: -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc(': line 1 byte 61: syntax error: eof\n"                                                  1 "func call with only '(' (missing ')')"
+test_rawhide "$rh -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc()'"      "" "./rh: command line: -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc()': line 1 byte 61: syntax error: ')'\n"                                                 1 "func call with () args but 2 needed"
+test_rawhide "$rh -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc(,'"      "" "./rh: command line: -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc(,': line 1 byte 61: syntax error: ','\n"                                                 1 "func call with \"(,\" but 2 needed"
+test_rawhide "$rh -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc(1'"      "" "./rh: command line: -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc(1': line 1 byte 62: expected ')' or ',' in function argument list, found eof\n"          1 "func call with \"(1\" args but 2 needed"
+test_rawhide "$rh -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc(1,'"     "" "./rh: command line: -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc(1,': line 1 byte 63: syntax error: eof\n"                                                1 "func call with \"(1,\" args but 2 needed"
+test_rawhide "$rh -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc(1)'"     "" "./rh: command line: -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc(1)': line 1 byte 63: wrong number of function arguments: expected 2, found 1\n"          1 "func call with \"(1)\" args but 2 needed"
+test_rawhide "$rh -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc(1,)'"    "" "./rh: command line: -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc(1,)': line 1 byte 63: syntax error: ')'\n"                                               1 "func call with \"(1,)\" args but 2 needed"
+test_rawhide "$rh -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc(1,1'"    "" "./rh: command line: -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc(1,1': line 1 byte 64: expected ')' or ',' in function argument list, found eof\n"        1 "func call with \"(1,1\" args but 2 needed"
+test_rawhide "$rh -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc(1,1)'"   "" ""                                                                                                                                                                            0 "func call with 2 args ok (not tested elsewhere?)"
+test_rawhide "$rh -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc(1,1,)'"  "" "./rh: command line: -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc(1,1,)': line 1 byte 65: syntax error: ')'\n"                                             1 "func call with \"(1,1,)\" args but 2 needed"
+test_rawhide "$rh -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc(1,1,1)'" "" "./rh: command line: -e 'newtestfunc(newtestfunc_a, newtestfunc_b) { 0 } newtestfunc(1,1,1)': line 1 byte 67: wrong number of function arguments: expected 2, found 3\n"      1 "func call with \"(1,1,1)\" args but 2 needed"
+
+test_rawhide "$rh -e '['"                  "" "./rh: command line: -e '[': line 1 byte 2: expected year number, found eof\n"                   1 "invalid date '['"
+test_rawhide "$rh -e '[]'"                 "" "./rh: command line: -e '[]': line 1 byte 2: expected year number, found ']'\n"                  1 "invalid date '[]'"
+test_rawhide "$rh -e '[2020+'"             "" "./rh: command line: -e '[2020+': line 1 byte 6: expected '/' after year, found '+'\n"           1 "invalid date '[2020+'"
+test_rawhide "$rh -e '[2020/'"             "" "./rh: command line: -e '[2020/': line 1 byte 7: expected month number, found eof\n"             1 "invalid date '[2020/'"
+test_rawhide "$rh -e '[2020/+'"            "" "./rh: command line: -e '[2020/+': line 1 byte 7: expected month number, found '+'\n"            1 "invalid date '[2020/'"
+test_rawhide "$rh -e '[2020/1'"            "" "./rh: command line: -e '[2020/1': line 1 byte 8: expected '/' after month, found eof\n"         1 "invalid date '[2020/1'"
+test_rawhide "$rh -e '[2020/1+'"           "" "./rh: command line: -e '[2020/1+': line 1 byte 8: expected '/' after month, found '+'\n"        1 "invalid date '[2020/1+'"
+test_rawhide "$rh -e '[2020/1/'"           "" "./rh: command line: -e '[2020/1/': line 1 byte 9: expected day number, found eof\n"             1 "invalid date '[2020/1/'"
+test_rawhide "$rh -e '[2020/1/+'"          "" "./rh: command line: -e '[2020/1/+': line 1 byte 9: expected day number, found '+'\n"            1 "invalid date '[2020/1/+'"
+test_rawhide "$rh -e '[2020/1/1'"          "" "./rh: command line: -e '[2020/1/1': line 1 byte 10: expected ']', found eof\n"                  1 "invalid date '[2020/1/+'"
+test_rawhide "$rh -e '[2020/1/1 +'"        "" "./rh: command line: -e '[2020/1/1 +': line 1 byte 11: expected ']', found '+'\n"                1 "invalid date '[2020/1/1 +'"
+test_rawhide "$rh -e '[2020/1/1 7'"        "" "./rh: command line: -e '[2020/1/1 7': line 1 byte 12: expected ']', found eof\n"                1 "invalid date '[2020/1/1 7'"
+test_rawhide "$rh -e '[2020/1/1 7+'"       "" "./rh: command line: -e '[2020/1/1 7+': line 1 byte 12: expected ']', found '+'\n"               1 "invalid date '[2020/1/1 7+'"
+test_rawhide "$rh -e '[2020/1/1 7:'"       "" "./rh: command line: -e '[2020/1/1 7:': line 1 byte 13: expected minute number, found eof\n"     1 "invalid date '[2020/1/1 7:'"
+test_rawhide "$rh -e '[2020/1/1 7:+'"      "" "./rh: command line: -e '[2020/1/1 7:+': line 1 byte 13: expected minute number, found '+'\n"    1 "invalid date '[2020/1/1 7:+'"
+test_rawhide "$rh -e '[2020/1/1 7:0'"      "" "./rh: command line: -e '[2020/1/1 7:0': line 1 byte 14: expected ']', found eof\n"              1 "invalid date '[2020/1/1 7:0'"
+test_rawhide "$rh -e '[2020/1/1 7:0+'"     "" "./rh: command line: -e '[2020/1/1 7:0+': line 1 byte 14: expected ']', found '+'\n"             1 "invalid date '[2020/1/1 7:0+'"
+test_rawhide "$rh -e '[2020/1/1 7:00+'"    "" "./rh: command line: -e '[2020/1/1 7:00+': line 1 byte 15: expected ']', found '+'\n"            1 "invalid date '[2020/1/1 7:00+'"
+test_rawhide "$rh -e '[2020/1/1 7:00+'"    "" "./rh: command line: -e '[2020/1/1 7:00+': line 1 byte 15: expected ']', found '+'\n"            1 "invalid date '[2020/1/1 7:00+'"
+test_rawhide "$rh -e '[2020/1/1 7:00:'"    "" "./rh: command line: -e '[2020/1/1 7:00:': line 1 byte 16: expected second number, found eof\n"  1 "invalid date '[2020/1/1 7:00:'"
+test_rawhide "$rh -e '[2020/1/1 7:00:+'"   "" "./rh: command line: -e '[2020/1/1 7:00:+': line 1 byte 16: expected second number, found '+'\n" 1 "invalid date '[2020/1/1 7:00:+'"
+test_rawhide "$rh -e '[2020/1/1 7:00:0'"   "" "./rh: command line: -e '[2020/1/1 7:00:0': line 1 byte 17: expected ']', found eof\n"           1 "invalid date '[2020/1/1 7:00:0'"
+test_rawhide "$rh -e '[2020/1/1 7:00:0+'"  "" "./rh: command line: -e '[2020/1/1 7:00:0+': line 1 byte 17: expected ']', found '+'\n"          1 "invalid date '[2020/1/1 7:00:0+'"
+test_rawhide "$rh -e '[2020/1/1 7:00:00'"  "" "./rh: command line: -e '[2020/1/1 7:00:00': line 1 byte 18: expected ']', found eof\n"          1 "invalid date '[2020/1/1 7:00:00'"
+test_rawhide "$rh -e '[2020/1/1 7:00:00+'" "" "./rh: command line: -e '[2020/1/1 7:00:00+': line 1 byte 18: expected ']', found '+'\n"         1 "invalid date '[2020/1/1 7:00:00+'"
+
+test_rawhide "RAWHIDE_TEST_INVALID_DATE=1 $rh -e '[1900/1/1]'"         "" "./rh: command line: -e '[1900/1/1]': line 1 byte 10: invalid date: [1900/1/1]\n"                 1 "invalid date '[1900/1/1]' (forced failure)"
+test_rawhide "RAWHIDE_TEST_INVALID_DATE=1 $rh -e '[1900/1/1 1]'"       "" "./rh: command line: -e '[1900/1/1 1]': line 1 byte 12: invalid time: [1900/1/1 1]\n"             1 "invalid date '[1900/1/1 1]' (forced failure)"
+test_rawhide "RAWHIDE_TEST_INVALID_DATE=1 $rh -e '[1900/1/1 1:1]'"     "" "./rh: command line: -e '[1900/1/1 1:1]': line 1 byte 14: invalid time: [1900/1/1 1:01]\n"        1 "invalid date '[1900/1/1 1:1]' (forced failure)"
+test_rawhide "RAWHIDE_TEST_INVALID_DATE=1 $rh -e '[1900/1/1 1:01]'"    "" "./rh: command line: -e '[1900/1/1 1:01]': line 1 byte 15: invalid time: [1900/1/1 1:01]\n"       1 "invalid date '[1900/1/1 1:01]' (forced failure)"
+test_rawhide "RAWHIDE_TEST_INVALID_DATE=1 $rh -e '[1900/1/1 1:01:1]'"  "" "./rh: command line: -e '[1900/1/1 1:01:1]': line 1 byte 17: invalid time: [1900/1/1 1:01:01]\n"  1 "invalid date '[1900/1/1 1:01:1]' (forced failure)"
+test_rawhide "RAWHIDE_TEST_INVALID_DATE=1 $rh -e '[1900/1/1 1:01:01]'" "" "./rh: command line: -e '[1900/1/1 1:01:01]': line 1 byte 18: invalid time: [1900/1/1 1:01:01]\n" 1 "invalid date '[1900/1/1 1:01:01]' (forced failure)"
+
+test_rawhide "$rh -e '09'"                                     "" "./rh: command line: -e '09': line 1 byte 2: invalid octal digit: 9\n"                                                                         1 "invalid octal digit"
+test_rawhide "$rh -e '0xh'"                                    "" "./rh: command line: -e '0xh': line 1 byte 3: invalid hexadecimal digit: h\n"                                                                  1 "invalid hexadecimal digit"
+test_rawhide "$rh -e '\"'"                                     "" "./rh: command line: -e '\"': line 1 byte 2: invalid string literal (missing closing double quote)\n"                                          1 "invalid glob '\"'"
+test_rawhide "$rh -e '\"\\'"                                   "" "./rh: command line: -e '\"\\\\': line 1 byte 3: invalid character quoting in string\n"                                                        1 "invalid glob character quoting '\"\\'"
+test_rawhide "$rh -e '\"\\\"'"                                 "" "./rh: command line: -e '\"\\\\\"': line 1 byte 4: invalid string literal (missing closing double quote)\n"                                    1 "invalid glob '\"\\\"'"
+test_rawhide "$rh -e '\$please-tell.me_this-isnt.a_real-user'" "" "./rh: command line: -e '\$please-tell.me_this-isnt.a_real-user': line 1 byte 37: no such user: please-tell.me_this-isnt.a_real-user\n"        1 "no such user"
+test_rawhide "$rh -e '@please-tell.me_this-isnt.a_real-group'" "" "./rh: command line: -e '@please-tell.me_this-isnt.a_real-group': line 1 byte 38: no such group: please-tell.me_this-isnt.a_real-group\n"      1 "no such group"
+test_rawhide "$rh -e '\$+'"                                    "" "./rh: command line: -e '\$+': line 1 byte 1: no such user: \n"                                                                                1 "no such user (empty name)"
+test_rawhide "$rh -e '@+'"                                     "" "./rh: command line: -e '@+': line 1 byte 1: no such group: \n"                                                                                1 "no such group (empty name)"
+
+test_rawhide "$rh -e '?1:1'" "" "./rh: command line: -e '?1:1': line 1 byte 1: syntax error: '?'\n"      1 "missing lhs operand for ?:"
+test_rawhide "$rh -e '1?:1'" "" "./rh: command line: -e '1?:1': line 1 byte 3: syntax error: ':'\n"      1 "missing middle operand for ?:"
+test_rawhide "$rh -e '1?1:'" "" "./rh: command line: -e '1?1:': line 1 byte 5: syntax error: eof\n"      1 "missing rhs operand for ?:"
+test_rawhide "$rh -e '||1'"  "" "./rh: command line: -e '||1': line 1 byte 2: syntax error: or ||\n"     1 "missing lhs operand for ||"
+test_rawhide "$rh -e '1||'"  "" "./rh: command line: -e '1||': line 1 byte 4: syntax error: eof\n"       1 "missing rhs operand for ||"
+test_rawhide "$rh -e '&&1'"  "" "./rh: command line: -e '&&1': line 1 byte 2: syntax error: and &&\n"    1 "missing lhs operand for &&"
+test_rawhide "$rh -e '1&&'"  "" "./rh: command line: -e '1&&': line 1 byte 4: syntax error: eof\n"       1 "missing rhs operand for &&"
+test_rawhide "$rh -e '|1'"   "" "./rh: command line: -e '|1': line 1 byte 1: syntax error: '|'\n"        1 "missing lhs operand for |"
+test_rawhide "$rh -e '1|'"   "" "./rh: command line: -e '1|': line 1 byte 3: syntax error: eof\n"        1 "missing rhs operand for |"
+test_rawhide "$rh -e '^1'"   "" "./rh: command line: -e '^1': line 1 byte 1: syntax error: '^'\n"        1 "missing lhs operand for ^"
+test_rawhide "$rh -e '1^'"   "" "./rh: command line: -e '1^': line 1 byte 3: syntax error: eof\n"        1 "missing rhs operand for ^"
+test_rawhide "$rh -e '&1'"   "" "./rh: command line: -e '&1': line 1 byte 1: syntax error: '&'\n"        1 "missing lhs operand for &"
+test_rawhide "$rh -e '1&'"   "" "./rh: command line: -e '1&': line 1 byte 3: syntax error: eof\n"        1 "missing rhs operand for &"
+test_rawhide "$rh -e '==1'"  "" "./rh: command line: -e '==1': line 1 byte 2: syntax error: eq ==\n"     1 "missing lhs operand for =="
+test_rawhide "$rh -e '1=='"  "" "./rh: command line: -e '1==': line 1 byte 4: syntax error: eof\n"       1 "missing rhs operand for =="
+test_rawhide "$rh -e '!=1'"  "" "./rh: command line: -e '!=1': line 1 byte 2: syntax error: ne !=\n"     1 "missing lhs operand for !="
+test_rawhide "$rh -e '1!='"  "" "./rh: command line: -e '1!=': line 1 byte 4: syntax error: eof\n"       1 "missing rhs operand for !="
+test_rawhide "$rh -e '<=1'"  "" "./rh: command line: -e '<=1': line 1 byte 2: syntax error: le <=\n"     1 "missing lhs operand for <="
+test_rawhide "$rh -e '1<='"  "" "./rh: command line: -e '1<=': line 1 byte 4: syntax error: eof\n"       1 "missing rhs operand for <="
+test_rawhide "$rh -e '>=1'"  "" "./rh: command line: -e '>=1': line 1 byte 2: syntax error: ge >=\n"     1 "missing lhs operand for >="
+test_rawhide "$rh -e '1>='"  "" "./rh: command line: -e '1>=': line 1 byte 4: syntax error: eof\n"       1 "missing rhs operand for >="
+test_rawhide "$rh -e '<1'"   "" "./rh: command line: -e '<1': line 1 byte 1: syntax error: '<'\n"        1 "missing lhs operand for <"
+test_rawhide "$rh -e '1<'"   "" "./rh: command line: -e '1<': line 1 byte 3: syntax error: eof\n"        1 "missing rhs operand for <"
+test_rawhide "$rh -e '>1'"   "" "./rh: command line: -e '>1': line 1 byte 1: syntax error: '>'\n"        1 "missing lhs operand for >"
+test_rawhide "$rh -e '1>'"   "" "./rh: command line: -e '1>': line 1 byte 3: syntax error: eof\n"        1 "missing rhs operand for >"
+test_rawhide "$rh -e '<<1'"  "" "./rh: command line: -e '<<1': line 1 byte 2: syntax error: shiftl <<\n" 1 "missing lhs operand for <<"
+test_rawhide "$rh -e '1<<'"  "" "./rh: command line: -e '1<<': line 1 byte 4: syntax error: eof\n"       1 "missing rhs operand for <<"
+test_rawhide "$rh -e '>>1'"  "" "./rh: command line: -e '>>1': line 1 byte 2: syntax error: shiftr >>\n" 1 "missing lhs operand for >>"
+test_rawhide "$rh -e '1>>'"  "" "./rh: command line: -e '1>>': line 1 byte 4: syntax error: eof\n"       1 "missing rhs operand for >>"
+test_rawhide "$rh -e '+1'"   "" "./rh: command line: -e '+1': line 1 byte 1: syntax error: '+'\n"        1 "missing lhs operand for +"
+test_rawhide "$rh -e '1+'"   "" "./rh: command line: -e '1+': line 1 byte 3: syntax error: eof\n"        1 "missing rhs operand for +"
+test_rawhide "$rh -e '1-'"   "" "./rh: command line: -e '1-': line 1 byte 3: syntax error: eof\n"        1 "missing rhs operand for -"
+test_rawhide "$rh -e '*1'"   "" "./rh: command line: -e '*1': line 1 byte 1: syntax error: '*'\n"        1 "missing lhs operand for *"
+test_rawhide "$rh -e '1*'"   "" "./rh: command line: -e '1*': line 1 byte 3: syntax error: eof\n"        1 "missing rhs operand for *"
+test_rawhide "$rh -e '/1'"   "" "./rh: command line: -e '/1': line 1 byte 1: syntax error: '/'\n"        1 "missing lhs operand for /"
+test_rawhide "$rh -e '1/'"   "" "./rh: command line: -e '1/': line 1 byte 3: syntax error: eof\n"        1 "missing rhs operand for /"
+test_rawhide "$rh -e '%%1'"  "" "./rh: command line: -e '%%%%1': line 1 byte 1: syntax error: '%%'\n"    1 "missing lhs operand for %%"
+test_rawhide "$rh -e '1%%'"  "" "./rh: command line: -e '1%%%%': line 1 byte 3: syntax error: '%%'\n"    1 "missing rhs operand for %%"
+test_rawhide "$rh -e '-'"    "" "./rh: command line: -e '-': line 1 byte 2: syntax error: eof\n"         1 "missing operand for unary -"
+test_rawhide "$rh -e '!'"    "" "./rh: command line: -e '!': line 1 byte 2: syntax error: eof\n"         1 "missing operand for unary !"
+test_rawhide "$rh -e '~'"    "" "./rh: command line: -e '~': line 1 byte 2: syntax error: eof\n"         1 "missing operand for unary ~"
+
+# Test unterminated comments
+
+test_rawhide "$rh -e 'blah/*'   $d" "" "./rh: command line: -e 'blah/*': line 1 byte 7: unterminated comment\n"   1 "unterminated comment"
+test_rawhide "$rh -e 'blah/* *' $d" "" "./rh: command line: -e 'blah/* *': line 1 byte 10: unterminated comment\n" 1 "unterminated comment"
+
+# Test ident length limit (silent truncation)
+
+z198=000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+id1="f${z198}a"
+id2="f${z198}b"
+id3="f${z198}0a"
+id4="f${z198}0b"
+
+test_rawhide "$rh -e '$id1() { 0 } $id1' $d" "" ""                                                                                                                                               0 "max length ident ok"
+test_rawhide "$rh -e '$id1() { 0 } $id2' $d" "" "./rh: command line: -e '$id1() { 0 } $id2': line 1 byte 410: expected '(' or '{', found eof (possible attempt to call an undefined function)\n" 1 "max length ident mismatch"
+test_rawhide "$rh -e '$id3() { 0 } $id3' $d" "" ""                                                                                                                                               0 "longer than max length ident correct but silently truncated"
+test_rawhide "$rh -e '$id3() { 0 } $id4' $d" "" ""                                                                                                                                               0 "longer than max length ident incorrect but silently truncated"
+
+# Test glob string space limit
+
+z1999=0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+f=tests/$t.f
+touch $f
+i=1
+while [ $i -le 100 ]
+do
+	echo "f$i { \"$z1999\" }" >> $f
+	i="`expr $i + 1`"
+done
+
+test_rawhide "$rh -f $f -e 'f100' $d" "" "" 0 "enough glob string space (just)"
+echo "f101 { \"0\" }" >> $f
+test_rawhide "$rh -f $f -e 'f101' $d" "" "./rh: $f: line 101 byte 10: no more string space\n" 1 "not enough glob string space (just)"
+rm $f
+
+# Test that backslash is only special before \ and " (i.e. \\ and \" are one byte but \d is two bytes)
+
+z2019=000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+f=tests/$t.f
+touch $f
+i=1
+while [ $i -le 99 ]
+do
+	echo "f$i { \"$z2019\" }" >> $f
+	i="`expr $i + 1`"
+done
+
+echo "f100 { \"0000000000000000\" }" >> $f # Leaves 3 bytes for a 2 byte string
+
+test_rawhide "$rh -f $f -e '\"12\"' $d"     "" ""                                                                               0 "enough glob string space (just) before backslash tests"
+test_rawhide "$rh -f $f -e '\"\\\\\"' $d"   "" ""                                                                               0 "enough glob string space (just) with \\\\ = 1+nul"
+test_rawhide "$rh -f $f -e '\"a\\\\\"' $d"  "" ""                                                                               0 "enough glob string space (just) with a\\\\ = 2+nul"
+test_rawhide "$rh -f $f -e '\"ab\\\\\"' $d" "" "./rh: command line: -e '\"ab\\\\\\\\\"': line 1 byte 4: no more string space\n" 1 "not enough glob string space with ab\\\\ = 3+nul"
+test_rawhide "$rh -f $f -e '\"\\\"\"' $d"   "" ""                                                                               0 "enough glob string space (just) with \\\" = 1+nul"
+test_rawhide "$rh -f $f -e '\"a\\\"\"' $d"  "" ""                                                                               0 "enough glob string space (just) with a\\\" = 2+nul"
+test_rawhide "$rh -f $f -e '\"ab\\\"\"' $d" "" "./rh: command line: -e '\"ab\\\\\"\"': line 1 byte 4: no more string space\n"   1 "not enough glob string space with ab\\\" = 3+nul"
+test_rawhide "$rh -f $f -e '\"\\d\"' $d"   "" ""                                                                                0 "enough glob string space (just) with \\d = 2+nul"
+test_rawhide "$rh -f $f -e '\"a\\d\"' $d"  "" "./rh: command line: -e '\"a\\\\d\"': line 1 byte 4: no more string space\n"        1 "not enough glob string space (just) with a\\d = 3+nul"
+test_rawhide "$rh -f $f -e '\"ab\\d\"' $d" "" "./rh: command line: -e '\"ab\\\\d\"': line 1 byte 4: no more string space\n"       1 "not enough glob string space with ab\\d = 4+nul"
+rm $f
+
+# Test (temporary) reference file field name space limit (same storage as glob pattern strings)
+
+z1998=000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+f=tests/$t.f
+touch $f
+i=1
+while [ $i -le 100 ]
+do
+	echo "f$i { \"$z1998\" }" >> $f
+	i="`expr $i + 1`"
+done
+
+z89=00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+echo "f101 { \"$z89\" }" >> $f
+
+test_rawhide "$rh -f $f -e 'f102 { \"/\".blocks } 0'               $d" "" ""                                                                                                                          0 "enough reffile field name space (just)"
+test_rawhide "$rh -f $f -e 'f102 { \"/\".blksize } 0'              $d" "" "./rh: command line: -e 'f102 { \"/\".blksize } 0': line 1 byte 18: no more reference file field name space\n"              1 "not enough reference file field name space (just)"
+test_rawhide "$rh -f $f -e 'f102 { \"0\" && \"/\".mtime } 0'       $d" "" "./rh: command line: -e 'f102 { \"0\" && \"/\".mtime } 0': line 1 byte 23: no more reference file field name space\n"       1 "not enough reference file field name space (just)"
+test_rawhide "$rh -f $f -e 'f102 { \"000000\" && \"/\".mtime } 0'  $d" "" "./rh: command line: -e 'f102 { \"000000\" && \"/\".mtime } 0': line 1 byte 23: no more reference file field name space\n"  1 "not enough reference file field name space (at initial .)"
+test_rawhide "$rh -f $f -e 'f102 { \"/\".mode == \"/\".mode } 0'   $d" "" ""                                                                                                                          0 "enough reffile field name space (just, with path reuse)"
+test_rawhide "$rh -f $f -e 'f102 { \"/\".mtime == \"/\".mtime } 0' $d" "" "./rh: command line: -e 'f102 { \"/\".mtime == \"/\".mtime } 0': line 1 byte 29: no more reference file field name space\n" 1 "not enough reffile field name space (just, with path reuse)"
+rm $f
+
+# Test invalid reference file path and field name
+
+test_rawhide "$rh -e 'ftest { \"/\".block } 0' $d" "" "./rh: command line: -e 'ftest { \"/\".block } 0': line 1 byte 17: invalid string suffix: .block (expected pattern modifier or reference file field)\n" 1 "invalid string suffix"
+# This is no longer an error (but using it is)
+test_rawhide "$rh -e 'ftest { \"/this-does-not-exist\".mtime } 0'     $d" "" ""                                                                                                                               0 "reference file path does not exist (but not an error unless used)"
+test_rawhide "$rh -e 'ftest { \"/this-does-not-exist\".mtime } ftest' $d" "" "./rh: invalid reference \"/this-does-not-exist\".mtime: No such file or directory\n"                                            1 "reference file path does not exist (an error when used)"
+
+test_rawhide "$rh -e '\"/\" .mtime' $d" "" "./rh: command line: -e '\"/\" .mtime': line 1 byte 5: expected ';' or EOF after final condition expression, found '.'\n"                                          1 "space before dot in reference file is invalid"
+test_rawhide "$rh -e '\"/\". mtime' $d" "" "./rh: command line: -e '\"/\". mtime': line 1 byte 4: invalid string suffix: . (expected pattern modifier or reference file field)\n"                             1 "space after dot in reference file is invalid"
+
+# Test implicit empty string "" reference file error
+
+test_rawhide "$rh -e '\"\".exists' $d" "" "./rh: command line: -e '\"\".exists': line 1 byte 9: invalid implicit reference file path: \"\".exists (no preceding reference file path to refer to)\n" 1 "invalid implicit reference file path"
+
+# Exercise show_token() in error messages
+
+test_rawhide "$rh -e 'return'             $d" "" "./rh: command line: -e 'return': line 1 byte 6: syntax error: return\n" 1 "misplaced return token"
+test_rawhide "$rh -e '[identifier]'       $d" "" "./rh: command line: -e '[identifier]': line 1 byte 11: expected year number, found identifier identifier\n" 1 "misplaced identifier token"
+test_rawhide "$rh -e 'fff { 1 } [fff]'    $d" "" "./rh: command line: -e 'fff { 1 } [fff]': line 1 byte 14: expected year number, found function fff\n" 1 "misplaced function token"
+test_rawhide "$rh -e 'fff(p) { [p] } fff' $d" "" "./rh: command line: -e 'fff(p) { [p] } fff': line 1 byte 11: expected year number, found param p\n" 1 "misplaced param token"
+test_rawhide "$rh -e 'fff(1) { 1 } fff'   $d" "" "./rh: command line: -e 'fff(1) { 1 } fff': line 1 byte 5: expected identifier (parameter name), found number 1\n" 1 "misplaced number token"
+test_rawhide "$rh -e '[size]'             $d" "" "./rh: command line: -e '[size]': line 1 byte 5: expected year number, found field size\n" 1 "misplaced field token"
+test_rawhide "$rh -e '[\"str\"]'          $d" "" "./rh: command line: -e '[\"str\"]': line 1 byte 6: expected year number, found string \"str\"\n" 1 "misplaced string token"
+test_rawhide "$rh -e '[\"str\".path]'     $d" "" "./rh: command line: -e '[\"str\".path]': line 1 byte 11: expected year number, found patmod \"str\".path\n" 1 "misplaced patmod token"
+test_rawhide "$rh -e '[\"str\".exists]'   $d" "" "./rh: command line: -e '[\"str\".exists]': line 1 byte 13: expected year number, found reffile \"str\".exists\n" 1 "misplaced reffile token"
+
+# Test program size limit
+
+f=tests/$t.f
+rm -f $f
+touch $f
+if [ -x "`which perl`" ]
+then
+	perl -e '
+		use warnings;
+		use strict;
+		my $i;
+		for ($i = 1; $i <= 4434; ++$i)
+		{
+			print "f$i { 1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1 }\n";
+		}
+		print "f$i { 1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1 }\n";
+
+	' > $f
+else
+	i=1
+	while [ $i -le 4434 ]
+	do
+		echo "f$i { 1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1 }" >> $f
+		i="`expr $i + 1`"
+	done
+	echo "f$i { 1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1 }" >> $f
+fi
+test_rawhide "$rh -f $f -e 'f1' $d" "$d\n" "" 0 "enough program space (just)"
+echo "f0 { 1 }" >> $f
+test_rawhide "$rh -f $f -e 'f1' $d" "" "./rh: command line: -e 'f1': line 1 byte 3: program too big\n" 1 "not enough program space (just)"
+rm $f
+
+# These test execution errors rather than parsing errors
+
+factorial='factorial(n) { (n <= 0) ? 1 : factorial(n - 1) * n }'
+test_rawhide "$rh -e '$factorial factorial(3)== 6'       $d" "$d\n" ""                       0 "factorial function - no error"
+test_rawhide "$rh -e '$factorial factorial(333331) && 0' $d" ""     ""                       0 "factorial function - no stack overflow (just) but result is meaningless"
+test_rawhide "$rh -e '$factorial factorial(333332) && 0' $d" ""     "./rh: stack overflow\n" 1 "factorial function - stack overflow (just)"
+
+ackermann='ackermann(x, y) { (x == 0) ? y + 1 : (y == 0) ? ackermann(x - 1, 1) : ackermann(x - 1, ackermann(x, y - 1)) }'
+test_rawhide "$rh -e '$ackermann ackermann(2, 2) == 7'     $d" "$d\n" ""                       0 "ackermann function - no error"
+test_rawhide "$rh -e '$ackermann ackermann(3, 3) == 61'    $d" "$d\n" ""                       0 "ackermann function - no error"
+[ -n "$RAWHIDE_TEST_SLOW_ACKERMANN_STACK_OVERFLOW" ] && \
+test_rawhide "$rh -e '$ackermann ackermann(4, 4)'          $d" ""     "./rh: stack overflow\n" 0 "ackermann function - stack overflow"
+
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:

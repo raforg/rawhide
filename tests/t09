@@ -1,0 +1,59 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+. tests/.common
+
+label="exit"
+
+mkdir $d/aaa
+touch $d/aaa/111
+touch $d/aaa/222
+mkdir $d/bbb
+touch $d/bbb/111
+touch $d/bbb/222
+
+test_rawhide_pre_hook() { test_rh_find_pre_hook; }
+
+test_rawhide_find "$rh -e '\"111\"' $d"            "find $d -name 111 -print"       "without exit"
+
+case "`uname`" in
+	OpenBSD|NetBSD|SunOS) # Find doesn't have -quit
+		test_rawhide_pre_hook() { true; }
+		first="`$rh -e '\"111\"' $d | head -1`"
+		test_rawhide "$rh -e '\"111\" ? exit : 0' $d" "$first\n"     "" 0 "with ? exit : 0"
+		test_rawhide "$rh -e '\"111\" ? quit : 0' $d" "$first\n"     "" 0 "with ? quit : 0"
+		test_rawhide "$rh -e '\"111\" && exit'    $d" "$first\n"     "" 0 "with && exit"
+		test_rawhide "$rh -e '\"111\" && quit'    $d" "$first\n"     "" 0 "with && quit"
+		;;
+	*)
+		test_rawhide_find "$rh -e '\"111\" ? exit : 0' $d" "find $d -name 111 -print -quit" "with ? exit : 0"
+		test_rawhide_find "$rh -e '\"111\" && exit'    $d" "find $d -name 111 -print -quit" "with && exit"
+		test_rawhide_find "$rh -e '\"111\" && quit'    $d" "find $d -name 111 -print -quit" "with && quit"
+		;;
+esac
+
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:

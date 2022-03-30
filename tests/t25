@@ -1,0 +1,113 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+. tests/.common
+
+label="-y and -Y and -1 options"
+
+mkdir $d/d1
+mkdir $d/d1/a
+mkdir $d/d1/a/b
+mkdir $d/d2
+mkdir $d/d2/x
+mkdir $d/d2/x/y
+ln -s ../../../d1 $d/d2/x/y/z
+ln -s ../../../broken $d/d2/x/y/zz
+ln -s d2 $d/d3
+ln -s broken $d/d4
+
+# Test top-level good/bad links and good/bad links below
+
+test_rawhide_post_hook() { test_rh_sort_post_hook; }
+test_rawhide                                  "$rh -t    $d/d1" "$d/d1/\n$d/d1/a/\n$d/d1/a/b/\n"                                                                ""                                                                            0 "without -y -Y d1 (real)"
+test_rawhide                                  "$rh -t    $d/d2" "$d/d2/\n$d/d2/x/\n$d/d2/x/y/\n$d/d2/x/y/z@\n$d/d2/x/y/zz@\n"                                   ""                                                                            0 "without -y -Y d2 (real, good/bad links below)"
+test_rawhide                                  "$rh -t    $d/d3" "$d/d3@\n"                                                                                      ""                                                                            0 "without -y -Y d3 (good link to d2)"
+test_rawhide                                  "$rh -t    $d/d4" "$d/d4@\n"                                                                                      ""                                                                            0 "without -y -Y d4 (broken link)"
+test_rawhide                                  "$rh -t -y $d/d1" "$d/d1/\n$d/d1/a/\n$d/d1/a/b/\n"                                                                ""                                                                            0 "with -y d1 (real)"
+test_rawhide                                  "$rh -t -y $d/d2" "$d/d2/\n$d/d2/x/\n$d/d2/x/y/\n$d/d2/x/y/z@\n$d/d2/x/y/zz@\n"                                   ""                                                                            0 "with -y d2 (real, good/bad links below)"
+test_rawhide                                  "$rh -t -y $d/d3" "$d/d3/\n$d/d3/x/\n$d/d3/x/y/\n$d/d3/x/y/z@\n$d/d3/x/y/zz@\n"                                   ""                                                                            0 "with -y d3 (good link to d2)"
+test_rawhide                                  "$rh -t -y $d/d4" "$d/d4@\n"                                                                                      ""                                                                            0 "with -y d4 (broken link - not reported as error)"
+test_rawhide "RAWHIDE_REPORT_BROKEN_SYMLINKS=1 $rh -t -y $d/d4" "$d/d4@\n"                                                                                      "./rh: fstatat $d/d4 (following symlink): No such file or directory\n"        1 "with -y d4 (broken link - reported as error)"
+test_rawhide                                  "$rh -t -Y $d/d1" "$d/d1/\n$d/d1/a/\n$d/d1/a/b/\n"                                                                ""                                                                            0 "with -Y d1 (real)"
+test_rawhide                                  "$rh -t -Y $d/d2" "$d/d2/\n$d/d2/x/\n$d/d2/x/y/\n$d/d2/x/y/z/\n$d/d2/x/y/z/a/\n$d/d2/x/y/z/a/b/\n$d/d2/x/y/zz@\n" ""                                                                            0 "with -Y d2 (real, good/bad links below - not reported as error)"
+test_rawhide "RAWHIDE_REPORT_BROKEN_SYMLINKS=1 $rh -t -Y $d/d2" "$d/d2/\n$d/d2/x/\n$d/d2/x/y/\n$d/d2/x/y/z/\n$d/d2/x/y/z/a/\n$d/d2/x/y/z/a/b/\n$d/d2/x/y/zz@\n" "./rh: fstatat $d/d2/x/y/zz (following symlink): No such file or directory\n" 1 "with -Y d2 (real, good/bad links below - reported as error)"
+test_rawhide                                  "$rh -t -Y $d/d3" "$d/d3/\n$d/d3/x/\n$d/d3/x/y/\n$d/d3/x/y/z/\n$d/d3/x/y/z/a/\n$d/d3/x/y/z/a/b/\n$d/d3/x/y/zz@\n" ""                                                                            0 "with -Y d3 (good link to d2, broken link not reported as error)"
+test_rawhide "RAWHIDE_REPORT_BROKEN_SYMLINKS=1 $rh -t -Y $d/d3" "$d/d3/\n$d/d3/x/\n$d/d3/x/y/\n$d/d3/x/y/z/\n$d/d3/x/y/z/a/\n$d/d3/x/y/z/a/b/\n$d/d3/x/y/zz@\n" "./rh: fstatat $d/d3/x/y/zz (following symlink): No such file or directory\n" 1 "with -Y d3 (good link to d2, broken link reported as error)"
+test_rawhide                                  "$rh -t -Y $d/d4" "$d/d4@\n"                                                                                      ""                                                                            0 "with -Y d4 (broken link not reported as error)"
+test_rawhide "RAWHIDE_REPORT_BROKEN_SYMLINKS=1 $rh -t -Y $d/d4" "$d/d4@\n"                                                                                      "./rh: fstatat $d/d4 (following symlink): No such file or directory\n"        1 "with -Y d4 (broken link reported as error)"
+
+# Demonstrate incompatibility of -Y with symlink target related built-ins
+
+test_rawhide                                  "$rh    link    $d" "$d/d2/x/y/z\n$d/d2/x/y/zz\n$d/d3\n$d/d4\n" ""                                                                                                                                                                                                                           0 "link without -y/-Y"
+test_rawhide                                  "$rh -y link    $d" "$d/d2/x/y/z\n$d/d2/x/y/zz\n$d/d3\n$d/d4\n" ""                                                                                                                                                                                                                           0 "link with -y"
+test_rawhide                                  "$rh -Y link    $d" "$d/d2/x/y/zz\n$d/d3/x/y/zz\n$d/d4\n"       ""                                                                                                                                                                                                                           0 "link with -Y, broken links not reported as error"
+test_rawhide "RAWHIDE_REPORT_BROKEN_SYMLINKS=1 $rh -Y link    $d" "$d/d2/x/y/zz\n$d/d3/x/y/zz\n$d/d4\n"       "./rh: fstatat $d/d2/x/y/zz (following symlink): No such file or directory\n./rh: fstatat $d/d3/x/y/zz (following symlink): No such file or directory\n./rh: fstatat $d/d4 (following symlink): No such file or directory\n" 1 "link with -Y, broken links reported as error"
+test_rawhide                                  "$rh    texists $d" "$d/d2/x/y/z\n$d/d3\n"                      ""                                                                                                                                                                                                                           0 "texists without -y/-Y"
+test_rawhide                                  "$rh -y texists $d" "$d/d2/x/y/z\n$d/d3\n"                      ""                                                                                                                                                                                                                           0 "texists with -y"
+test_rawhide                                  "$rh -Y texists $d" ""                                          ""                                                                                                                                                                                                                           0 "texists with -Y, broken links not reported as error"
+test_rawhide "RAWHIDE_REPORT_BROKEN_SYMLINKS=1 $rh -Y texists $d" ""                                          "./rh: fstatat $d/d2/x/y/zz (following symlink): No such file or directory\n./rh: fstatat $d/d3/x/y/zz (following symlink): No such file or directory\n./rh: fstatat $d/d4 (following symlink): No such file or directory\n" 1 "texists with -Y, broken links reported as error"
+
+# Test file references that are good/bad symlinks
+
+test_rawhide                                  "$rh -t    '\"$d/d3\".mtime != 0' $d/d3" "$d/d3@\n"                                                                                      ""                                                                                                                                         0 "reference file without -y/-Y"
+test_rawhide                                  "$rh -t    '\"$d/d4\".mtime != 0' $d/d4" "$d/d4@\n"                                                                                      ""                                                                                                                                         0 "reference file without -y/-Y (broken)"
+test_rawhide                                  "$rh -t -y '\"$d/d3\".mtime != 0' $d/d3" "$d/d3/\n$d/d3/x/\n$d/d3/x/y/\n$d/d3/x/y/z@\n$d/d3/x/y/zz@\n"                                   ""                                                                                                                                         0 "reference file with -y"
+test_rawhide                                  "$rh -t -y '\"$d/d4\".mtime != 0' $d/d4" ""                                                                                              "./rh: invalid reference \"$d/d4\".mtime: No such file or directory\n"                                                                     1 "reference file with -y (broken links not reported as error)"
+test_rawhide "RAWHIDE_REPORT_BROKEN_SYMLINKS=1 $rh -t -y '\"$d/d4\".mtime != 0' $d/d4" ""                                                                                              "./rh: fstatat $d/d4 (following symlink): No such file or directory\n./rh: invalid reference \"$d/d4\".mtime: No such file or directory\n" 1 "reference file with -y (broken links reported as error)"
+test_rawhide                                  "$rh -t -Y '\"$d/d3\".mtime != 0' $d/d3" "$d/d3/\n$d/d3/x/\n$d/d3/x/y/\n$d/d3/x/y/z/\n$d/d3/x/y/z/a/\n$d/d3/x/y/z/a/b/\n$d/d3/x/y/zz@\n" ""                                                                                                                                         0 "reference file with -Y (broken links not reported as error)"
+test_rawhide "RAWHIDE_REPORT_BROKEN_SYMLINKS=1 $rh -t -Y '\"$d/d3\".mtime != 0' $d/d3" "$d/d3/\n$d/d3/x/\n$d/d3/x/y/\n$d/d3/x/y/z/\n$d/d3/x/y/z/a/\n$d/d3/x/y/z/a/b/\n$d/d3/x/y/zz@\n" "./rh: fstatat $d/d3/x/y/zz (following symlink): No such file or directory\n"                                                              1 "reference file with -Y (broken links reported as error)"
+test_rawhide                                  "$rh -t -Y '\"$d/d4\".mtime != 0' $d/d4" ""                                                                                              "./rh: invalid reference \"$d/d4\".mtime: No such file or directory\n"                                                                     1 "reference file with -Y (broken links not reported as error)"
+test_rawhide "RAWHIDE_REPORT_BROKEN_SYMLINKS=1 $rh -t -Y '\"$d/d4\".mtime != 0' $d/d4" ""                                                                                              "./rh: fstatat $d/d4 (following symlink): No such file or directory\n./rh: invalid reference \"$d/d4\".mtime: No such file or directory\n" 1 "reference file with -Y (broken links reported as error)"
+
+# Test symlink loop detection
+
+mkdir $d/d5
+ln -s b $d/d5/a
+ln -s a $d/d5/b
+
+test_rawhide_post_hook() { test_rh_sort_post_hook; test_rh_errno_post_hook; }
+test_rawhide                                  "$rh -t    $d/d5" "$d/d5/\n$d/d5/a@\n$d/d5/b@\n" ""                                                                                                                                                             0 "trivial loop detection without -Y"
+test_rawhide                                  "$rh -t -Y $d/d5" "$d/d5/\n$d/d5/a@\n$d/d5/b@\n" ""                                                                                                                                                             0 "trivial loop detection with -Y broken symlinks not reported as error"
+test_rawhide "RAWHIDE_REPORT_BROKEN_SYMLINKS=1 $rh -t -Y $d/d5" "$d/d5/\n$d/d5/a@\n$d/d5/b@\n" "./rh: fstatat $d/d5/a (following symlink): Too many levels of symbolic links\n./rh: fstatat $d/d5/b (following symlink): Too many levels of symbolic links\n" 1 "trivial loop detection with -Y broken symlinks reported as error"
+
+# Test filesystem cycle detection
+
+mkdir $d/d6
+touch $d/d6/a
+mkdir $d/d6/b
+ln -s .. $d/d6/b/c
+
+test_rawhide "                             $rh -t    $d/d6" "$d/d6/\n$d/d6/a\n$d/d6/b/\n$d/d6/b/c@\n" ""                                                      0 "filesystem cycle unfollowed without -Y"
+test_rawhide "                             $rh -t -y $d/d6" "$d/d6/\n$d/d6/a\n$d/d6/b/\n$d/d6/b/c@\n" ""                                                      0 "filesystem cycle unfollowed without -y"
+test_rawhide "                             $rh -t -Y $d/d6" "$d/d6/\n$d/d6/a\n$d/d6/b/\n$d/d6/b/c/\n" "./rh: skipping $d/d6/b/c: Filesystem cycle detected\n" 0 "filesystem cycle detected with -Y"
+test_rawhide "RAWHIDE_DONT_REPORT_CYCLES=1 $rh -t -Y $d/d6" "$d/d6/\n$d/d6/a\n$d/d6/b/\n$d/d6/b/c/\n" ""                                                      0 "filesystem cycle detected with -Y but not reported"
+
+# Test -1 (not really, just exercise as much code as feasible)
+
+test_rawhide "$rh -1e0 $d" "" "" 0 "-1"
+
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:

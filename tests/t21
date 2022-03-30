@@ -1,0 +1,146 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+. tests/.common
+
+label="-D and -U options"
+
+mkdir $d/d1
+mkdir $d/d1/d2
+mkdir $d/d1/d2/d3
+touch $d/d1/d2/d3/d4
+
+# Solaris find can't do -mindepth -maxdepth, so test explicitly
+test_rawhide "$rh $d"            "$d\n$d/d1\n$d/d1/d2\n$d/d1/d2/d3\n$d/d1/d2/d3/d4\n" "" 0 "without -D option"
+test_rawhide "$rh -D $d"         "$d/d1/d2/d3/d4\n$d/d1/d2/d3\n$d/d1/d2\n$d/d1\n$d\n" "" 0 "with -D option"
+test_rawhide "$rh -D -M0 $d"     "$d\n"                                               "" 0 "-D and -M0"
+test_rawhide "$rh -D -M1 $d"     "$d/d1\n$d\n"                                        "" 0 "-D and -M1"
+test_rawhide "$rh -D -m0 -M1 $d" "$d/d1\n$d\n"                                        "" 0 "-D and -m0 -M1"
+test_rawhide "$rh -D -m0 -M2 $d" "$d/d1/d2\n$d/d1\n$d\n"                              "" 0 "-D and -m0 -M2"
+test_rawhide "$rh -D -m1 -M2 $d" "$d/d1/d2\n$d/d1\n"                                  "" 0 "-D and -m1 -M2"
+test_rawhide "$rh -D -m1 -M3 $d" "$d/d1/d2/d3\n$d/d1/d2\n$d/d1\n"                     "" 0 "-D and -m1 -M3"
+test_rawhide "$rh -D -m2 -M3 $d" "$d/d1/d2/d3\n$d/d1/d2\n"                            "" 0 "-D and -m2 -M3"
+test_rawhide "$rh -D -m3 -M4 $d" "$d/d1/d2/d3/d4\n$d/d1/d2/d3\n"                      "" 0 "-D and -m3 -M4"
+test_rawhide "$rh -D -m4 -M4 $d" "$d/d1/d2/d3/d4\n"                                   "" 0 "-D and -m4 -M4"
+test_rawhide "$rh -D -m5 -M5 $d" ""                                                   "" 0 "-D and -m5 -M5"
+
+# But where possible, compare depth numbers with find's -mindepth -maxdepth
+if find_has_mindepth
+then
+	test_rawhide_pre_hook() { test_rh_find_pre_hook; }
+	test_rawhide_find "$rh $d"            "find $d"                                "without -D option"
+	test_rawhide_find "$rh -D $d"         "find $d -depth"                         "with -D option"
+	test_rawhide_find "$rh -D -M0 $d"     "find $d -depth -maxdepth 0"             "-D and -M0"
+	test_rawhide_find "$rh -D -M1 $d"     "find $d -depth -maxdepth 1"             "-D and -M1"
+	test_rawhide_find "$rh -D -m0 -M1 $d" "find $d -depth -mindepth 0 -maxdepth 1" "-D and -m0 -M1"
+	test_rawhide_find "$rh -D -m0 -M2 $d" "find $d -depth -mindepth 0 -maxdepth 2" "-D and -m0 -M2"
+	test_rawhide_find "$rh -D -m1 -M2 $d" "find $d -depth -mindepth 1 -maxdepth 2" "-D and -m1 -M2"
+	test_rawhide_find "$rh -D -m1 -M3 $d" "find $d -depth -mindepth 1 -maxdepth 3" "-D and -m1 -M3"
+	test_rawhide_find "$rh -D -m2 -M3 $d" "find $d -depth -mindepth 2 -maxdepth 3" "-D and -m2 -M3"
+	test_rawhide_find "$rh -D -m3 -M4 $d" "find $d -depth -mindepth 3 -maxdepth 4" "-D and -m3 -M4"
+	test_rawhide_find "$rh -D -m4 -M4 $d" "find $d -depth -mindepth 4 -maxdepth 4" "-D and -m4 -M4"
+	test_rawhide_find "$rh -D -m5 -M5 $d" "find $d -depth -mindepth 5 -maxdepth 5" "-D and -m5 -M5"
+	test_rawhide_pre_hook() { true; }
+fi
+
+test_rawhide "$rh -D -e exit $d" "$d/d1/d2/d3/d4\n" "" 0 "-D with exit"
+
+test_rawhide "$rh -D   $d" "$d/d1/d2/d3/d4\n$d/d1/d2/d3\n$d/d1/d2\n$d/d1\n$d\n" "" 0 "-D explicit check without find"
+test_rawhide "$rh -UUU $d" "" ""                                                   0 "-UUU action (check next)"
+test_rawhide "$rh      $d" "" "./rh: fstatat $d: No such file or directory\n"      1 "-UUU check (without -e1, deleted $d cleverly seen as an attempt at a path)"
+test_rawhide "$rh -e1  $d" "" "./rh: fstatat $d: No such file or directory\n"      1 "-UUU check (with -e1)"
+
+mkdir $d
+mkdir $d/d1
+mkdir $d/d1/d2
+mkdir $d/d1/d2/d3
+touch $d/d1/d2/d3/d4
+
+test_rawhide "$rh -UUU -e 'file' $d" ""                                   "" 0 "-UUU file only action"
+test_rawhide "$rh -D             $d" "$d/d1/d2/d3\n$d/d1/d2\n$d/d1\n$d\n" "" 0 "-UUU file only check (with -D)"
+test_rawhide "$rh                $d" "$d\n$d/d1\n$d/d1/d2\n$d/d1/d2/d3\n" "" 0 "-UUU file only check (without -D)"
+
+touch $d/d1/d2/d3/d4
+
+test_rawhide_post_hook() { test_rh_errno_post_hook; }
+test_rawhide "$rh -UUU -e 'dir' $d" ""                                                   "./rh: unlinkat $d/d1/d2/d3: Directory not empty\n./rh: unlinkat $d/d1/d2: Directory not empty\n./rh: unlinkat $d/d1: Directory not empty\n./rh: rmdir $d: Directory not empty\n" 1 "-UUU dir only action (fails because a file exists)"                                                                                                                  0 "-UUU preparation"
+test_rawhide "$rh               $d" "$d\n$d/d1\n$d/d1/d2\n$d/d1/d2/d3\n$d/d1/d2/d3/d4\n" ""                                                                                                                                                                                                                0 "-UUU failed dir only check (no change)"
+test_rawhide_post_hook() { true; }
+
+test_rawhide "RAWHIDE_TEST_TTY=1 $rh -UUU -v      $d/d1" "$d/d1/d2/d3/d4\n$d/d1/d2/d3\n$d/d1/d2\n$d/d1\n" "" 0 "-UUU with -v action (tty)"
+test_rawhide "                   $rh              $d"    "$d\n"                                           "" 0 "-UUU with -v check"
+
+mkdir $d/d1
+mkdir $d/d1/d2
+mkdir $d/d1/d2/d3
+touch $d/d1/d2/d3/d4
+
+test_rawhide "$rh -UUU -v -e file $d" "$d/d1/d2/d3/d4\n"                   "" 0 "-UUU with -v (file only) action"
+test_rawhide "$rh                 $d" "$d\n$d/d1\n$d/d1/d2\n$d/d1/d2/d3\n" "" 0 "-UUU with -v (file only) check"
+
+test_rawhide "$rh -UUU -v -e dir $d/d1" "$d/d1/d2/d3\n$d/d1/d2\n$d/d1\n"   "" 0 "-UUU with -v (the rest) action"
+test_rawhide "$rh                $d"    "$d\n"                             "" 0 "-UUU with -v (the rest) check"
+
+if [ "`whoami`" != root ]
+then
+	mkdir $d/d1
+	touch $d/d1/f
+	chmod -w $d/d1
+	test_rawhide "$rh -UUU -e file $d/d1/f" ""                     "./rh: unlink $d/d1/f: Permission denied\n" 1 "-UUU file only (fail because parent directory not writable)"
+	test_rawhide "$rh              $d"      "$d\n$d/d1\n$d/d1/f\n" ""                                                  0 "-UUU with -v (the rest) check"
+	chmod +w $d/d1
+	rm -rf $d/d1
+fi
+
+# Test -U with -y/-Y and symlinks
+
+mkdir $d/t1 $d/tt1 $d/t2 $d/tt2 $d/t3 $d/tt3 $d/t4 $d/tt4
+touch $d/ff1 $d/ff2 $d/ff3 $d/ff4
+mkdir $d/tt1/d $d/tt2/d $d/tt3/d $d/tt4/d
+touch $d/tt1/d/f $d/tt2/d/f $d/tt3/d/f $d/tt4/d/f
+ln -s ../tt1 $d/t1/ld
+ln -s ../tt2 $d/t2/ld
+ln -s ../tt3 $d/t3/ld
+ln -s ../tt4 $d/t4/ld
+ln -s ../ff1 $d/t1/lf
+ln -s ../ff2 $d/t2/lf
+ln -s ../ff3 $d/t3/lf
+ln -s ../ff4 $d/t4/lf
+
+test_rawhide_post_hook() { test_rh_sort_post_hook; }
+test_rawhide "$rh -UUU -v    $d/t1"    "$d/t1\n$d/t1/ld\n$d/t1/lf\n"                             ""                                                 0 "-UUU -v with symlinks"
+test_rawhide "$rh $d/t1 $d/tt1 $d/ff1" "$d/ff1\n$d/tt1\n$d/tt1/d\n$d/tt1/d/f\n"                  "./rh: fstatat $d/t1: No such file or directory\n" 1 "-UUU -v with symlinks (aftermath)"
+test_rawhide "$rh -UUU -v -y $d/t2"    "$d/t2\n$d/t2/ld\n$d/t2/lf\n"                             ""                                                 0 "-UUU -v -y with unfollowed symlinks"
+test_rawhide "$rh $d/t2 $d/tt2 $d/ff2" "$d/ff2\n$d/tt2\n$d/tt2/d\n$d/tt2/d/f\n"                  "./rh: fstatat $d/t2: No such file or directory\n" 1 "-UUU -v -y with unfollowed symlinks (aftermath)"
+test_rawhide "$rh -UUU -v -y $d/t3/lf" "$d/t3/lf\n"                                              ""                                                 0 "-UUU -v -y with followed symlinks (to file)"
+test_rawhide "$rh $d/t3 $d/tt3 $d/ff3" "$d/ff3\n$d/t3\n$d/t3/ld\n$d/tt3\n$d/tt3/d\n$d/tt3/d/f\n" ""                                                 0 "-UUU -v -y with followed symlinks (to file) (aftermath)"
+test_rawhide "$rh -UUU -v -y $d/t3/ld" "$d/t3/ld\n$d/t3/ld/d\n$d/t3/ld/d/f\n"                    ""                                                 0 "-UUU -v -y with followed symlinks (to dir)"
+test_rawhide "$rh $d/t3 $d/tt3 $d/ff3" "$d/ff3\n$d/t3\n$d/tt3\n"                                 ""                                                 0 "-UUU -v -y with followed symlinks (to dir) (aftermath)"
+test_rawhide "$rh -UUU -v -Y $d/t4"    "$d/t4\n$d/t4/ld\n$d/t4/ld/d\n$d/t4/ld/d/f\n$d/t4/lf\n"   ""                                                 0 "-UUU -v -Y with followed symlinks (to dir and file)"
+test_rawhide "$rh $d/t4 $d/tt4 $d/ff4" "$d/ff4\n$d/tt4\n"                                        "./rh: fstatat $d/t4: No such file or directory\n" 1 "-UUU -v -Y with followed symlinks (to dir and file) (aftermath)"
+
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:

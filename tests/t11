@@ -1,0 +1,140 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+. tests/.common
+
+label="config file path buf size handling"
+
+RAWHIDE_TEST_TTY=1; export RAWHIDE_TEST_TTY # Exercise ok() and ok2()
+
+test_configpathbufsize()
+{
+	max="$1"
+	cmd="$2"
+	expected_stdout="$3"
+	expected_stderr="$4"
+	expected_rc="$5"
+	desc="$6"
+
+	max="`expr $max - 1`" # Convert buf size to max length
+	test_rawhide "RAWHIDE_TEST_PATHLEN_MAX=$max $cmd" "$expected_stdout" "$expected_stderr" "$expected_rc" "$desc"
+}
+
+# Where config buf size checks are:
+#
+# (#1) - main - /etc/rawhide.conf
+# (#2) - main - /etc/rawhide.conf.d
+# (#3) - main - /etc/rawhide.conf.d/*
+# (#4) - main - /etc/rawhide.conf.d/d_name
+# (#5) - main - ~
+# (#6) - main - ~/.rhrc and $RAWHIDE_RC (separate checks)
+# (#7) - main - ~/.rhrc.d
+# (#8) - main - ~/.rhrc.d/*
+# (#9) - main - ~/.rhrc.d/d_name
+
+mkdir tests/etc
+touch tests/etc/rawhide.conf			# 23
+mkdir tests/etc/rawhide.conf.d 			# 25
+touch tests/etc/rawhide.conf.d/a		# 27
+touch tests/etc/rawhide.conf.d/aa       # 28
+touch tests/etc/rawhide.conf.d/aaa      # 29
+touch tests/etc/rawhide.conf.d/aaaa     # 30
+mkdir tests/home                        # 11
+touch tests/home/.rhrc                  # 17
+mkdir tests/home/.rhrc.d                # 19
+touch tests/home/.rhrc.d/a              # 21
+touch tests/home/.rhrc.d/aa             # 22
+touch tests/home/.rhrc.d/aaa            # 23
+touch tests/home/.rhrc.d/aaaa           # 24
+
+# Note: root can't use $RAWHIDE_CONFIG or $RAWHIDE_RC so some tests aren't possible
+
+[ "`whoami`" = root ] && root=1 || root=0
+
+if [ $root = 0 ]
+then
+	rh="RAWHIDE_CONFIG=tests/etc/rawhide.conf RAWHIDE_RC=tests/home/.rhrc ./rh"
+	test_configpathbufsize  10 "$rh $d" ""     "./rh: path is too long: tests/etc/rawhide.conf\n./rh: path is too long: tests/home/.rhrc\n./rh: path is too long: $d\n"                                                                           1 "[10] too big - /etc/rawhide.conf (#1) - ~ (#5)"
+	test_configpathbufsize  11 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf\n./rh: path is too long: tests/home/.rhrc\n./rh: path is too long: $d/\n"                                                                          1 "[11] too big - /etc/rawhide.conf (#1) - ~/.rhrc (#6)"
+	test_configpathbufsize  16 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf\n./rh: path is too long: tests/home/.rhrc\n"                                                                                                       0 "[16] too big - /etc/rawhide.conf (#1) - ~/.rhrc (#6)"
+	test_configpathbufsize  17 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf\n./rh: path is too long: tests/home/.rhrc.d\n"                                                                                                     0 "[17] too big - /etc/rawhide.conf (#1) - ~/.rhrc.d (#7)"
+	test_configpathbufsize  18 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf\n./rh: path is too long: tests/home/.rhrc.d\n"                                                                                                     0 "[18] too big - /etc/rawhide.conf (#1) - ~/.rhrc.d (#7)"
+	test_configpathbufsize  19 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf\n./rh: path is too long: tests/home/.rhrc.d/*\n"                                                                                                   0 "[19] too big - /etc/rawhide.conf (#1) - ~/.rhrc.d/* (#8)"
+	test_configpathbufsize  20 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf\n./rh: path is too long: tests/home/.rhrc.d/*\n"                                                                                                   0 "[20] too big - /etc/rawhide.conf (#1) - ~/.rhrc.d/* (#8)"
+	test_configpathbufsize  21 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf\n./rh: path is too long: tests/home/.rhrc.d/aa\n./rh: path is too long: tests/home/.rhrc.d/aaa\n./rh: path is too long: tests/home/.rhrc.d/aaaa\n" 0 "[21] too big - /etc/rawhide.conf (#1) - ~/.rhrc.d/aa aaa aaaa (#9)"
+	test_configpathbufsize  22 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf\n./rh: path is too long: tests/home/.rhrc.d/aaa\n./rh: path is too long: tests/home/.rhrc.d/aaaa\n"                                                0 "[22] too big - /etc/rawhide.conf (#1) - ~/.rhrc.d/aaa aaaa (#9)"
+	test_configpathbufsize  23 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d\n./rh: path is too long: tests/home/.rhrc.d/aaaa\n"                                                                                              0 "[23] too big - /etc/rawhide.conf.d (#2) - ~/.rhrc.d/aaaa (#9)"
+	test_configpathbufsize  24 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d\n"                                                                                                                                               0 "[24] too big - /etc/rawhide.conf.d (#2)"
+	test_configpathbufsize  26 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d/*\n"                                                                                                                                             0 "[26] too big - /etc/rawhide.conf.d/* (#3)"
+	test_configpathbufsize  27 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d/aa\n./rh: path is too long: tests/etc/rawhide.conf.d/aaa\n./rh: path is too long: tests/etc/rawhide.conf.d/aaaa\n"                               0 "[27] too big - /etc/rawhide.conf.d/aa aaa aaaa (#4)"
+	test_configpathbufsize  28 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d/aaa\n./rh: path is too long: tests/etc/rawhide.conf.d/aaaa\n"                                                                                    0 "[28] too big - /etc/rawhide.conf.d/aaa aaaa (#4)"
+	test_configpathbufsize  29 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d/aaaa\n"                                                                                                                                          0 "[29] too big - /etc/rawhide.conf.d/aaaa (#4)"
+	test_configpathbufsize  30 "$rh $d" "$d\n" ""                                                                                                                                                                                                 0 "[30] max"
+	test_configpathbufsize  31 "$rh $d" "$d\n" ""                                                                                                                                                                                                 0 "[31] small"
+fi
+
+rm -r tests/etc/rawhide.conf.d
+touch tests/etc/rawhide.conf.d
+rm -r tests/home/.rhrc.d
+touch tests/home/.rhrc.d
+
+[ $root = 0 ] &&
+test_rawhide "$rh $d" "$d\n" "./rh: tests/etc/rawhide.conf.d is not a directory\n./rh: tests/home/.rhrc.d is not a directory\n" 0 "/etc/rawhide.conf.d and ~/.rhrc.d are not directories"
+
+rm tests/etc/rawhide.conf.d
+mkdir tests/etc/rawhide.conf.d
+mkdir tests/etc/rawhide.conf.d/dir
+rm tests/home/.rhrc.d
+mkdir tests/home/.rhrc.d
+mkdir tests/home/.rhrc.d/dir
+
+[ $root = 0 ] &&
+test_rawhide "$rh $d" "$d\n" "./rh: tests/etc/rawhide.conf.d/dir is not a file\n./rh: tests/home/.rhrc.d/dir is not a file\n" 0 "/etc/rawhide.conf.d/dir and ~/.rhrc.d/dir are not files"
+
+rm -rf tests/etc tests/home
+
+# Above tests were for $RAWHIDE_RC. Need to test actual ~ and ~/.rhrc (but leave root's home directory alone)
+
+if [ $root = 0 -a ! -e ~/.rhrc -a ! -d ~/.rhrc.d ]
+then
+	rh="./rh -N"
+	touch ~/.rhrc
+	home_size="`echo ~ | wc -c`"
+	home_under_size="`expr $home_size - 1`"
+	home_rhrc_size="`expr $home_size + 6`"
+	home_rhrc_under_size="`expr $home_rhrc_size - 1`"
+	if [ $home_under_size -le 10 ]
+	then
+		test_configpathbufsize $home_under_size "$rh $d" ""     "./rh: path is too long: $HOME/.rhrc\n./rh: path is too long: $d\n" 1 "[$home_under_size] too big - real ~ (#6) - searchpath"
+	else
+		test_configpathbufsize $home_under_size "$rh $d" "$d\n" "./rh: path is too long: $HOME/.rhrc\n"                             0 "[$home_under_size] too big - real ~ (#6)"
+	fi
+	test_configpathbufsize $home_rhrc_under_size "$rh $d" "$d\n" "./rh: path is too long: $HOME/.rhrc\n"                            0 "[$home_under_size] too big - real ~/.rhrc (#6)"
+	rm -rf ~/.rhrc
+fi
+
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:

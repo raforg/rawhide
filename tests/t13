@@ -1,0 +1,339 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+. tests/.common
+
+label="builtins"
+
+touch $d/e
+chmod 755 $d
+chmod 644 $d/e
+
+test_rawhide_post_hook() { test_rh_sort_post_hook; }
+
+# stat(2) structure fields
+
+case "`uname`" in
+	NetBSD)
+		test_rawhide "$rh -e 'dev'                $d" ""                  "" 0 "dev" # NetBSD directories aren't on a device (or on dev 0)?
+		test_rawhide "$rh -e 'major | minor'      $d" ""                  "" 0 "major | minor" # NetBSD directories aren't on a device (or on dev 0)?
+		;;
+	*)
+		test_rawhide "$rh -e 'dev'                $d" "$d\n$d/e\n"         "" 0 "dev"
+		test_rawhide "$rh -e 'major | minor'      $d" "$d\n$d/e\n"         "" 0 "major | minor"
+		;;
+esac
+test_rawhide "$rh -e 'ino'                     $d" "$d\n$d/e\n"            "" 0 "ino"
+test_rawhide "$rh -e 'mode'                    $d" "$d\n$d/e\n"            "" 0 "mode"
+test_rawhide "$rh -e '(mode&~IFMT)&0755==0755' $d" "$d\n"                  "" 0 "mode 755" # Might inherit sgid
+test_rawhide "$rh -e '(mode&~IFMT)==0644'      $d" "$d/e\n"                "" 0 "mode 644"
+# Note: Directories on btrfs can have only 1 hardlink(!)
+[ `$rh -e 'dir && nlink == 1' $d | wc -l` != 0 ] && btrfs=1 || btrfs=0
+[ $btrfs = 0 ] && test_rawhide "$rh -e 'nlink==1'         $d" "$d/e\n"     "" 0 "nlink == 1"
+[ $btrfs = 0 ] && test_rawhide "$rh -e 'nlink!=1'         $d" "$d\n"       "" 0 "nlink != 1"
+[ $btrfs = 1 ] && test_rawhide "$rh -e 'nlink==1'         $d" "$d\n$d/e\n" "" 0 "nlink == 1"
+[ $btrfs = 1 ] && test_rawhide "$rh -e 'nlink!=1'         $d" ""           "" 0 "nlink != 1"
+[ "`whoami`" = root ]  && test_rawhide "$rh -e 'uid == 0' $d" "$d\n$d/e\n" "" 0 "uid == 0 as root"
+[ "`whoami`" = root ]  && test_rawhide "$rh -e 'uid != 0' $d" ""           "" 0 "uid != 0 as root"
+# On macOS, root's primary group is wheel but it gets group staff instead
+[ "`whoami`" = root -a "`uname`" != Darwin -a "`uname`" != FreeBSD -a "`uname`" != OpenBSD -a "`uname`" != NetBSD ] && test_rawhide "$rh -e 'gid == 0' $d" "$d\n$d/e\n" "" 0 "gid == 0 as root"
+[ "`whoami`" = root -a "`uname`" != Darwin -a "`uname`" != FreeBSD -a "`uname`" != OpenBSD -a "`uname`" != NetBSD ] && test_rawhide "$rh -e 'gid != 0' $d" ""           "" 0 "gid != 0 as root"
+[ "`whoami`" != root ] && test_rawhide "$rh -e 'uid == 0' $d" ""           "" 0 "uid == 0 not as root"
+[ "`whoami`" != root ] && test_rawhide "$rh -e 'uid != 0' $d" "$d\n$d/e\n" "" 0 "uid != 0 not as root"
+[ "`whoami`" != root ] && test_rawhide "$rh -e 'gid == 0' $d" ""           "" 0 "gid == 0 not as root"
+[ "`whoami`" != root ] && test_rawhide "$rh -e 'gid != 0' $d" "$d\n$d/e\n" "" 0 "gid != 0 not as root"
+# Testing rdev on non-devices is silly
+case "`uname`" in
+	FreeBSD|NetBSD|SunOS)
+		test_rawhide "$rh -e 'rdev'            $d" "$d\n$d/e\n" "" 0 "rdev"            # Maybe everything is a device here?
+		test_rawhide "$rh -e 'rmajor | rminor' $d" "$d\n$d/e\n" "" 0 "rmajor | rminor" # Maybe everything is a device here?
+		;;
+	OpenBSD)
+		test_rawhide "$rh -e 'rdev'            $d" "$d\n" "" 0 "rdev"            # Maybe directories are a device here?
+		test_rawhide "$rh -e 'rmajor | rminor' $d" "$d\n" "" 0 "rmajor | rminor" # Maybe directories are a device here?
+		;;
+	*)
+		test_rawhide "$rh -e 'rdev'            $d" "" "" 0 "rdev"
+		test_rawhide "$rh -e 'rmajor | rminor' $d" "" "" 0 "rmajor | rminor"
+		;;
+esac
+echo not empty > $d/f
+test_rawhide "$rh -e 'size == 0'          $d" "$d/e\n"     "" 0 "size == 0"
+test_rawhide "$rh -e 'size'               $d" "$d\n$d/f\n" "" 0 "size"
+test_rawhide "$rh -e 'file && size >= 10' $d" "$d/f\n"     "" 0 "size >= 10" # dir size is #entries (inspired by FreeBSD)
+test_rawhide "$rh -e 'file && size < 10'  $d" "$d/e\n"     "" 0 "size < 10"  # dir size is #entries (inspired by FreeBSD)
+rm $d/f
+
+# Test directory size (number of entries, excluding . and ..)
+
+mkdir $d/ds
+mkdir $d/ds/d0
+mkdir $d/ds/d1
+mkdir $d/ds/d1/d1
+mkdir $d/ds/d2
+touch $d/ds/d2/d1
+mkdir $d/ds/d2/d2
+mkdir $d/ds/d3
+touch $d/ds/d3/d1
+touch $d/ds/d3/d2
+mkdir $d/ds/d3/d3
+mkdir $d/ds/d4
+touch $d/ds/d4/d1
+touch $d/ds/d4/d2
+touch $d/ds/d4/d3
+mkdir $d/ds/d4/d4
+
+test_rawhide "$rh -e 'dir && size == 0' $d/ds" "$d/ds/d0\n$d/ds/d1/d1\n$d/ds/d2/d2\n$d/ds/d3/d3\n$d/ds/d4/d4\n"     "" 0 "dir size == 0"
+test_rawhide "$rh -e 'dir && size == 1' $d/ds" "$d/ds/d1\n" "" 0 "dir size == 1"
+test_rawhide "$rh -e 'dir && size == 2' $d/ds" "$d/ds/d2\n" "" 0 "dir size == 2"
+test_rawhide "$rh -e 'dir && size == 3' $d/ds" "$d/ds/d3\n" "" 0 "dir size == 3"
+test_rawhide "$rh -e 'dir && size == 4' $d/ds" "$d/ds/d4\n" "" 0 "dir size == 4"
+test_rawhide "$rh -e 'dir && size == 5' $d/ds" "$d/ds\n"    "" 0 "dir size == 5"
+
+test_rawhide "$rh -e 'dir && size == \"$d/ds/d0\".size' $d/ds" "$d/ds/d0\n$d/ds/d1/d1\n$d/ds/d2/d2\n$d/ds/d3/d3\n$d/ds/d4/d4\n"     "" 0 "dir size == \"d0\".size (0)"
+test_rawhide "$rh -e 'dir && size == \"$d/ds/d1\".size' $d/ds" "$d/ds/d1\n" "" 0 "dir size == \"d1\".size (1)"
+test_rawhide "$rh -e 'dir && size == \"$d/ds/d2\".size' $d/ds" "$d/ds/d2\n" "" 0 "dir size == \"d2\".size (2)"
+test_rawhide "$rh -e 'dir && size == \"$d/ds/d3\".size' $d/ds" "$d/ds/d3\n" "" 0 "dir size == \"d3\".size (3)"
+test_rawhide "$rh -e 'dir && size == \"$d/ds/d4\".size' $d/ds" "$d/ds/d4\n" "" 0 "dir size == \"d4\".size (4)"
+test_rawhide "$rh -e 'dir && size == \"$d/ds\".size'    $d/ds" "$d/ds\n"    "" 0 "dir size == \"ds\".size (5)"
+
+ln -s d0 $d/ds/l0
+ln -s d1 $d/ds/l1
+ln -s d2 $d/ds/l2
+ln -s d3 $d/ds/l3
+ln -s d4 $d/ds/l4
+ln -s . $d/ds/lds
+
+test_rawhide "$rh -e 'link && texists && tdir && tsize == 0'  $d/ds" "$d/ds/l0\n"  "" 0 "link tsize == 0"
+test_rawhide "$rh -e 'link && texists && tdir && tsize == 1'  $d/ds" "$d/ds/l1\n"  "" 0 "link tsize == 1"
+test_rawhide "$rh -e 'link && texists && tdir && tsize == 2'  $d/ds" "$d/ds/l2\n"  "" 0 "link tsize == 2"
+test_rawhide "$rh -e 'link && texists && tdir && tsize == 3'  $d/ds" "$d/ds/l3\n"  "" 0 "link tsize == 3"
+test_rawhide "$rh -e 'link && texists && tdir && tsize == 4'  $d/ds" "$d/ds/l4\n"  "" 0 "link tsize == 4"
+test_rawhide "$rh -e 'link && texists && tdir && tsize == 11' $d/ds" "$d/ds/lds\n" "" 0 "link tsize == 11"
+
+rm -r $d/ds
+
+# Back to stat fields
+
+test_rawhide "$rh -e 'blksize'           $d" "$d\n$d/e\n" "" 0 "blksize"
+case "`uname`" in
+	FreeBSD|SunOS)
+		test_rawhide "$rh -e 'file && blocks'    $d" "$d/e\n" "" 0 "blocks" # FreeBSD/Solaris empty files have 1 block
+		test_rawhide "$rh -e 'file && !blocks'   $d" ""       "" 0 "blocks" # FreeBSD/Solaris empty files have 1 block
+		;;
+	*)
+		test_rawhide "$rh -e 'file && blocks'    $d" ""           "" 0 "blocks" # macOS directories have 0 blocks
+		test_rawhide "$rh -e 'file && !blocks'   $d" "$d/e\n"     "" 0 "blocks" # macOS directories have 0 blocks
+		;;
+esac
+test_rawhide "$rh -e 'atime'                     $d" "$d\n$d/e\n" "" 0 "atime"
+test_rawhide "$rh -e 'mtime'                     $d" "$d\n$d/e\n" "" 0 "mtime"
+test_rawhide "$rh -e 'ctime'                     $d" "$d\n$d/e\n" "" 0 "ctime"
+test_rawhide "$rh -e 'now'                       $d" "$d\n$d/e\n" "" 0 "now"
+test_rawhide "$rh -e 'mtime > now - 5 * minute'  $d" "$d\n$d/e\n" "" 0 "mtime > now - minute" # Allow 5 minutes for valgrind
+test_rawhide "$rh -e 'mtime <= now - 5 * minute' $d" ""           "" 0 "mtime <= now - minute"
+test_rawhide "$rh -e 'today'                     $d" "$d\n$d/e\n" "" 0 "today"
+test_rawhide "$rh -e 'mtime >= today'            $d" "$d\n$d/e\n" "" 0 "mtime > today - minute (it's ok to be wrong at midnight)"
+test_rawhide "$rh -e 'mtime < today'             $d" ""           "" 0 "mtime <= today - minute (it's ok to be wrong at midnight)"
+
+# Time durations (Note: month and year are just averages)
+
+test_rawhide "$rh -e 'second != 1'      $d" "" "" 0 "second"
+test_rawhide "$rh -e 'minute != 60'     $d" "" "" 0 "minute"
+test_rawhide "$rh -e 'hour != 3600'     $d" "" "" 0 "hour"
+test_rawhide "$rh -e 'day != 86400'     $d" "" "" 0 "day"
+test_rawhide "$rh -e 'week != 604800'   $d" "" "" 0 "week"
+test_rawhide "$rh -e 'month != 2629746' $d" "" "" 0 "month"
+test_rawhide "$rh -e 'year != 31556952' $d" "" "" 0 "year"
+
+# Miscellaneous functions, and control flow
+
+test_rawhide "$rh -e nouser  $d" "" "" 0 "nouser (no match)"
+test_rawhide "$rh -e nogroup $d" "" "" 0 "nogroup (no match)"
+nouid=65432
+nogid=65432
+if [ "`whoami`" = root -a -z "`grep -w :$nouid: /etc/passwd`" -a -z "`grep -w :$nogid: /etc/group`" -a -n "`grep -w ^root: /etc/passwd`" -a -n "`grep ^root: /etc/group`" ]
+then
+	chown $nouid $d/e
+	chgrp $nouid $d/e
+	test_rawhide "$rh -e nouser  $d" "$d/e\n" "" 0 "nouser (match)"
+	test_rawhide "$rh -e nogroup $d" "$d/e\n" "" 0 "nogroup (match)"
+	chown root $d/e
+	chgrp root $d/e
+fi
+
+test_rawhide        "$rh -e readable   $d" "$d\n$d/e\n"              "" 0 "readable (access)"
+test_rawhide        "$rh -e writable   $d" "$d\n$d/e\n"              "" 0 "writable (access)"
+# On Solaris, the following can report $d/e as executable.
+# Sometimes it does. Sometimes it doesn't.
+# Apparently, both are fine choices.
+test_rawhide_either "$rh -e executable $d" "$d\n"       "$d\n$d/e\n" "" 0 "executable (access)"
+
+test_rawhide "$rh -e 'strlen == 1'      $d" "$d/e\n" "" 0 "strlen == 1"
+test_rawhide "$rh -e 'strlen != 1'      $d" "$d\n"   "" 0 "strlen != 1"
+test_rawhide "$rh -e 'depth == 0'       $d" "$d\n"   "" 0 "depth == 0"
+test_rawhide "$rh -e 'depth == 1'       $d" "$d/e\n" "" 0 "depth == 1"
+# For prune builtin, see tests/t08 (prune)
+# For exit builtin, see tests/t09 (exit)
+
+# Mode bitmasks from <sys/stat.h>
+
+test_rawhide "$rh -e 'IFIFO  == 0010000' $d" "$d\n$d/e\n" "" 0 "IFIFO"
+test_rawhide "$rh -e 'IFCHR  == 0020000' $d" "$d\n$d/e\n" "" 0 "IFCHR"
+test_rawhide "$rh -e 'IFDIR  == 0040000' $d" "$d\n$d/e\n" "" 0 "IFDIR"
+test_rawhide "$rh -e 'IFBLK  == 0060000' $d" "$d\n$d/e\n" "" 0 "IFBLK"
+test_rawhide "$rh -e 'IFREG  == 0100000' $d" "$d\n$d/e\n" "" 0 "IFREG"
+test_rawhide "$rh -e 'IFLNK  == 0120000' $d" "$d\n$d/e\n" "" 0 "IFLNK"
+test_rawhide "$rh -e 'IFSOCK == 0140000' $d" "$d\n$d/e\n" "" 0 "IFSOCK"
+test_rawhide "$rh -e 'IFDOOR == 0150000' $d" "$d\n$d/e\n" "" 0 "IFDOOR" # For Solaris
+test_rawhide "$rh -e 'IFMT   == 0170000' $d" "$d\n$d/e\n" "" 0 "IFMT"
+test_rawhide "$rh -e 'ISUID  == 04000'   $d" "$d\n$d/e\n" "" 0 "ISUID"
+test_rawhide "$rh -e 'ISGID  == 02000'   $d" "$d\n$d/e\n" "" 0 "ISGID"
+test_rawhide "$rh -e 'ISVTX  == 01000'   $d" "$d\n$d/e\n" "" 0 "ISVTX"
+test_rawhide "$rh -e 'IRWXU  == 0700'    $d" "$d\n$d/e\n" "" 0 "IRWXU"
+test_rawhide "$rh -e 'IRUSR  == 0400'    $d" "$d\n$d/e\n" "" 0 "IRUSR"
+test_rawhide "$rh -e 'IWUSR  == 0200'    $d" "$d\n$d/e\n" "" 0 "IWUSR"
+test_rawhide "$rh -e 'IXUSR  == 0100'    $d" "$d\n$d/e\n" "" 0 "IXUSR"
+test_rawhide "$rh -e 'IRWXG  == 0070'    $d" "$d\n$d/e\n" "" 0 "IRWXG"
+test_rawhide "$rh -e 'IRGRP  == 0040'    $d" "$d\n$d/e\n" "" 0 "IRGRP"
+test_rawhide "$rh -e 'IWGRP  == 0020'    $d" "$d\n$d/e\n" "" 0 "IWGRP"
+test_rawhide "$rh -e 'IXGRP  == 0010'    $d" "$d\n$d/e\n" "" 0 "IXGRP"
+test_rawhide "$rh -e 'IRWXO  == 0007'    $d" "$d\n$d/e\n" "" 0 "IRWXO"
+test_rawhide "$rh -e 'IROTH  == 0004'    $d" "$d\n$d/e\n" "" 0 "IROTH"
+test_rawhide "$rh -e 'IWOTH  == 0002'    $d" "$d\n$d/e\n" "" 0 "IWOTH"
+test_rawhide "$rh -e 'IXOTH  == 0001'    $d" "$d\n$d/e\n" "" 0 "IXOTH"
+
+# Symlink target stat(2) structure fields
+
+rm $d/e
+mkdir $d/d
+chmod 755 $d/d
+echo hi > $d/e
+chmod 644 $d/e
+ln -s ./d $d/sd
+ln -s e   $d/se
+ln -s ./f $d/sf # broken
+ln -s g   $d/sg # broken
+
+test_rawhide "$rh -e 'lnk && texists'                       $d" "$d/sd\n$d/se\n"               "" 0 "texists"
+test_rawhide "$rh -e 'lnk && !texists'                      $d" "$d/sf\n$d/sg\n"               "" 0 "!texists"
+case "`uname`" in
+	NetBSD)
+		test_rawhide "$rh -e 'lnk && tdev'                  $d" ""                             "" 0 "tdev"            # NetBSD directories aren't on a device (or on dev 0)?
+		test_rawhide "$rh -e 'lnk && tmajor | tminor'       $d" ""                             "" 0 "tmajor | tminor" # NetBSD directories aren't on a device (or on dev 0)?
+		;;
+	*)
+		test_rawhide "$rh -e 'lnk && tdev'                  $d" "$d/sd\n$d/se\n"               "" 0 "tdev"
+		test_rawhide "$rh -e 'lnk && tmajor | tminor'       $d" "$d/sd\n$d/se\n"               "" 0 "tmajor | tminor"
+		;;
+esac
+test_rawhide "$rh -e 'lnk && tino != 0'                     $d" "$d/sd\n$d/se\n"               "" 0 "tino"
+test_rawhide "$rh -e 'lnk && tino == 0'                     $d" "$d/sf\n$d/sg\n"               "" 0 "tino (broken)"
+test_rawhide "$rh -e 'lnk && (tmode&~IFMT)&0755==0755'      $d" "$d/sd\n"                      "" 0 "tmode 0755"
+test_rawhide "$rh -e 'lnk && (tmode&~IFMT)==0644'           $d" "$d/se\n"                      "" 0 "tmode 0644"
+test_rawhide "$rh -e 'lnk && (tmode&IFMT)==IFDIR'           $d" "$d/sd\n"                      "" 0 "tmode dir"
+test_rawhide "$rh -e 'lnk && (tmode&IFMT)==IFREG'           $d" "$d/se\n"                      "" 0 "tmode file"
+test_rawhide "$rh -e 'lnk && tmode == 0'                    $d" "$d/sf\n$d/sg\n"               "" 0 "tmode (broken)"
+# Note: directories on btrfs can have only 1 hardlink(!)
+[ $btrfs = 0 ] && test_rawhide "$rh -e 'lnk && tnlink == 1' $d" "$d/se\n"                      "" 0 "tnlink 1"
+[ $btrfs = 0 ] && test_rawhide "$rh -e 'lnk && tnlink == 2' $d" "$d/sd\n"                      "" 0 "tnlink 2"
+[ $btrfs = 1 ] && test_rawhide "$rh -e 'lnk && tnlink == 1' $d" "$d/sd\n$d/se\n"               "" 0 "tnlink 1"
+[ $btrfs = 1 ] && test_rawhide "$rh -e 'lnk && tnlink == 2' $d" ""                             "" 0 "tnlink 2"
+test_rawhide "$rh -e 'lnk && tnlink == 0'                   $d" "$d/sf\n$d/sg\n"               "" 0 "tnlink (broken)"
+test_rawhide "$rh -e 'lnk && texists && tuid == \"$d\".uid' $d" "$d/sd\n$d/se\n"               "" 0 "tuid"
+test_rawhide "$rh -e 'lnk && !texists && tuid == 0'         $d" "$d/sf\n$d/sg\n"               "" 0 "tuid (broken)"
+test_rawhide "$rh -e 'lnk && texists && tgid == \"$d\".gid' $d" "$d/sd\n$d/se\n"               "" 0 "tgid"
+test_rawhide "$rh -e 'lnk && !texists && tgid == 0'         $d" "$d/sf\n$d/sg\n"               "" 0 "tgid (broken)"
+# Testing rdev on non-devices is silly
+case "`uname`" in
+	FreeBSD|NetBSD|SunOS)
+		test_rawhide "$rh -e 'lnk && texists && trdev'             $d" "$d/sd\n$d/se\n" "" 0 "trdev"             # Maybe everything is a device here?
+		test_rawhide "$rh -e 'lnk && texists && trmajor | trminor' $d" "$d/sd\n$d/se\n" "" 0 "trmajor | trminor" # Maybe everything is a device here?
+		test_rawhide "$rh -e 'lnk && !texists && trdev == 0'       $d" "$d/sf\n$d/sg\n" "" 0 "trdev (broken)"
+		test_rawhide "$rh -e 'lnk && !texists && trmajor == 0'     $d" "$d/sf\n$d/sg\n" "" 0 "trmajor (broken)"
+		test_rawhide "$rh -e 'lnk && !texists && trminor == 0'     $d" "$d/sf\n$d/sg\n" "" 0 "trminor (broken)"
+		;;
+	OpenBSD)
+		test_rawhide "$rh -e 'lnk && texists && trdev'             $d" "$d/sd\n$d/se\n" "" 0 "trdev"             # Maybe directories are a device here? Why is the file showing up here as well?
+		test_rawhide "$rh -e 'lnk && texists && trmajor | trminor' $d" "$d/sd\n$d/se\n" "" 0 "trmajor | trminor" # Maybe directories are a device here? Why is the file showing up here as well?
+		test_rawhide "$rh -e 'lnk && !texists && trdev == 0'       $d" "$d/sf\n$d/sg\n" "" 0 "trdev (broken)"
+		test_rawhide "$rh -e 'lnk && !texists && trmajor == 0'     $d" "$d/sf\n$d/sg\n" "" 0 "trmajor (broken)"
+		test_rawhide "$rh -e 'lnk && !texists && trminor == 0'     $d" "$d/sf\n$d/sg\n" "" 0 "trminor (broken)"
+		;;
+	*)
+		test_rawhide "$rh -e 'lnk && texists && trdev'             $d" ""               "" 0 "trdev"
+		test_rawhide "$rh -e 'lnk && texists && trmajor | trminor' $d" ""               "" 0 "trmajor | trminor"
+		test_rawhide "$rh -e 'lnk && !texists && trdev == 0'       $d" "$d/sf\n$d/sg\n" "" 0 "trdev (broken)"
+		test_rawhide "$rh -e 'lnk && !texists && trmajor == 0'     $d" "$d/sf\n$d/sg\n" "" 0 "trmajor (broken)"
+		test_rawhide "$rh -e 'lnk && !texists && trminor == 0'     $d" "$d/sf\n$d/sg\n" "" 0 "trminor (broken)"
+		;;
+esac
+test_rawhide "$rh -e 'lnk && texists && tsize == 3'     $d" "$d/se\n"        "" 0 "tsize"
+test_rawhide "$rh -e 'lnk && !texists && tsize == 0'    $d" "$d/sf\n$d/sg\n" "" 0 "tsize (broken)"
+test_rawhide "$rh -e 'lnk && texists && tblksize != 0'  $d" "$d/sd\n$d/se\n" "" 0 "tsize"
+test_rawhide "$rh -e 'lnk && !texists && tblksize == 0' $d" "$d/sf\n$d/sg\n" "" 0 "tsize (broken)"
+rm $d/e
+touch $d/e
+case "`uname`" in
+	FreeBSD|SunOS)
+		test_rawhide "$rh -e 'lnk && texists && tfile && tblocks'    $d" "$d/se\n" "" 0 "tblocks" # FreeBSD/Solaris empty files have 1 block
+		test_rawhide "$rh -e 'lnk && texists && tfile && !tblocks'   $d" ""        "" 0 "tblocks" # FreeBSD/Solaris empty files have 1 block
+		;;
+	*)
+		test_rawhide "$rh -e 'lnk && texists && tfile && tblocks'    $d" ""        "" 0 "tblocks" # macOS directories have 0 blocks
+		test_rawhide "$rh -e 'lnk && texists && tfile && !tblocks'   $d" "$d/se\n" "" 0 "tblocks" # macOS directories have 0 blocks
+		;;
+esac
+test_rawhide "$rh -e 'lnk && !texists && !tblocks'     $d" "$d/sf\n$d/sg\n"               "" 0 "tblocks (broken)"
+test_rawhide "$rh -e 'lnk && texists && tmtime'        $d" "$d/sd\n$d/se\n"               "" 0 "tmtime"
+test_rawhide "$rh -e 'lnk && !texists && !tmtime'      $d" "$d/sf\n$d/sg\n"               "" 0 "tmtime (broken)"
+test_rawhide "$rh -e 'lnk && texists && tatime'        $d" "$d/sd\n$d/se\n"               "" 0 "tatime"
+test_rawhide "$rh -e 'lnk && !texists && !tatime'      $d" "$d/sf\n$d/sg\n"               "" 0 "tatime (broken)"
+test_rawhide "$rh -e 'lnk && texists && tctime'        $d" "$d/sd\n$d/se\n"               "" 0 "tctime"
+test_rawhide "$rh -e 'lnk && !texists && !tctime'      $d" "$d/sf\n$d/sg\n"               "" 0 "tctime (broken)"
+test_rawhide "$rh -e 'lnk && tstrlen == 1'             $d" "$d/sd\n$d/se\n$d/sf\n$d/sg\n" "" 0 "tstrlen"
+test_rawhide "$rh -e 'lnk && texists && tstrlen == 1'  $d" "$d/sd\n$d/se\n"               "" 0 "tstrlen (non-broken only)"
+test_rawhide "$rh -e 'lnk && !texists && tstrlen == 1' $d" "$d/sf\n$d/sg\n"               "" 0 "tstrlen (broken only)"
+
+rm -r $d/d $d/e $d/s[defg]
+
+ln -s / $d/lroota
+ln -s //// $d/lrootb
+ln -s 1 $d/l1a
+ln -s 1//// $d/l1b
+ln -s ./123 $d/ldot3a
+ln -s ./123//// $d/ldot3b
+
+test_rawhide "$rh -e 'lnk && tstrlen == 0' $d" "$d/lroota\n$d/lrootb\n" "" 0 "tstrlen == 0 for / and //// (trailing / removal)"
+test_rawhide "$rh -e 'lnk && tstrlen == 1' $d" "$d/l1a\n$d/l1b\n"       "" 0 "tstrlen == 1 for 1 and 1/// (trailing / removal)"
+test_rawhide "$rh -e 'lnk && tstrlen == 3' $d" "$d/ldot3a\n$d/ldot3b\n" "" 0 "tstrlen == 3 for ./123 and ./123/// (trailing / removal)"
+
+test_rawhide_post_hook() { true; }
+
+# For reference file fields, see tests/t15
+
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:

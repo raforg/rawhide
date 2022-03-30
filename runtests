@@ -1,0 +1,50 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+# runtests - Run all of the rawhide tests
+
+suites=0
+errors=0
+list=
+
+for t in tests/t*
+do
+	./$t
+	rc=$?
+	if [ "$rc" != 0 ]
+	then
+		rc=1
+		case "$list" in ?*) list="$list ${t#tests/}";; *) list="${t#tests/}";; esac
+	fi
+	suites="`expr $suites + 1`"
+	errors="`expr $errors + $rc`"
+done
+
+if [ $suites -gt 0 -a $errors -eq 0 ]
+then
+	echo All test suites passed
+else
+	echo "$errors/$suites test suites failed ($list)"
+fi
+
+# vi:set ts=4 sw=4:

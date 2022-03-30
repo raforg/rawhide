@@ -1,120 +1,414 @@
+/*
+* rawhide - find files using pretty C expressions
+* https://raf.org/rawhide
+* https://github.com/raforg/rawhide
+*
+* Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 3 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, see <https://www.gnu.org/licenses/>.
+*
+* 20220330 raf <raf@raf.org>
+*/
 
-/* ----------------------------------------------------------------------
- * FILE: rhdata.c
- * VERSION: 2
- * Written by: Ken Stauffer
- * This file contains the predefined symbol table, and related data
- * structures.
- *
- * ---------------------------------------------------------------------- */
-
-#define DATA
-#include "rh.h"
-#include "rhcmds.h"
-#include "rhparse.h"
+#define _GNU_SOURCE /* For FNM_EXTMATCH and FNM_CASEFOLD in <fnmatch.h> */
+#define _FILE_OFFSET_BITS 64 /* For 64-bit off_t on 32-bit systems (Not AIX) */
 
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <fnmatch.h>
 #include <time.h>
 #include <sys/stat.h>
 
-struct symbol	*symbols;
+#define DATA
+#include "rh.h"
+#include "rhdata.h"
+#include "rhcmds.h"
+#include "rherr.h"
 
-struct symbol	*tokensym;
-long			tokenval;
-long			token;
+char *prog_name;                     /* Name of the program for messages */
+runtime_t attr;                      /* Configuration and runtime state */
 
-char			Strbuf[MAX_STRBUF_SIZE + 1];
-int				strfree = 0;
+symbol_t *symbols;                   /* Symbol table */
+symbol_t *tokensym;                  /* Current token symbol */
+llong tokenval;                      /* Current token value */
+llong token;                         /* Current token code */
 
-struct instr	StackProgram[MAX_PROGRAM_SIZE];
-int				PC;
-int				startPC;
+instr_t Program[MAX_PROGRAM_SIZE];   /* Program instructions */
+llong PC;                            /* Program counter */
+llong startPC;                       /* Initial program counter */
 
-long			Stack[MAX_STACK_SIZE + 3];
-int				SP;
-int				FP;
+llong Stack[MAX_STACK_SIZE + 3];     /* Stack */
+llong SP;                            /* Stack pointer */
+llong FP;                            /* Frame pointer */
 
-struct runtime	attr;
+char Strbuf[MAX_DATA_SIZE];          /* Storage for string literals */
+llong strfree = 0;                   /* Index into Strbuf for the next string literal */
 
-/*
- * The following variables specify where the input is comming from.
- * If expstr == NULL then the input is certainly not from there, and
- * instead is taken from expfile.
- * else expstr is used as input.
- *
- */
+reffile_t RefFile[MAX_REFFILE_SIZE]; /* Storage for reference files */
+llong reffree = 0;                   /* Index into RefFile for the next one */
 
-char		*expstr;
-FILE		*expfile;
-char		*expfname;
+char *expstr;   /* The -e option argument */
+char *expfname; /* The -f option filename or current config file */
+FILE *expfile;  /* FILE handle for expfname */
 
-static struct symbol init_syms[] =
+#ifndef S_IFDOOR
+#define S_IFDOOR 0150000
+#endif
+
+/* Initial built-in symbol table */
+
+static symbol_t init_syms[] =
 {
-	{ "NOW",	NUMBER,	0,			c_number,	NULL },
-	{ "IFBLK",	NUMBER,	S_IFBLK,	c_number,	NULL },
-	{ "IFCHR",	NUMBER,	S_IFCHR,	c_number,	NULL },
-	{ "IFDIR",	NUMBER,	S_IFDIR,	c_number,	NULL },
-	{ "IFMT",	NUMBER,	S_IFMT,		c_number,	NULL },
-	{ "IFREG",	NUMBER,	S_IFREG,	c_number,	NULL },
-	{ "ISGID",	NUMBER,	S_ISGID,	c_number,	NULL },
-	{ "ISUID",	NUMBER,	S_ISUID,	c_number,	NULL },
-	{ "ISVTX",	NUMBER,	S_ISVTX,	c_number,	NULL },
-#ifdef S_IFLNK
-	{ "IFLNK",	NUMBER,	S_IFLNK,	c_number,	NULL },
+	/* stat structure fields */
+
+	{ "dev",     FIELD, 0, c_dev,     NULL },
+	{ "major",   FIELD, 0, c_major,   NULL },
+	{ "minor",   FIELD, 0, c_minor,   NULL },
+	{ "ino",     FIELD, 0, c_ino,     NULL },
+	{ "mode",    FIELD, 0, c_mode,    NULL },
+	{ "nlink",   FIELD, 0, c_nlink,   NULL },
+	{ "uid",     FIELD, 0, c_uid,     NULL },
+	{ "gid",     FIELD, 0, c_gid,     NULL },
+	{ "rdev",    FIELD, 0, c_rdev,    NULL },
+	{ "rmajor",  FIELD, 0, c_rmajor,  NULL },
+	{ "rminor",  FIELD, 0, c_rminor,  NULL },
+	{ "size",    FIELD, 0, c_size,    NULL },
+	{ "blksize", FIELD, 0, c_blksize, NULL },
+	{ "blocks",  FIELD, 0, c_blocks,  NULL },
+	{ "atime",   FIELD, 0, c_atime,   NULL },
+	{ "mtime",   FIELD, 0, c_mtime,   NULL },
+	{ "ctime",   FIELD, 0, c_ctime,   NULL },
+
+	/* Miscellaneous functions and control flow */
+
+	{ "nouser",     FIELD, 0, c_nouser,     NULL },
+	{ "nogroup",    FIELD, 0, c_nogroup,    NULL },
+	{ "readable",   FIELD, 0, c_readable,   NULL },
+	{ "writable",   FIELD, 0, c_writable,   NULL },
+	{ "executable", FIELD, 0, c_executable, NULL },
+	{ "strlen",     FIELD, 0, c_strlen,     NULL },
+	{ "depth",      FIELD, 0, c_depth,      NULL },
+	{ "prune",      FIELD, 0, c_prune,      NULL },
+	{ "trim",       FIELD, 0, c_trim,       NULL },
+	{ "exit",       FIELD, 0, c_exit,       NULL },
+
+	/* Time */
+
+	{ "now",    NUMBER, 0,                            c_number, NULL }, /* Set by rawhide_init() */
+	{ "today",  NUMBER, 0,                            c_number, NULL }, /* Set by rawhide_init() */
+	{ "second", NUMBER, 1,                            c_number, NULL },
+	{ "minute", NUMBER, 60,                           c_number, NULL },
+	{ "hour",   NUMBER, 60 * 60,                      c_number, NULL },
+	{ "day",    NUMBER, 60 * 60 * 24,                 c_number, NULL },
+	{ "week",   NUMBER, 60 * 60 * 24 * 7,             c_number, NULL },
+	{ "month",  NUMBER, 60 * 60 * 24 * 365.2425 / 12, c_number, NULL },
+	{ "year",   NUMBER, 60 * 60 * 24 * 365.2425,      c_number, NULL },
+
+	/* Constants from <sys/stat.h> */
+
+	{ "IFREG",  NUMBER, S_IFREG,  c_number, NULL },
+	{ "IFDIR",  NUMBER, S_IFDIR,  c_number, NULL },
+	{ "IFLNK",  NUMBER, S_IFLNK,  c_number, NULL },
+	{ "IFCHR",  NUMBER, S_IFCHR,  c_number, NULL },
+	{ "IFBLK",  NUMBER, S_IFBLK,  c_number, NULL },
+	{ "IFSOCK", NUMBER, S_IFSOCK, c_number, NULL },
+	{ "IFIFO",  NUMBER, S_IFIFO,  c_number, NULL },
+	{ "IFDOOR", NUMBER, S_IFDOOR, c_number, NULL },
+	{ "IFMT",   NUMBER, S_IFMT,   c_number, NULL },
+	{ "ISUID",  NUMBER, S_ISUID,  c_number, NULL },
+	{ "ISGID",  NUMBER, S_ISGID,  c_number, NULL },
+	{ "ISVTX",  NUMBER, S_ISVTX,  c_number, NULL },
+	{ "IRWXU",  NUMBER, S_IRWXU,  c_number, NULL },
+	{ "IRUSR",  NUMBER, S_IRUSR,  c_number, NULL },
+	{ "IWUSR",  NUMBER, S_IWUSR,  c_number, NULL },
+	{ "IXUSR",  NUMBER, S_IXUSR,  c_number, NULL },
+	{ "IRWXG",  NUMBER, S_IRWXG,  c_number, NULL },
+	{ "IRGRP",  NUMBER, S_IRGRP,  c_number, NULL },
+	{ "IWGRP",  NUMBER, S_IWGRP,  c_number, NULL },
+	{ "IXGRP",  NUMBER, S_IXGRP,  c_number, NULL },
+	{ "IRWXO",  NUMBER, S_IRWXO,  c_number, NULL },
+	{ "IROTH",  NUMBER, S_IROTH,  c_number, NULL },
+	{ "IWOTH",  NUMBER, S_IWOTH,  c_number, NULL },
+	{ "IXOTH",  NUMBER, S_IXOTH,  c_number, NULL },
+
+	/* Symlink target stat structure fields */
+
+	{ "texists",   FIELD, 0, t_exists,  NULL },
+	{ "tdev",      FIELD, 0, t_dev,     NULL },
+	{ "tmajor",    FIELD, 0, t_major,   NULL },
+	{ "tminor",    FIELD, 0, t_minor,   NULL },
+	{ "tino",      FIELD, 0, t_ino,     NULL },
+	{ "tmode",     FIELD, 0, t_mode,    NULL },
+	{ "tnlink",    FIELD, 0, t_nlink,   NULL },
+	{ "tuid",      FIELD, 0, t_uid,     NULL },
+	{ "tgid",      FIELD, 0, t_gid,     NULL },
+	{ "trdev",     FIELD, 0, t_rdev,    NULL },
+	{ "trmajor",   FIELD, 0, t_rmajor,  NULL },
+	{ "trminor",   FIELD, 0, t_rminor,  NULL },
+	{ "tsize",     FIELD, 0, t_size,    NULL },
+	{ "tblksize",  FIELD, 0, t_blksize, NULL },
+	{ "tblocks",   FIELD, 0, t_blocks,  NULL },
+	{ "tatime",    FIELD, 0, t_atime,   NULL },
+	{ "tmtime",    FIELD, 0, t_mtime,   NULL },
+	{ "tctime",    FIELD, 0, t_ctime,   NULL },
+	{ "tstrlen",   FIELD, 0, t_strlen,  NULL },
+
+	/* Reference file stat structure fields */
+
+	{ ".exists",   REFFILE, 0, r_exists,  NULL },
+	{ ".dev",      REFFILE, 0, r_dev,     NULL },
+	{ ".major",    REFFILE, 0, r_major,   NULL },
+	{ ".minor",    REFFILE, 0, r_minor,   NULL },
+	{ ".ino",      REFFILE, 0, r_ino,     NULL },
+	{ ".mode",     REFFILE, 0, r_mode,    NULL },
+	{ ".type",     REFFILE, 0, r_type,    NULL },
+	{ ".perm",     REFFILE, 0, r_perm,    NULL },
+	{ ".nlink",    REFFILE, 0, r_nlink,   NULL },
+	{ ".uid",      REFFILE, 0, r_uid,     NULL },
+	{ ".gid",      REFFILE, 0, r_gid,     NULL },
+	{ ".rdev",     REFFILE, 0, r_rdev,    NULL },
+	{ ".rmajor",   REFFILE, 0, r_rmajor,  NULL },
+	{ ".rminor",   REFFILE, 0, r_rminor,  NULL },
+	{ ".size",     REFFILE, 0, r_size,    NULL },
+	{ ".blksize",  REFFILE, 0, r_blksize, NULL },
+	{ ".blocks",   REFFILE, 0, r_blocks,  NULL },
+	{ ".atime",    REFFILE, 0, r_atime,   NULL },
+	{ ".mtime",    REFFILE, 0, r_mtime,   NULL },
+	{ ".ctime",    REFFILE, 0, r_ctime,   NULL },
+	{ ".strlen",   REFFILE, 0, r_strlen,  NULL },
+
+	{ ".inode",    REFFILE, 0, r_ino,     NULL },
+	{ ".nlinks",   REFFILE, 0, r_nlink,   NULL },
+	{ ".user",     REFFILE, 0, r_uid,     NULL },
+	{ ".group",    REFFILE, 0, r_gid,     NULL },
+	{ ".sz",       REFFILE, 0, r_size,    NULL },
+	{ ".accessed", REFFILE, 0, r_atime,   NULL },
+	{ ".modified", REFFILE, 0, r_mtime,   NULL },
+	{ ".changed",  REFFILE, 0, r_ctime,   NULL },
+	{ ".len",      REFFILE, 0, r_strlen,  NULL },
+
+	/* Pattern modifiers */
+
+#ifdef FNM_CASEFOLD
+	{ ".i",        PATMOD, 0, c_i,       NULL },
 #endif
-#ifdef S_IFSOCK
-	{ "IFSOCK",	NUMBER,	S_IFSOCK,	c_number,	NULL },
+	{ ".path",     PATMOD, 0, c_path,    NULL },
+#ifdef FNM_CASEFOLD
+	{ ".ipath",    PATMOD, 0, c_ipath,   NULL },
 #endif
-#ifdef S_IFIFO
-	{ "IFIFO",	NUMBER,	S_IFIFO,	c_number,	NULL },
+	{ ".link",     PATMOD, 0, c_link,    NULL },
+#ifdef FNM_CASEFOLD
+	{ ".ilink",    PATMOD, 0, c_ilink,   NULL },
 #endif
-	{ "atime",	FIELD,	0,			c_atime,	NULL },
-	{ "ctime",	FIELD,	0,			c_ctime,	NULL },
-	{ "dev",	FIELD,	0,			c_dev,		NULL },
-	{ "gid",	FIELD,	0,			c_gid,		NULL },
-	{ "ino",	FIELD,	0,			c_ino,		NULL },
-	{ "mode",	FIELD,	0,			c_mode,		NULL },
-	{ "mtime",	FIELD,	0,			c_mtime,	NULL },
-	{ "nlink",	FIELD,	0,			c_nlink,	NULL },
-	{ "rdev",	FIELD,	0,			c_rdev,		NULL },
-	{ "size",	FIELD,	0,			c_size,		NULL },
-	{ "uid",	FIELD,	0,			c_uid,		NULL },
-	{ "depth",	FIELD,	0,			c_depth,	NULL },
-	{ "prune",	FIELD,	0,			c_prune,	NULL },
-	{ "days",	NUMBER,	24 * 3600,		c_number,	NULL },
-	{ "weeks",	NUMBER,	24 * 3600 * 7,	c_number,	NULL },
-	{ "hours",	NUMBER, 3600,		c_number,	NULL },
-	{ "strlen",	FIELD,  0,			c_baselen,	NULL },
-	{ "return",	RETURN,	0,			c_return,	NULL }
+#ifdef HAVE_ACL
+	{ ".acl",      PATMOD, 0, c_acl,     NULL },
+#ifdef FNM_CASEFOLD
+	{ ".iacl",     PATMOD, 0, c_iacl,    NULL },
+#endif
+#endif
+#ifdef HAVE_EA
+	{ ".ea",       PATMOD, 0, c_ea,      NULL },
+#ifdef FNM_CASEFOLD
+	{ ".iea",      PATMOD, 0, c_iea,     NULL },
+#endif
+#endif
+#ifdef HAVE_PCRE2
+	{ ".re",       PATMOD, 0, c_re,      NULL },
+	{ ".rei",      PATMOD, 0, c_rei,     NULL },
+	{ ".repath",   PATMOD, 0, c_repath,  NULL },
+	{ ".reipath",  PATMOD, 0, c_reipath, NULL },
+	{ ".relink",   PATMOD, 0, c_relink,  NULL },
+	{ ".reilink",  PATMOD, 0, c_reilink, NULL },
+#ifdef HAVE_ACL
+	{ ".reacl",    PATMOD, 0, c_reacl,   NULL },
+	{ ".reiacl",   PATMOD, 0, c_reiacl,  NULL },
+#endif
+#ifdef HAVE_EA
+	{ ".reea",     PATMOD, 0, c_reea,    NULL },
+	{ ".reiea",    PATMOD, 0, c_reiea,   NULL },
+#endif
+#endif
+	{ ".sh",       PATMOD, 0, c_sh,      NULL },
 };
 
-void rhinit(void)
+/*
+
+void rawhide_init(void);
+
+Prepare the symbol table with built-in symbols.
+Set the values for "now" and "today".
+Must be called before the -h option is processed.
+
+*/
+
+void rawhide_init(void)
 {
+	symbol_t *sym;
+	struct tm *tm;
+	time_t t;
 	int i;
-	struct symbol *s;
 
 	symbols = &init_syms[0];
 
-	for (i = 0; i < sizeof(init_syms) / sizeof(struct symbol) - 1; i++)
+	for (i = 0; i < sizeof(init_syms) / sizeof(symbol_t) - 1; i++)
 		init_syms[i].next = &init_syms[i + 1];
 
-	/* Initialize the NOW variable to the time right now */
+	/* Initialize "now" to the time right now */
 
-	s = locatename("NOW");
-	s->value = time(NULL);
+	sym = locate_symbol("now");
+	sym->value = (llong)time(&t);
+
+	/* Initialize "today" to the time last midnight (local time) */
+
+	tm = localtime(&t);
+	tm->tm_hour = tm->tm_min = tm->tm_sec = 0;
+	tm->tm_isdst = -1;
+	t = mktime(tm);
+
+	sym = locate_symbol("today");
+	sym->value = (llong)t;
+
+	/* Initialize Program */
+
+	PC = 0;
+	startPC = -1;
 }
 
-void rhfinish(void)
-{
-	struct symbol *s;
+/*
 
-	while (symbols->type == PARAM || symbols->type == FUNCTION)
+void rawhide_finish(void);
+
+Free non-built-in symbols.
+Must be called after parsing.
+Can be called before searching.
+
+*/
+
+void rawhide_finish(void)
+{
+	symbol_t *s;
+
+	while (symbols->type == PARAM || symbols->type == FUNCTION || symbols->type == IDENTIFIER)
 	{
 		s = symbols;
 		symbols = symbols->next;
 		free(s->name);
 		free(s);
 	}
+}
+
+/*
+
+symbol_t *insert_symbol(char *name, int toktype, llong val);
+
+Insert a new symbol into the symbol table.
+The name parameter is its name.
+The toktype parameter is its type.
+The val parameter is its value, or zero.
+
+Return a pointer to the symbol table entry.
+The symbol is inserted at the head of the linked list.
+This behaviour is relied upon elsewhere.
+
+*/
+
+symbol_t *insert_symbol(char *name, int toktype, llong val)
+{
+	symbol_t *sym;
+
+	if (!(sym = malloc(sizeof(symbol_t))))
+		return NULL;
+
+	if (!(sym->name = strdup(name)))
+	{
+		free(sym);
+
+		return NULL;
+	}
+
+	sym->type = toktype;
+	sym->value = val;
+	sym->next = symbols;
+	symbols = sym;
+
+	return sym;
+}
+
+/*
+
+symbol_t *locate_symbol(char *name);
+
+Search for a symbol in the symbol table.
+The name parameter is the name of the symbol to search for.
+
+*/
+
+symbol_t *locate_symbol(char *name)
+{
+	symbol_t *s;
+
+	for (s = symbols; s; s = s->next)
+		if (!strcmp(name, s->name))
+			return s;
+
+	return NULL;
+}
+
+/*
+
+int rawhide_instruction(void (*func)(llong), llong value);
+
+Append a rawhide instruction to the Program array.
+The func parameter is the instruction's implementation.
+The value parameter is the argument to that function.
+
+*/
+
+int rawhide_instruction(void (*func)(llong), llong value)
+{
+	if (PC >= MAX_PROGRAM_SIZE)
+		return -1;
+
+	Program[PC].func = func;
+	Program[PC++].value = value;
+
+	return 0;
+}
+
+/*
+
+llong rawhide_execute(void);
+
+Execute the program stored in Program.
+Each element of Program contains a pointer to a function.
+The program is NULL terminated.
+Returns the value of the expression.
+
+*/
+
+llong rawhide_execute(void)
+{
+	for (SP = 0, PC = startPC; Program[PC].func; PC++)
+	{
+		(*Program[PC].func)(Program[PC].value);
+
+		if (SP >= MAX_STACK_SIZE)
+			fatal("stack overflow");
+	}
+
+	return Stack[0];
 }
 
 /* vi:set ts=4 sw=4: */

@@ -1,0 +1,219 @@
+# /etc/rawhide.conf: rh system-wide configuration.
+# See rh(1) and rawhide.conf(5) for more information.
+
+/*
+This file constitutes the rawhide "standard" library.
+
+Actually, this is a smaller version of the library that
+excludes most of the longer alternative names for things.
+This might be preferable for resource-constrained systems.
+Particularly when rawhide is configured with --static=tiny.
+
+You can modify this file, and/or place additional
+files in the /etc/rawhide.conf.d directory.
+They'll be read after this file, in lexicographic order.
+Any files whose names start with dot are skipped.
+
+On some systems, this file could be somewhere other than /etc
+(e.g., /usr/local/etc, /opt/local/etc, /usr/pkg/etc).
+
+You can also create your own user-specific rawhide
+functions in ~/.rhrc and ~/.rhrc.d/*. They'll be
+read by rh after these system-wide files.
+Any files whose names start with dot are skipped.
+*/
+
+
+// File types (canonical, aliases)
+
+type { mode & IFMT }
+
+f { type == IFREG }
+d { type == IFDIR }
+b { type == IFBLK }
+c { type == IFCHR }
+l { type == IFLNK }
+s { type == IFSOCK }
+p { type == IFIFO }
+D { type == IFDOOR } # Solaris
+
+// File permissions (canonical, aliases, helpers)
+
+perm { mode & ~IFMT }
+
+ur { perm & IRUSR }
+uw { perm & IWUSR }
+ux { perm & IXUSR }
+gr { perm & IRGRP }
+gw { perm & IWGRP }
+gx { perm & IXGRP }
+or { perm & IROTH }
+ow { perm & IWOTH }
+ox { perm & IXOTH }
+wr { perm & IROTH }
+ww { perm & IWOTH }
+wx { perm & IXOTH }
+
+suid { perm & ISUID }
+sgid { perm & ISGID }
+svtx { perm & ISVTX }
+
+setuid { suid }
+setgid { sgid }
+sticky { svtx }
+
+
+all(bitmask)  { (perm & bitmask) == bitmask }
+any(bitmask)  { perm & bitmask }
+none(bitmask) { !any(bitmask) }
+
+allr  { all(IRUSR | IRGRP | IROTH) }
+allw  { all(IWUSR | IWGRP | IWOTH) }
+allx  { all(IXUSR | IXGRP | IXOTH) }
+anyr  { any(IRUSR | IRGRP | IROTH) }
+anyw  { any(IWUSR | IWGRP | IWOTH) }
+anyx  { any(IXUSR | IXGRP | IXOTH) }
+noner { !anyr }
+nonew { !anyw }
+nonex { !anyx }
+
+
+// Aliases for built-ins
+
+inode    { ino }
+nlinks   { nlink }
+user     { uid }
+group    { gid }
+space    { blocks * 512 }
+accessed { atime }
+modified { mtime } # Refers to the contents
+changed  { ctime } # Refers to the inode
+len      { strlen }
+sz       { size }
+
+seconds  { second }
+minutes  { minute }
+hours    { hour }
+days     { day }
+weeks    { week }
+months   { month }
+years    { year }
+quit     { exit }
+
+imayread  { readable }   # Uses access(2) not perm
+imaywrite { writable }   # Uses access(2) not perm
+imayexec  { executable } # Uses access(2) not perm
+
+ir { readable }
+iw { writable }
+ix { executable }
+
+
+// File types for symlink targets (canonical, aliases)
+
+ttype { tmode & IFMT }
+
+tf { ttype == IFREG }
+td { ttype == IFDIR }
+tb { ttype == IFBLK }
+tc { ttype == IFCHR }
+tl { ttype == IFLNK } # Impossible
+ts { ttype == IFSOCK }
+tp { ttype == IFIFO }
+tD { ttype == IFDOOR } # Solaris
+
+
+// File permissions for symlink targets (canonical, aliases, helpers)
+
+tperm { tmode & ~IFMT }
+
+tur { tperm & IRUSR }
+tuw { tperm & IWUSR }
+tux { tperm & IXUSR }
+tgr { tperm & IRGRP }
+tgw { tperm & IWGRP }
+tgx { tperm & IXGRP }
+tor { tperm & IROTH }
+tow { tperm & IWOTH }
+tox { tperm & IXOTH }
+twr { tperm & IROTH }
+tww { tperm & IWOTH }
+twx { tperm & IXOTH }
+
+
+tsuid { tperm & ISUID }
+tsgid { tperm & ISGID }
+tsvtx { tperm & ISVTX }
+
+tsetuid { tsuid }
+tsetgid { tsgid }
+tsticky { tsvtx }
+
+
+tall(bitmask)  { (tperm & bitmask) == bitmask }
+tany(bitmask)  { tperm & bitmask }
+tnone(bitmask) { !tany(bitmask) }
+
+tallr  { tall(IRUSR | IRGRP | IROTH) }
+tallw  { tall(IWUSR | IWGRP | IWOTH) }
+tallx  { tall(IXUSR | IXGRP | IXOTH) }
+tanyr  { tany(IRUSR | IRGRP | IROTH) }
+tanyw  { tany(IWUSR | IWGRP | IWOTH) }
+tanyx  { tany(IXUSR | IXGRP | IXOTH) }
+tnoner { !tanyr }
+tnonew { !tanyw }
+tnonex { !tanyx }
+
+
+// Aliases for symlink target built-ins
+
+tinode    { tino }
+tnlinks   { tnlink }
+tuser     { tuid }
+tgroup    { tgid }
+tspace    { tblocks * 512 }
+taccessed { tatime }
+tmodified { tmtime } # Refers to the target's contents
+tchanged  { tctime } # Refers to the target's inode
+tlen      { tstrlen }
+tsz       { tsize }
+
+
+// Miscellaneous helper functions
+
+empty { size == 0 } # Only for files and readable directories
+roots { uid == 0 }
+mine { uid == $$ }
+ours { gid == @@ }
+broken { l && !texists }
+dangling { broken }
+gmtoday { now - now % day }
+
+ago(sec)  { now - sec }
+old(sec)  { mtime <= ago(sec) }
+past(sec) { mtime >= ago(sec) }
+min(x, y) { (x < y) ? x : y }
+max(x, y) { (x > y) ? x : y }
+abs(x)    { (x < 0) ? -x : x }
+
+
+// Examples
+
+// Complex tests can be very readable (and/or very concise)
+// rootshell { setuid && roots && (group_writable | other_writable) }
+// rootshell { suid && roots && (gw | ow) }
+// csrc { "*.[ch]" || "[Mm]akefile" }
+// oldaout { "a.out" && f && old(week) }
+// oldcore { "^core(\.\d+)?$".re && f && old(week) }
+// bad { oldaout || oldcore || "*.BAK" || "*.CKP" || gw | ow }
+// Note: Read "<" and ">" as before/after, not as less/more than
+// recent { modified > ago(hour) }
+
+// Silly recursive functions are possible (but not mutual recursion)
+// sqrt1(n, odd) { (n <= 0) ? 0 : sqrt1(n - odd, odd + 2) + 1 }
+// sqrt(n) { sqrt1(n, 1) }
+// prime1(n, i) { (i * i > n) ? 1 : !(n % i) ? 0 : prime1(n, i + 2) }
+// prime(n) { (n < 2) ? 0 : !(n % 2) ? n == 2 : prime1(n, 3) }
+// factorial(x) { (x > 0) ? x * factorial(x - 1) : 1 }
+// ack(x, y) { !x ? y+1 : !y ? ack(x-1, 1) : ack(x-1, ack(x, y-1)) }
+

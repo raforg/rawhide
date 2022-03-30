@@ -1,0 +1,79 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+. tests/.common
+
+label="traversal error reporting (stderr and exit status)"
+
+mkdir $d/d1
+mkdir $d/d1/d2
+mkdir $d/d1/d2/d3
+mkdir $d/d1/d2/d3/d4
+
+# Test "too many directory levels"
+
+test_rawhide "RAWHIDE_TEST_DEPTH_LIMIT=1 $rh $d" "$d\n$d/d1\n"                                        "./rh: too many directory levels: $d/d1\n"          1 "reached system depth limit 1"
+test_rawhide "RAWHIDE_TEST_DEPTH_LIMIT=2 $rh $d" "$d\n$d/d1\n$d/d1/d2\n"                              "./rh: too many directory levels: $d/d1/d2\n"       1 "reached system depth limit 2"
+test_rawhide "RAWHIDE_TEST_DEPTH_LIMIT=3 $rh $d" "$d\n$d/d1\n$d/d1/d2\n$d/d1/d2/d3\n"                 "./rh: too many directory levels: $d/d1/d2/d3\n"    1 "reached system depth limit 3"
+test_rawhide "RAWHIDE_TEST_DEPTH_LIMIT=4 $rh $d" "$d\n$d/d1\n$d/d1/d2\n$d/d1/d2/d3\n$d/d1/d2/d3/d4\n" "./rh: too many directory levels: $d/d1/d2/d3/d4\n" 1 "reached system depth limit 4"
+test_rawhide "RAWHIDE_TEST_DEPTH_LIMIT=5 $rh $d" "$d\n$d/d1\n$d/d1/d2\n$d/d1/d2/d3\n$d/d1/d2/d3/d4\n" ""                                                  0 "not reached system depth limit 5"
+
+# Test just enough
+
+test_rawhide "RAWHIDE_TEST_DEPTH_LIMIT=1 $rh -M1 $d" "$d\n$d/d1\n"                                        ""                                                          0 "not reached system depth limit 1"
+test_rawhide "RAWHIDE_TEST_DEPTH_LIMIT=2 $rh -M2 $d" "$d\n$d/d1\n$d/d1/d2\n"                              ""                                                          0 "not reached system depth limit 2"
+test_rawhide "RAWHIDE_TEST_DEPTH_LIMIT=3 $rh -M3 $d" "$d\n$d/d1\n$d/d1/d2\n$d/d1/d2/d3\n"                 ""                                                          0 "not reached system depth limit 3"
+test_rawhide "RAWHIDE_TEST_DEPTH_LIMIT=4 $rh -M4 $d" "$d\n$d/d1\n$d/d1/d2\n$d/d1/d2/d3\n$d/d1/d2/d3/d4\n" ""                                                          0 "not reached system depth limit 4"
+test_rawhide "RAWHIDE_TEST_DEPTH_LIMIT=5 $rh -M5 $d" "$d\n$d/d1\n$d/d1/d2\n$d/d1/d2/d3\n$d/d1/d2/d3/d4\n" ""                                                          0 "not reached system depth limit 5"
+
+# Test fstatat messages
+
+test_rawhide_post_hook() { test_rh_errno_post_hook; }
+test_rawhide "RAWHIDE_TEST_FSTATAT_FAILURE=$d             $rh $d" ""                                   "./rh: fstatat $d: Operation not permitted\n"             1 "fstatat failure $d/"
+test_rawhide "RAWHIDE_TEST_FSTATAT_FAILURE=$d/d1          $rh $d" "$d\n"                               "./rh: fstatat $d/d1: Operation not permitted\n"          1 "fstatat failure $d/d1"
+test_rawhide "RAWHIDE_TEST_FSTATAT_FAILURE=$d/d1/d2       $rh $d" "$d\n$d/d1\n"                        "./rh: fstatat $d/d1/d2: Operation not permitted\n"       1 "fstatat failure $d/d1/d2"
+test_rawhide "RAWHIDE_TEST_FSTATAT_FAILURE=$d/d1/d2/d3    $rh $d" "$d\n$d/d1\n$d/d1/d2\n"              "./rh: fstatat $d/d1/d2/d3: Operation not permitted\n"    1 "fstatat failure $d/d1/d2/d3"
+test_rawhide "RAWHIDE_TEST_FSTATAT_FAILURE=$d/d1/d2/d3/d4 $rh $d" "$d\n$d/d1\n$d/d1/d2\n$d/d1/d2/d3\n" "./rh: fstatat $d/d1/d2/d3/d4: Operation not permitted\n" 1 "fstatat failure $d/d1/d2/d3/d4"
+test_rawhide_post_hook() { true; }
+
+# For "stack overflow", see tests/t12 (parser error messages)
+# For "path is too long" see tests/t03 (path buf size handling)
+
+# Test opendir
+
+if [ "`whoami`" != root ]
+then
+	chmod 000 $d/d1/d2/d3/d4
+	test_rawhide "$rh $d" "$d\n$d/d1\n$d/d1/d2\n$d/d1/d2/d3\n$d/d1/d2/d3/d4\n"  "./rh: $d/d1/d2/d3/d4: Permission denied\n" 1 "openat permission error 1"
+	chmod 755 $d/d1/d2/d3/d4
+
+	chmod 000 $d/d1/d2/d3
+	test_rawhide "$rh $d" "$d\n$d/d1\n$d/d1/d2\n$d/d1/d2/d3\n"                  "./rh: $d/d1/d2/d3: Permission denied\n"    1 "openat permission error 2"
+	chmod 755 $d/d1/d2/d3
+fi
+
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:

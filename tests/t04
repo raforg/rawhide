@@ -1,0 +1,44 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+. tests/.common
+
+label="rc is failure when -x cmd fails"
+
+touch $d/abc
+
+test_rawhide "$rh -x 'echo out' $d"            "out\nout\n" ""           0 "-x rc=0"
+test_rawhide "$rh -x 'echo err >&2' $d"        ""           "err\nerr\n" 0 "-x stderr but rc=0"
+test_rawhide "$rh -x 'echo err >&2; false' $d" ""           "err\nerr\n" 1 "-x stderr and rc=1"
+
+label="rc is failure when -X cmd fails"
+
+test_rawhide "$rh -X 'echo out' $d"            "out\nout\n" ""           0 "-X rc=0"
+test_rawhide "$rh -X 'echo err >&2' $d"        ""           "err\nerr\n" 0 "-X stderr but rc=0"
+test_rawhide "$rh -X 'echo err >&2; false' $d" ""           "err\nerr\n" 1 "-X stderr and rc=1"
+
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:

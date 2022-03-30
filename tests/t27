@@ -1,0 +1,722 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20220330 raf <raf@raf.org>
+
+. tests/.common
+
+label="acl ea %z %x %Z %X %j"
+
+touch $d/none
+touch $d/acl
+touch $d/ea
+touch $d/both
+ln -s none $d/symnone
+ln -s acl $d/symacl
+ln -s ea $d/symea
+ln -s both $d/symboth
+ln -s none $d/symlink
+
+test_rawhide_post_hook() { test_rh_sort_post_hook; }
+
+$rh -h | grep -q '\.acl' && ACL=1 || ACL=0
+$rh -h | grep -q '\.ea' && EA=1 || EA=0
+
+if [ $ACL = 1 ]
+then
+	case "`uname`" in
+		Linux) # setfacl setfattr
+			if [ -x "`which setfacl 2>/dev/null`" ]
+			then
+				setfacl -m user:root:rwx $d/acl $d/both
+				test_rawhide "$rh    -L '%z\n' $d/none"    "user::rw-,group::r--,other::r--\n"                         "" 0 "-L %z (no acl or ea)"
+				test_rawhide "$rh    -L '%z\n' $d/acl"     "user::rw-,user:root:rwx,group::r--,mask::rwx,other::r--\n" "" 0 "-L %z (acl)"
+				test_rawhide "$rh    -L '%z\n' $d/ea"      "user::rw-,group::r--,other::r--\n"                         "" 0 "-L %z (ea)"
+				test_rawhide "$rh    -L '%z\n' $d/both"    "user::rw-,user:root:rwx,group::r--,mask::rwx,other::r--\n" "" 0 "-L %z (acl+ea)"
+				test_rawhide "$rh    -L '%z\n' $d/symnone" "user::rw-,group::r--,other::r--\n"                         "" 0 "-L %z (symlink to no acl or ea)"
+				test_rawhide "$rh    -L '%z\n' $d/symacl"  "user::rw-,user:root:rwx,group::r--,mask::rwx,other::r--\n" "" 0 "-L %z (symlink to acl)"
+				test_rawhide "$rh    -L '%z\n' $d/symea"   "user::rw-,group::r--,other::r--\n"                         "" 0 "-L %z (symlink to ea)"
+				test_rawhide "$rh    -L '%z\n' $d/symboth" "user::rw-,user:root:rwx,group::r--,mask::rwx,other::r--\n" "" 0 "-L %z (symlink to acl+ea)"
+				test_rawhide "$rh -y -L '%z\n' $d/symnone" "user::rw-,group::r--,other::r--\n"                         "" 0 "-y -L %z (symlink to no acl or ea)"
+				test_rawhide "$rh -y -L '%z\n' $d/symacl"  "user::rw-,user:root:rwx,group::r--,mask::rwx,other::r--\n" "" 0 "-y -L %z (symlink to acl)"
+				test_rawhide "$rh -y -L '%z\n' $d/symea"   "user::rw-,group::r--,other::r--\n"                         "" 0 "-y -L %z (symlink to ea)"
+				test_rawhide "$rh -y -L '%z\n' $d/symboth" "user::rw-,user:root:rwx,group::r--,mask::rwx,other::r--\n" "" 0 "-y -L %z (symlink to acl+ea)"
+				test_rawhide "$rh -Y -L '%z\n' $d/symnone" "user::rw-,group::r--,other::r--\n"                         "" 0 "-Y -L %z (symlink to no acl or ea)"
+				test_rawhide "$rh -Y -L '%z\n' $d/symacl"  "user::rw-,user:root:rwx,group::r--,mask::rwx,other::r--\n" "" 0 "-Y -L %z (symlink to acl)"
+				test_rawhide "$rh -Y -L '%z\n' $d/symea"   "user::rw-,group::r--,other::r--\n"                         "" 0 "-Y -L %z (symlink to ea)"
+				test_rawhide "$rh -Y -L '%z\n' $d/symboth" "user::rw-,user:root:rwx,group::r--,mask::rwx,other::r--\n" "" 0 "-Y -L %z (symlink to acl+ea)"
+
+				test_rawhide "$rh    '\"*user:root:rwx*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".acl"
+				test_rawhide "$rh -y '\"*user:root:rwx*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .acl"
+				test_rawhide "$rh -Y '\"*user:root:rwx*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .acl"
+				if $rh -h | grep -q '\.iacl'
+				then
+					test_rawhide "$rh    '\"*user:ROOT:rwx*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".iacl"
+					test_rawhide "$rh -y '\"*user:ROOT:rwx*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .iacl"
+					test_rawhide "$rh -Y '\"*user:ROOT:rwx*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .iacl"
+				fi
+				if $rh -h | grep -q '\.reacl'
+				then
+					test_rawhide "$rh    '\"^user:root:rwx\$\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reacl"
+					test_rawhide "$rh    '\"^user:ROOT:rwx\$\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reiacl"
+					test_rawhide "$rh -y '\"^user:root:rwx\$\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .reacl"
+					test_rawhide "$rh -y '\"^user:ROOT:rwx\$\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .reiacl"
+					test_rawhide "$rh -Y '\"^user:root:rwx\$\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .reacl"
+					test_rawhide "$rh -Y '\"^user:ROOT:rwx\$\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .reiacl"
+				fi
+
+				test_rawhide_grep "$rh -L '%j\n' $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*\\}$"                     "" 0 "-L %j (json) with acl"
+			else
+				echo "$t: Skipping ACL tests (setfacl not found)"
+				ACL=0
+			fi
+			;;
+
+		Darwin) # chmod xattr
+			chmod +a 'group:admin allow write' $d/acl $d/both
+			test_rawhide      "$rh    -L '%z\n' $d/none" "\n"                          "" 0 "-L %z (no acl or ea)"
+			test_rawhide_grep "$rh    -L '%z\n' $d/acl"  "admin:[0-9]+:allow:write"    "" 0 "-L %z (acl)"
+			test_rawhide      "$rh    -L '%z\n' $d/ea"   "\n"                          "" 0 "-L %z (ea)"
+			test_rawhide_grep "$rh    -L '%z\n' $d/both" "admin:[0-9]+:allow:write"    "" 0 "-L %z (acl+ea)"
+			test_rawhide      "$rh    -L '%z\n' $d/symnone" "\n"                       "" 0 "-L %z (symlink to no acl or ea)"
+			test_rawhide_grep "$rh    -L '%z\n' $d/symacl"  "admin:[0-9]+:allow:write" "" 0 "-L %z (symlink to acl)"
+			test_rawhide      "$rh    -L '%z\n' $d/symea"   "\n"                       "" 0 "-L %z (symlink to ea)"
+			test_rawhide_grep "$rh    -L '%z\n' $d/symboth" "admin:[0-9]+:allow:write" "" 0 "-L %z (symlink to acl+ea)"
+			test_rawhide      "$rh -y -L '%z\n' $d/symnone" "\n"                       "" 0 "-y -L %z (symlink to no acl or ea)"
+			test_rawhide_grep "$rh -y -L '%z\n' $d/symacl"  "admin:[0-9]+:allow:write" "" 0 "-y -L %z (symlink to acl)"
+			test_rawhide      "$rh -y -L '%z\n' $d/symea"   "\n"                       "" 0 "-y -L %z (symlink to ea)"
+			test_rawhide_grep "$rh -y -L '%z\n' $d/symboth" "admin:[0-9]+:allow:write" "" 0 "-y -L %z (symlink to acl+ea)"
+			test_rawhide      "$rh -Y -L '%z\n' $d/symnone" "\n"                       "" 0 "-Y -L %z (symlink to no acl or ea)"
+			test_rawhide_grep "$rh -Y -L '%z\n' $d/symacl"  "admin:[0-9]+:allow:write" "" 0 "-Y -L %z (symlink to acl)"
+			test_rawhide      "$rh -Y -L '%z\n' $d/symea"   "\n"                       "" 0 "-Y -L %z (symlink to ea)"
+			test_rawhide_grep "$rh -Y -L '%z\n' $d/symboth" "admin:[0-9]+:allow:write" "" 0 "-Y -L %z (symlink to acl+ea)"
+
+			test_rawhide      "$rh    '\"*group:*:allow:write*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".acl"
+			test_rawhide      "$rh -y '\"*group:*:allow:write*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .acl"
+			test_rawhide      "$rh -Y '\"*group:*:allow:write*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .acl"
+			if $rh -h | grep -q '\.iacl'
+			then
+				test_rawhide "$rh    '\"*group:*:ALLOW:write*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"  "" 0 ".iacl"
+				test_rawhide "$rh -y '\"*group:*:ALLOW:write*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"  "" 0 "-y .iacl"
+				test_rawhide "$rh -Y '\"*group:*:ALLOW:write*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"  "" 0 "-Y .iacl"
+			fi
+			if $rh -h | grep -q '\.reacl'
+			then
+				test_rawhide "$rh    '\"group:.*:allow:write\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"    "" 0 ".reacl"
+				test_rawhide "$rh    '\"group:.*:ALLOW:write\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"    "" 0 ".reiacl"
+				test_rawhide "$rh -y '\"group:.*:allow:write\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"    "" 0 "-y .reacl"
+				test_rawhide "$rh -y '\"group:.*:ALLOW:write\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"    "" 0 "-y .reiacl"
+				test_rawhide "$rh -Y '\"group:.*:allow:write\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"    "" 0 "-Y .reacl"
+				test_rawhide "$rh -Y '\"group:.*:ALLOW:write\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"    "" 0 "-Y .reiacl"
+			fi
+
+			test_rawhide_grep "$rh -L '%j\n' $d/acl" "^{\"path\":\"$d/acl\", .*\"access_control_list\":.*}$"                     "" 0 "-L %j (json) with acl"
+			;;
+
+		FreeBSD) # setfacl setextattr
+			if [ -x "`which setfacl 2>/dev/null`" ]
+			then
+				setfacl -a 0 user:root:rwxpaARWcCos::allow $d/acl $d/both
+				test_rawhide "$rh    -L '%z\n' $d/none"    "            owner@:rw-p--aARWcCos:-------:allow,            group@:r-----a-R-c--s:-------:allow,         everyone@:r-----a-R-c--s:-------:allow\n"                                                 "" 0 "-L %z (no acl or ea)"
+				test_rawhide "$rh    -L '%z\n' $d/acl"     "         user:root:rwxp--aARWcCos:-------:allow,            owner@:rw-p--aARWcCos:-------:allow,            group@:r-----a-R-c--s:-------:allow,         everyone@:r-----a-R-c--s:-------:allow\n" "" 0 "-L %z (acl)"
+				test_rawhide "$rh    -L '%z\n' $d/ea"      "            owner@:rw-p--aARWcCos:-------:allow,            group@:r-----a-R-c--s:-------:allow,         everyone@:r-----a-R-c--s:-------:allow\n"                                                 "" 0 "-L %z (ea)"
+				test_rawhide "$rh    -L '%z\n' $d/both"    "         user:root:rwxp--aARWcCos:-------:allow,            owner@:rw-p--aARWcCos:-------:allow,            group@:r-----a-R-c--s:-------:allow,         everyone@:r-----a-R-c--s:-------:allow\n" "" 0 "-L %z (acl+ea)"
+				test_rawhide "$rh    -L '%z\n' $d/symnone" "            owner@:rw-p--aARWcCos:-------:allow,            group@:r-----a-R-c--s:-------:allow,         everyone@:r-----a-R-c--s:-------:allow\n"                                                 "" 0 "-L %z (symlink to no acl or ea)"
+				test_rawhide "$rh    -L '%z\n' $d/symacl"  "         user:root:rwxp--aARWcCos:-------:allow,            owner@:rw-p--aARWcCos:-------:allow,            group@:r-----a-R-c--s:-------:allow,         everyone@:r-----a-R-c--s:-------:allow\n" "" 0 "-L %z (symlink to acl)"
+				test_rawhide "$rh    -L '%z\n' $d/symea"   "            owner@:rw-p--aARWcCos:-------:allow,            group@:r-----a-R-c--s:-------:allow,         everyone@:r-----a-R-c--s:-------:allow\n"                                                 "" 0 "-L %z (symlink to ea)"
+				test_rawhide "$rh    -L '%z\n' $d/symboth" "         user:root:rwxp--aARWcCos:-------:allow,            owner@:rw-p--aARWcCos:-------:allow,            group@:r-----a-R-c--s:-------:allow,         everyone@:r-----a-R-c--s:-------:allow\n" "" 0 "-L %z (symlink to acl+ea)"
+				test_rawhide "$rh -y -L '%z\n' $d/symnone" "            owner@:rw-p--aARWcCos:-------:allow,            group@:r-----a-R-c--s:-------:allow,         everyone@:r-----a-R-c--s:-------:allow\n"                                                 "" 0 "-y -L %z (symlink to no acl or ea)"
+				test_rawhide "$rh -y -L '%z\n' $d/symacl"  "         user:root:rwxp--aARWcCos:-------:allow,            owner@:rw-p--aARWcCos:-------:allow,            group@:r-----a-R-c--s:-------:allow,         everyone@:r-----a-R-c--s:-------:allow\n" "" 0 "-y -L %z (symlink to acl)"
+				test_rawhide "$rh -y -L '%z\n' $d/symea"   "            owner@:rw-p--aARWcCos:-------:allow,            group@:r-----a-R-c--s:-------:allow,         everyone@:r-----a-R-c--s:-------:allow\n"                                                 "" 0 "-y -L %z (symlink to ea)"
+				test_rawhide "$rh -y -L '%z\n' $d/symboth" "         user:root:rwxp--aARWcCos:-------:allow,            owner@:rw-p--aARWcCos:-------:allow,            group@:r-----a-R-c--s:-------:allow,         everyone@:r-----a-R-c--s:-------:allow\n" "" 0 "-y -L %z (symlink to acl+ea)"
+				test_rawhide "$rh -Y -L '%z\n' $d/symnone" "            owner@:rw-p--aARWcCos:-------:allow,            group@:r-----a-R-c--s:-------:allow,         everyone@:r-----a-R-c--s:-------:allow\n"                                                 "" 0 "-Y -L %z (symlink to no acl or ea)"
+				test_rawhide "$rh -Y -L '%z\n' $d/symacl"  "         user:root:rwxp--aARWcCos:-------:allow,            owner@:rw-p--aARWcCos:-------:allow,            group@:r-----a-R-c--s:-------:allow,         everyone@:r-----a-R-c--s:-------:allow\n" "" 0 "-Y -L %z (symlink to acl)"
+				test_rawhide "$rh -Y -L '%z\n' $d/symea"   "            owner@:rw-p--aARWcCos:-------:allow,            group@:r-----a-R-c--s:-------:allow,         everyone@:r-----a-R-c--s:-------:allow\n"                                                 "" 0 "-Y -L %z (symlink to ea)"
+				test_rawhide "$rh -Y -L '%z\n' $d/symboth" "         user:root:rwxp--aARWcCos:-------:allow,            owner@:rw-p--aARWcCos:-------:allow,            group@:r-----a-R-c--s:-------:allow,         everyone@:r-----a-R-c--s:-------:allow\n" "" 0 "-Y -L %z (symlink to acl+ea)"
+
+				test_rawhide "$rh -v -L '%z\n' $d/none"    "            owner@:read_data/write_data/append_data/read_attributes/write_attributes/read_xattr/write_xattr/read_acl/write_acl/write_owner/synchronize::allow,            group@:read_data/read_attributes/read_xattr/read_acl/synchronize::allow,         everyone@:read_data/read_attributes/read_xattr/read_acl/synchronize::allow\n"                                                                                                                                                                       "" 0 "-v -L %z (no acl or ea)"
+				test_rawhide "$rh -v -L '%z\n' $d/acl"     "         user:root:read_data/write_data/execute/append_data/read_attributes/write_attributes/read_xattr/write_xattr/read_acl/write_acl/write_owner/synchronize::allow,            owner@:read_data/write_data/append_data/read_attributes/write_attributes/read_xattr/write_xattr/read_acl/write_acl/write_owner/synchronize::allow,            group@:read_data/read_attributes/read_xattr/read_acl/synchronize::allow,         everyone@:read_data/read_attributes/read_xattr/read_acl/synchronize::allow\n" "" 0 "-v -L %z (acl)"
+				test_rawhide "$rh -v -L '%z\n' $d/ea"      "            owner@:read_data/write_data/append_data/read_attributes/write_attributes/read_xattr/write_xattr/read_acl/write_acl/write_owner/synchronize::allow,            group@:read_data/read_attributes/read_xattr/read_acl/synchronize::allow,         everyone@:read_data/read_attributes/read_xattr/read_acl/synchronize::allow\n"                                                                                                                                                                       "" 0 "-v -L %z (ea)"
+				test_rawhide "$rh -v -L '%z\n' $d/both"    "         user:root:read_data/write_data/execute/append_data/read_attributes/write_attributes/read_xattr/write_xattr/read_acl/write_acl/write_owner/synchronize::allow,            owner@:read_data/write_data/append_data/read_attributes/write_attributes/read_xattr/write_xattr/read_acl/write_acl/write_owner/synchronize::allow,            group@:read_data/read_attributes/read_xattr/read_acl/synchronize::allow,         everyone@:read_data/read_attributes/read_xattr/read_acl/synchronize::allow\n" "" 0 "-v -L %z (acl+ea)"
+
+				test_rawhide "$rh    '\"*user:root:rwxp*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".acl"
+				test_rawhide "$rh -y '\"*user:root:rwxp*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .acl"
+				test_rawhide "$rh -Y '\"*user:root:rwxp*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .acl"
+
+				test_rawhide "$rh    '\"*user:root:read_data/write_data*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".acl non-compact form"
+				test_rawhide "$rh -y '\"*user:root:read_data/write_data*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .acl non-compact form"
+				test_rawhide "$rh -Y '\"*user:root:read_data/write_data*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .acl non-compact form"
+
+				if $rh -h | grep -q '\.iacl'
+				then
+					test_rawhide "$rh    '\"*user:ROOT:rwxp*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".iacl"
+					test_rawhide "$rh -y '\"*user:ROOT:rwxp*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .iacl"
+					test_rawhide "$rh -Y '\"*user:ROOT:rwxp*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .iacl"
+				fi
+				if $rh -h | grep -q '\.reacl'
+				then
+					test_rawhide "$rh    '\"user:root:rwxp\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reacl"
+					test_rawhide "$rh    '\"user:ROOT:rwxp\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reiacl"
+					test_rawhide "$rh -y '\"user:root:rwxp\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .reacl"
+					test_rawhide "$rh -y '\"user:ROOT:rwxp\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .reiacl"
+					test_rawhide "$rh -Y '\"user:root:rwxp\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .reacl"
+					test_rawhide "$rh -Y '\"user:ROOT:rwxp\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .reiacl"
+				fi
+
+				test_rawhide_grep "$rh -L '%j\n' $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*\\}$"                     "" 0 "-L %j (json) with acl"
+			else
+				echo "$t: Skipping ACL tests (setfacl not found)"
+				ACL=0
+			fi
+			;;
+
+		SunOS) # chmod runat
+			if [ -x "`which chmod 2>/dev/null`" ]
+			then
+				chmod A+user:root:rwxpaARWcCos::allow $d/acl $d/both
+				test_rawhide "$rh    -L '%z\n' $d/none"    "owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n"                                        "" 0 "-L %z (no acl or ea)"
+				test_rawhide "$rh    -L '%z\n' $d/acl"     "user:root:rwxp--aARWcCos:-------:allow,owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n" "" 0 "-L %z (acl)"
+				test_rawhide "$rh    -L '%z\n' $d/ea"      "owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n"                                        "" 0 "-L %z (ea)"
+				test_rawhide "$rh    -L '%z\n' $d/both"    "user:root:rwxp--aARWcCos:-------:allow,owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n" "" 0 "-L %z (acl+ea)"
+				test_rawhide "$rh    -L '%z\n' $d/symnone" "owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n"                                        "" 0 "-L %z (symlink to no acl or ea)"
+				test_rawhide "$rh    -L '%z\n' $d/symacl"  "user:root:rwxp--aARWcCos:-------:allow,owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n" "" 0 "-L %z (symlink to acl)"
+				test_rawhide "$rh    -L '%z\n' $d/symea"   "owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n"                                        "" 0 "-L %z (symlink to ea)"
+				test_rawhide "$rh    -L '%z\n' $d/symboth" "user:root:rwxp--aARWcCos:-------:allow,owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n" "" 0 "-L %z (symlink to acl+ea)"
+				test_rawhide "$rh -y -L '%z\n' $d/symnone" "owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n"                                        "" 0 "-y -L %z (symlink to no acl or ea)"
+				test_rawhide "$rh -y -L '%z\n' $d/symacl"  "user:root:rwxp--aARWcCos:-------:allow,owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n" "" 0 "-y -L %z (symlink to acl)"
+				test_rawhide "$rh -y -L '%z\n' $d/symea"   "owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n"                                        "" 0 "-y -L %z (symlink to ea)"
+				test_rawhide "$rh -y -L '%z\n' $d/symboth" "user:root:rwxp--aARWcCos:-------:allow,owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n" "" 0 "-y -L %z (symlink to acl+ea)"
+				test_rawhide "$rh -Y -L '%z\n' $d/symnone" "owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n"                                        "" 0 "-Y -L %z (symlink to no acl or ea)"
+				test_rawhide "$rh -Y -L '%z\n' $d/symacl"  "user:root:rwxp--aARWcCos:-------:allow,owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n" "" 0 "-Y -L %z (symlink to acl)"
+				test_rawhide "$rh -Y -L '%z\n' $d/symea"   "owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n"                                        "" 0 "-Y -L %z (symlink to ea)"
+				test_rawhide "$rh -Y -L '%z\n' $d/symboth" "user:root:rwxp--aARWcCos:-------:allow,owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n" "" 0 "-Y -L %z (symlink to acl+ea)"
+
+				test_rawhide_grep "$rh -v -L '%z\n' $d/none"    "owner@:read_data/write_data.*:allow"    "" 0 "-v -L %z (no acl or ea)"
+				test_rawhide_grep "$rh -v -L '%z\n' $d/acl"     "user:root:read_data/write_data.*:allow" "" 0 "-v -L %z (acl)"
+				test_rawhide_grep "$rh -v -L '%z\n' $d/ea"      "owner@:read_data/write_data.*:allow"    "" 0 "-v -L %z (ea)"
+				test_rawhide_grep "$rh -v -L '%z\n' $d/both"    "user:root:read_data/write_data.*:allow" "" 0 "-v -L %z (acl+ea)"
+
+				test_rawhide "$rh    '\"*user:root:rwxp*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".acl"
+				test_rawhide "$rh -y '\"*user:root:rwxp*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .acl"
+				test_rawhide "$rh -Y '\"*user:root:rwxp*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .acl"
+
+				test_rawhide "$rh    '\"*user:root:read_data/write_data*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".acl non-compact form"
+				test_rawhide "$rh -y '\"*user:root:read_data/write_data*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .acl non-compact form"
+				test_rawhide "$rh -Y '\"*user:root:read_data/write_data*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .acl non-compact form"
+
+				if $rh -h | grep -q '\.iacl'
+				then
+					test_rawhide "$rh    '\"*user:ROOT:rwxp*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".iacl"
+					test_rawhide "$rh -y '\"*user:ROOT:rwxp*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .iacl"
+					test_rawhide "$rh -Y '\"*user:ROOT:rwxp*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .iacl"
+				fi
+				if $rh -h | grep -q '\.reacl'
+				then
+					test_rawhide "$rh    '\"user:root:rwxp\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reacl"
+					test_rawhide "$rh    '\"user:ROOT:rwxp\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reiacl"
+					test_rawhide "$rh -y '\"user:root:rwxp\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .reacl"
+					test_rawhide "$rh -y '\"user:ROOT:rwxp\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .reiacl"
+					test_rawhide "$rh -Y '\"user:root:rwxp\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .reacl"
+					test_rawhide "$rh -Y '\"user:ROOT:rwxp\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .reiacl"
+				fi
+
+				test_rawhide_grep "$rh -L '%j\n' $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*\\}$"                     "" 0 "-L %j (json) with acl"
+
+				# Test environment variable
+
+				test_rawhide "RAWHIDE_SOLARIS_ACL_NO_TRIVIAL=0 $rh    -L '%z\n' $d/none"    "owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n"                                        "" 0 "-L %z (no acl) without suppressing trivial"
+				test_rawhide "RAWHIDE_SOLARIS_ACL_NO_TRIVIAL=0 $rh    -L '%z\n' $d/acl"     "user:root:rwxp--aARWcCos:-------:allow,owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n" "" 0 "-L %z (acl) without suppressing trivial"
+				test_rawhide "RAWHIDE_SOLARIS_ACL_NO_TRIVIAL=1 $rh    -L '%z\n' $d/none"    "\n"                                                                                                                                                      "" 0 "-L %z (no acl) with suppressing trivial"
+				test_rawhide "RAWHIDE_SOLARIS_ACL_NO_TRIVIAL=1 $rh    -L '%z\n' $d/acl"     "user:root:rwxp--aARWcCos:-------:allow,owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n" "" 0 "-L %z (acl) with suppressing trivial"
+			else
+				echo "$t: Skipping ACL tests (chmod not found)"
+				ACL=0
+			fi
+			;;
+
+		CYGWIN*) # setfacl setfattr
+			if [ -x "`which setfacl 2>/dev/null`" ]
+			then
+				root=Administrator
+				ROOT=ADMINISTRATOR
+				setfacl -m user:$root:rwx $d/acl $d/both
+				test_rawhide_grep "$rh    -L '%z\n' $d/none"    "user::rw-,group::r--"                "" 0 "-L %z (no acl or ea)"
+				test_rawhide_grep "$rh    -L '%z\n' $d/acl"     "user::rw-,user:$root:rwx,group::r--" "" 0 "-L %z (acl)"
+				test_rawhide_grep "$rh    -L '%z\n' $d/ea"      "user::rw-,group::r--"                "" 0 "-L %z (ea)"
+				test_rawhide_grep "$rh    -L '%z\n' $d/both"    "user::rw-,user:$root:rwx,group::r--" "" 0 "-L %z (acl+ea)"
+				test_rawhide_grep "$rh    -L '%z\n' $d/symnone" "user::rw-,group::r--"                "" 0 "-L %z (symlink to no acl or ea)"
+				test_rawhide_grep "$rh    -L '%z\n' $d/symacl"  "user::rw-,user:$root:rwx,group::r--" "" 0 "-L %z (symlink to acl)"
+				test_rawhide_grep "$rh    -L '%z\n' $d/symea"   "user::rw-,group::r--"                "" 0 "-L %z (symlink to ea)"
+				test_rawhide_grep "$rh    -L '%z\n' $d/symboth" "user::rw-,user:$root:rwx,group::r--" "" 0 "-L %z (symlink to acl+ea)"
+				test_rawhide_grep "$rh -y -L '%z\n' $d/symnone" "user::rw-,group::r--"                "" 0 "-y -L %z (symlink to no acl or ea)"
+				test_rawhide_grep "$rh -y -L '%z\n' $d/symacl"  "user::rw-,user:$root:rwx,group::r--" "" 0 "-y -L %z (symlink to acl)"
+				test_rawhide_grep "$rh -y -L '%z\n' $d/symea"   "user::rw-,group::r--"                "" 0 "-y -L %z (symlink to ea)"
+				test_rawhide_grep "$rh -y -L '%z\n' $d/symboth" "user::rw-,user:$root:rwx,group::r--" "" 0 "-y -L %z (symlink to acl+ea)"
+				test_rawhide_grep "$rh -Y -L '%z\n' $d/symnone" "user::rw-,group::r--"                "" 0 "-Y -L %z (symlink to no acl or ea)"
+				test_rawhide_grep "$rh -Y -L '%z\n' $d/symacl"  "user::rw-,user:$root:rwx,group::r--" "" 0 "-Y -L %z (symlink to acl)"
+				test_rawhide_grep "$rh -Y -L '%z\n' $d/symea"   "user::rw-,group::r--"                "" 0 "-Y -L %z (symlink to ea)"
+				test_rawhide_grep "$rh -Y -L '%z\n' $d/symboth" "user::rw-,user:$root:rwx,group::r--" "" 0 "-Y -L %z (symlink to acl+ea)"
+
+				test_rawhide "$rh    '\"*user:$root:rwx*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".acl"
+				test_rawhide "$rh -y '\"*user:$root:rwx*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .acl"
+				test_rawhide "$rh -Y '\"*user:$root:rwx*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .acl"
+				if $rh -h | grep -q '\.iacl'
+				then
+					test_rawhide "$rh    '\"*user:$ROOT:rwx*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".iacl"
+					test_rawhide "$rh -y '\"*user:$ROOT:rwx*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .iacl"
+					test_rawhide "$rh -Y '\"*user:$ROOT:rwx*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .iacl"
+				fi
+				if $rh -h | grep -q '\.reacl'
+				then
+					test_rawhide "$rh    '\"^user:$root:rwx\$\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reacl"
+					test_rawhide "$rh    '\"^user:$ROOT:rwx\$\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reiacl"
+					test_rawhide "$rh -y '\"^user:$root:rwx\$\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .reacl"
+					test_rawhide "$rh -y '\"^user:$ROOT:rwx\$\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .reiacl"
+					test_rawhide "$rh -Y '\"^user:$root:rwx\$\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .reacl"
+					test_rawhide "$rh -Y '\"^user:$ROOT:rwx\$\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .reiacl"
+				fi
+
+				test_rawhide_grep "$rh -L '%j\n' $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*\\}$"                     "" 0 "-L %j (json) with acl"
+			else
+				echo "$t: Skipping ACL tests (setfacl not found)"
+				ACL=0
+			fi
+			;;
+
+	esac
+fi
+
+if [ $EA = 1 ]
+then
+	case "`uname`" in
+		Linux) # setfacl setfattr
+			if [ -x "`which setfattr 2>/dev/null`" ]
+			then
+				setfattr -n user.rawhide-attrtest -v "abc\012def\033ghi\177jkl\200" $d/ea $d/both
+				# getfattr $d/ea
+				# getfattr -e text -n user.rawhide-attrtest $d/ea
+				# getfattr -e hex -n user.rawhide-attrtest $d/ea
+				# getfattr $d/both
+				# getfattr -e text -n user.rawhide-attrtest $d/both
+				# getfattr -e hex -n user.rawhide-attrtest $d/both
+				selinuxopt="^(|security.selinux: .*_u:.*_r:.*_t:s[0-3]\\\\0)$"
+				test_rawhide_grep "$rh    -L '%x\n' $d/none"    "$selinuxopt"                                                   "" 0 "-L %x (no acl or ea)"
+				[ $ACL = 1 ] && \
+				test_rawhide_grep "$rh    -L '%x\n' $d/acl"     "system\.posix_acl_access: "                                    "" 0 "-L %x (acl)"
+				test_rawhide_grep "$rh    -L '%x\n' $d/ea"      "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80" "" 0 "-L %x (ea)"
+				test_rawhide_grep "$rh    -L '%x\n' $d/both"    "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80" "" 0 "-L %x (acl+ea)"
+				[ $ACL = 1 ] && \
+				test_rawhide_grep "$rh    -L '%x\n' $d/both"    "system\.posix_acl_access: "                                 "" 0 "-L %x (acl+ea)"
+				test_rawhide_grep "$rh    -L '%x\n' $d/symnone" "$selinuxopt"                                                "" 0 "-L %x (symlink to no acl or ea)"
+				test_rawhide_grep "$rh    -L '%x\n' $d/symacl"  "$selinuxopt"                                                "" 0 "-L %x (symlink to acl)"
+				test_rawhide_grep "$rh    -L '%x\n' $d/symea"   "$selinuxopt"                                                "" 0 "-L %x (symlink to ea)"
+				test_rawhide_grep "$rh    -L '%x\n' $d/symboth" "$selinuxopt"                                                "" 0 "-L %x (symlink to acl+ea)"
+				test_rawhide_grep "$rh -y -L '%x\n' $d/symnone" "$selinuxopt"                                                "" 0 "-y -L %x (symlink to no acl or ea)"
+				[ $ACL = 1 ] && \
+				test_rawhide_grep "$rh -y -L '%x\n' $d/symacl"  "system\.posix_acl_access: "                                    "" 0 "-y -L %x (symlink to acl)"
+				test_rawhide_grep "$rh -y -L '%x\n' $d/symea"   "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80" "" 0 "-y -L %x (symlink to ea)"
+				[ $ACL = 1 ] && \
+				test_rawhide_grep "$rh -y -L '%x\n' $d/symboth" "system\.posix_acl_access: "                                    "" 0 "-y -L %x (symlink to acl+ea)"
+				test_rawhide_grep "$rh -y -L '%x\n' $d/symboth" "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80" "" 0 "-y -L %x (symlink to acl+ea)"
+				test_rawhide_grep "$rh -Y -L '%x\n' $d/symnone" "$selinuxopt"                                                   "" 0 "-Y -L %x (symlink to no acl or ea)"
+				[ $ACL = 1 ] && \
+				test_rawhide_grep "$rh -Y -L '%x\n' $d/symacl"  "system\.posix_acl_access: "                                     "" 0 "-Y -L %x (symlink to acl)"
+				test_rawhide_grep "$rh -Y -L '%x\n' $d/symea"   "user\.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80" "" 0 "-Y -L %x (symlink to ea)"
+				test_rawhide_grep "$rh -Y -L '%x\n' $d/symboth" "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80"  "" 0 "-Y -L %x (symlink to acl+ea)"
+				[ $ACL = 1 ] && \
+				test_rawhide_grep "$rh -Y -L '%x\n' $d/symboth" "system\.posix_acl_access: "                                 "" 0 "-Y -L %x (symlink to acl+ea)"
+
+				test_rawhide      "$rh    '\"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n"                          "" 0 ".ea"
+				test_rawhide      "$rh -y '\"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n"                          "" 0 "-y .ea"
+				test_rawhide      "$rh -Y '\"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"    "" 0 "-Y .ea"
+
+				test_rawhide      "$rh    '\"*user.rawhide-attrtest: *\".ea' $d/both $d/ea" "$d/both\n$d/ea\n"               "" 0 ".ea with multiple search directories"
+
+				if $rh -h | grep -q '\.iea'
+				then
+					test_rawhide "$rh    '\"*user.rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n"                       "" 0 ".iea"
+					test_rawhide "$rh -y '\"*user.rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n"                       "" 0 "-y .iea"
+					test_rawhide "$rh -Y '\"*user.rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n" "" 0 "-Y .iea"
+				fi
+				if $rh -h | grep -q '\.reea'
+				then
+					test_rawhide "$rh    '\"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n"                         "" 0 ".reea"
+					test_rawhide "$rh    '\"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n"                         "" 0 ".reiea"
+					test_rawhide "$rh -y '\"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n"                         "" 0 "-y .reea"
+					test_rawhide "$rh -y '\"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n"                         "" 0 "-y .reiea"
+					test_rawhide "$rh -Y '\"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"   "" 0 "-Y .reea"
+					test_rawhide "$rh -Y '\"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"   "" 0 "-Y .reiea"
+				fi
+
+				test_rawhide_grep "$rh -L '%Z\n' $d/none" "^(|.*_u:.*_r:.*t:s[0-3])$" "" 0 "-L %Z"
+
+				test_rawhide_grep "$rh -L '%j\n' $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-L %j (json) with ea"
+			else
+				echo "$t: Skipping EA tests (setfattr not found)"
+				EA=0
+			fi
+			;;
+
+		Darwin) # chmod xattr
+			xattr -w user.rawhide-attrtest "`printf \"abc\ndef\033ghi\177jkl\200\"`" $d/ea $d/both
+			test_rawhide      "$rh    -L '%x\n' $d/none"    "\n"                                                              "" 0 "-L %x (no acl or ea)"
+			test_rawhide      "$rh    -L '%x\n' $d/acl"     "\n"                                                              "" 0 "-L %x (acl)"
+			test_rawhide      "$rh    -L '%x\n' $d/ea"      "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80\n" "" 0 "-L %x (ea)"
+			test_rawhide_grep "$rh    -L '%x\n' $d/both"    "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80"   "" 0 "-L %x (acl+ea)"
+			test_rawhide      "$rh    -L '%x\n' $d/symnone" "\n"                                                              "" 0 "-L %x (symlink to no acl or ea)"
+			test_rawhide      "$rh    -L '%x\n' $d/symacl"  "\n"                                                              "" 0 "-L %x (symlink to acl)"
+			test_rawhide      "$rh    -L '%x\n' $d/symea"   "\n"                                                              "" 0 "-L %x (symlink to ea)"
+			test_rawhide      "$rh    -L '%x\n' $d/symboth" "\n"                                                              "" 0 "-L %x (symlink to acl+ea)"
+			test_rawhide      "$rh -y -L '%x\n' $d/symnone" "\n"                                                              "" 0 "-y -L %x (symlink to no acl or ea)"
+			test_rawhide      "$rh -y -L '%x\n' $d/symacl"  "\n"                                                              "" 0 "-y -L %x (symlink to acl)"
+			test_rawhide      "$rh -y -L '%x\n' $d/symea"   "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80\n" "" 0 "-y -L %x (symlink to ea)"
+			test_rawhide      "$rh -y -L '%x\n' $d/symboth" "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80\n" "" 0 "-y -L %x (symlink to acl+ea)"
+			test_rawhide      "$rh -Y -L '%x\n' $d/symnone" "\n"                                                              "" 0 "-Y -L %x (symlink to no acl or ea)"
+			test_rawhide      "$rh -Y -L '%x\n' $d/symacl"  "\n"                                                              "" 0 "-Y -L %x (symlink to acl)"
+			test_rawhide      "$rh -Y -L '%x\n' $d/symea"   "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80\n" "" 0 "-Y -L %x (symlink to ea)"
+			test_rawhide_grep "$rh -Y -L '%x\n' $d/symboth" "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80"   "" 0 "-Y -L %x (symlink to acl+ea)"
+
+			test_rawhide      "$rh    '\"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n"                        "" 0 ".ea"
+			test_rawhide      "$rh -y '\"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n"                        "" 0 "-y .ea"
+			test_rawhide      "$rh -Y '\"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"  "" 0 "-Y .ea"
+
+			test_rawhide      "$rh    '\"*user.rawhide-attrtest: *\".ea' $d/both $d/ea" "$d/both\n$d/ea\n"             "" 0 ".ea with multiple search directories"
+
+			if $rh -h | grep -q '\.iea'
+			then
+				test_rawhide "$rh    '\"*user.rawhide-ATTRTEST: *\".iea' $d" "$d/both\n$d/ea\n"                        "" 0 ".iea"
+				test_rawhide "$rh -y '\"*user.rawhide-ATTRTEST: *\".iea' $d" "$d/both\n$d/ea\n"                        "" 0 "-y .iea"
+				test_rawhide "$rh -Y '\"*user.rawhide-ATTRTEST: *\".iea' $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"  "" 0 "-Y .iea"
+			fi
+			if $rh -h | grep -q '\.reea'
+			then
+				test_rawhide "$rh    '\"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n"                       "" 0 ".reea"
+				test_rawhide "$rh    '\"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n"                       "" 0 ".reiea"
+				test_rawhide "$rh -y '\"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n"                       "" 0 "-y .reea"
+				test_rawhide "$rh -y '\"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n"                       "" 0 "-y .reiea"
+				test_rawhide "$rh -Y '\"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n" "" 0 "-Y .reea"
+				test_rawhide "$rh -Y '\"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n" "" 0 "-Y .reiea"
+			fi
+
+			test_rawhide_grep "$rh -L '%j\n' $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-L %j (json) with ea"
+			;;
+
+		FreeBSD) # setfacl setextattr (symlinks can have their own ea here)
+			if [ -x "`which setextattr 2>/dev/null`" ]
+			then
+				setextattr -h user rawhide-attrtest "`printf \"abc\012def\033ghi\177jkl\200\"`" $d/ea $d/both
+				setextattr -h user rawhide-attrtest "`printf \"abc\012def\033ghi\177jkl\200m\"`" $d/symlink
+				# getextattr -h user rawhide-attrtest $d/ea   | od -c
+				# getextattr -h user rawhide-attrtest $d/both | od -c
+				test_rawhide "$rh    -L '%x\n' $d/none"    "\n"                                                              "" 0 "-L %x (no acl or ea)"
+				test_rawhide "$rh    -L '%x\n' $d/acl"     "\n"                                                              "" 0 "-L %x (acl)"
+				test_rawhide "$rh    -L '%x\n' $d/ea"      "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80\n" "" 0 "-L %x (ea)"
+				test_rawhide "$rh    -L '%x\n' $d/both"    "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80\n" "" 0 "-L %x (acl+ea)"
+				test_rawhide "$rh    -L '%x\n' $d/symnone" "\n"                                                              "" 0 "-L %x (symlink to no acl or ea)"
+				test_rawhide "$rh    -L '%x\n' $d/symacl"  "\n"                                                              "" 0 "-L %x (symlink to acl)"
+				test_rawhide "$rh    -L '%x\n' $d/symea"   "\n"                                                              "" 0 "-L %x (symlink to ea)"
+				test_rawhide "$rh    -L '%x\n' $d/symboth" "\n"                                                              "" 0 "-L %x (symlink to acl+ea)"
+				test_rawhide "$rh -y -L '%x\n' $d/symnone" "\n"                                                              "" 0 "-y -L %x (symlink to no acl or ea)"
+				test_rawhide "$rh -y -L '%x\n' $d/symacl"  "\n"                                                              "" 0 "-y -L %x (symlink to acl)"
+				test_rawhide "$rh -y -L '%x\n' $d/symea"   "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80\n" "" 0 "-y -L %x (symlink to ea)"
+				test_rawhide "$rh -y -L '%x\n' $d/symboth" "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80\n" "" 0 "-y -L %x (symlink to acl+ea)"
+				test_rawhide "$rh -Y -L '%x\n' $d/symnone" "\n"                                                              "" 0 "-Y -L %x (symlink to no acl or ea)"
+				test_rawhide "$rh -Y -L '%x\n' $d/symacl"  "\n"                                                              "" 0 "-Y -L %x (symlink to acl)"
+				test_rawhide "$rh -Y -L '%x\n' $d/symea"   "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80\n" "" 0 "-Y -L %x (symlink to ea)"
+				test_rawhide "$rh -Y -L '%x\n' $d/symboth" "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80\n" "" 0 "-Y -L %x (symlink to acl+ea)"
+
+				test_rawhide "$rh    -L '%x\n' $d/symlink" "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80m\n" "" 0 "-L %x (symlink to none but with its own ea)"
+				test_rawhide "$rh -y -L '%x\n' $d/symlink" "\n"                                                               "" 0 "-y -L %x (symlink to none but with its own ea)"
+				test_rawhide "$rh -Y -L '%x\n' $d/symlink" "\n"                                                               "" 0 "-Y -L %x (symlink to none but with its own ea)"
+
+				test_rawhide      "$rh    '\"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n$d/symlink\n"              "" 0 ".ea"
+				test_rawhide      "$rh -y '\"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n$d/symlink\n"              "" 0 "-y .ea"
+				test_rawhide      "$rh -Y '\"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"    "" 0 "-Y .ea"
+
+				test_rawhide      "$rh    '\"*user.rawhide-attrtest: *\".ea' $d/both $d/ea" "$d/both\n$d/ea\n"               "" 0 ".ea with multiple search directories"
+
+				if $rh -h | grep -q '\.iea'
+				then
+					test_rawhide "$rh    '\"*user.rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n$d/symlink\n"           "" 0 ".iea"
+					test_rawhide "$rh -y '\"*user.rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n$d/symlink\n"           "" 0 "-y .iea"
+					test_rawhide "$rh -Y '\"*user.rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n" "" 0 "-Y .iea"
+				fi
+				if $rh -h | grep -q '\.reea'
+				then
+					test_rawhide "$rh    '\"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n$d/symlink\n"             "" 0 ".reea"
+					test_rawhide "$rh    '\"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n$d/symlink\n"             "" 0 ".reiea"
+					test_rawhide "$rh -y '\"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n$d/symlink\n"             "" 0 "-y .reea"
+					test_rawhide "$rh -y '\"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n$d/symlink\n"             "" 0 "-y .reiea"
+					test_rawhide "$rh -Y '\"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"   "" 0 "-Y .reea"
+					test_rawhide "$rh -Y '\"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"   "" 0 "-Y .reiea"
+				fi
+
+				test_rawhide_grep "$rh -L '%j\n' $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-L %j (json) with ea"
+			else
+				echo "$t: Skipping EA tests (setextattr not found)"
+				EA=0
+			fi
+			;;
+
+		SunOS) # chmod runat
+			if [ -x "`which runat 2>/dev/null`" ]
+			then
+				printf "abc\012def\033ghi\177jkl\200" > rawhide-attrtest
+				runat $d/ea cp $saved_pwd/rawhide-attrtest .
+				runat $d/both cp $saved_pwd/rawhide-attrtest .
+				rm rawhide-attrtest
+				# runat $d/ea cat rawhide-attrtest
+				# runat $d/both cat rawhide-attrtest
+				test_rawhide      "$rh    -L '%x\n' $d/none"    "\n"                                                       "" 0 "-L %x (no acl or ea)"
+				test_rawhide      "$rh    -L '%x\n' $d/acl"     "\n"                                                       "" 0 "-L %x (acl)"
+				test_rawhide_grep "$rh    -L '%x\n' $d/ea"      "rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80" "" 0 "-L %x (ea)"
+				test_rawhide_grep "$rh    -L '%x\n' $d/both"    "rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80" "" 0 "-L %x (acl+ea)"
+				test_rawhide      "$rh    -L '%x\n' $d/symnone" "\n"                                                       "" 0 "-L %x (symlink to no acl or ea)"
+				test_rawhide      "$rh    -L '%x\n' $d/symacl"  "\n"                                                       "" 0 "-L %x (symlink to acl)"
+				test_rawhide      "$rh    -L '%x\n' $d/symea"   "\n"                                                       "" 0 "-L %x (symlink to ea)"
+				test_rawhide      "$rh    -L '%x\n' $d/symboth" "\n"                                                       "" 0 "-L %x (symlink to acl+ea)"
+				test_rawhide      "$rh -y -L '%x\n' $d/symnone" "\n"                                                       "" 0 "-y -L %x (symlink to no acl or ea)"
+				test_rawhide      "$rh -y -L '%x\n' $d/symacl"  "\n"                                                       "" 0 "-y -L %x (symlink to acl)"
+				test_rawhide_grep "$rh -y -L '%x\n' $d/symea"   "rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80" "" 0 "-y -L %x (symlink to ea)"
+				test_rawhide_grep "$rh -y -L '%x\n' $d/symboth" "rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80" "" 0 "-y -L %x (symlink to acl+ea)"
+				test_rawhide      "$rh -Y -L '%x\n' $d/symnone" "\n"                                                       "" 0 "-Y -L %x (symlink to no acl or ea)"
+				test_rawhide      "$rh -Y -L '%x\n' $d/symacl"  "\n"                                                       "" 0 "-Y -L %x (symlink to acl)"
+				test_rawhide_grep "$rh -Y -L '%x\n' $d/symea"   "rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80" "" 0 "-Y -L %x (symlink to ea)"
+				test_rawhide_grep "$rh -Y -L '%x\n' $d/symboth" "rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80" "" 0 "-Y -L %x (symlink to acl+ea)"
+
+				test_rawhide      "$rh    '\"*rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n"                          "" 0 ".ea"
+				test_rawhide      "$rh -y '\"*rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n"                          "" 0 "-y .ea"
+				test_rawhide      "$rh -Y '\"*rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"    "" 0 "-Y .ea"
+
+				test_rawhide      "$rh    '\"*rawhide-attrtest: *\".ea' $d/both $d/ea" "$d/both\n$d/ea\n"               "" 0 ".ea with multiple search directories"
+
+				if $rh -h | grep -q '\.iea'
+				then
+					test_rawhide "$rh    '\"*rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n"                       "" 0 ".iea"
+					test_rawhide "$rh -y '\"*rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n"                       "" 0 "-y .iea"
+					test_rawhide "$rh -Y '\"*rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n" "" 0 "-Y .iea"
+				fi
+				if $rh -h | grep -q '\.reea'
+				then
+					test_rawhide "$rh    '\"rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n"                         "" 0 ".reea"
+					test_rawhide "$rh    '\"rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n"                         "" 0 ".reiea"
+					test_rawhide "$rh -y '\"rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n"                         "" 0 "-y .reea"
+					test_rawhide "$rh -y '\"rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n"                         "" 0 "-y .reiea"
+					test_rawhide "$rh -Y '\"rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"   "" 0 "-Y .reea"
+					test_rawhide "$rh -Y '\"rawhide-ATTRTEST: \".reiea' $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"   "" 0 "-Y .reiea"
+				fi
+
+				# Test environment variables
+
+				test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=0 RAWHIDE_SOLARIS_EA_NO_STATINFO=0 $rh '\"*SUNWattr_ro: *\".ea'                 $d/ea" "$d/ea\n"          "" 0 ".ea with default SUNWattr_ro"
+				test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=0 RAWHIDE_SOLARIS_EA_NO_STATINFO=0 $rh '\"*SUNWattr_ro/stat: -r--r--r-- *\".ea' $d/ea" "$d/ea\n"          "" 0 ".ea with default SUNWattr_ro and /stat"
+				test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=0 RAWHIDE_SOLARIS_EA_NO_STATINFO=0 $rh '\"*SUNWattr_rw: *\".ea'                 $d/ea" "$d/ea\n"          "" 0 ".ea with default SUNWattr_rw"
+				test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=0 RAWHIDE_SOLARIS_EA_NO_STATINFO=0 $rh '\"*SUNWattr_rw/stat: -rw-r--r-- *\".ea' $d/ea" "$d/ea\n"          "" 0 ".ea with default SUNWattr_rw and /stat"
+
+				test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=0 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh '\"*SUNWattr_ro: *\".ea'                 $d/ea" "$d/ea\n"          "" 0 ".ea with default SUNWattr_ro"
+				test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=0 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh '\"*SUNWattr_ro/stat: -r--r--r-- *\".ea' $d/ea" ""                 "" 0 ".ea with default SUNWattr_ro but no /stat"
+				test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=0 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh '\"*SUNWattr_rw: *\".ea'                 $d/ea" "$d/ea\n"          "" 0 ".ea with default SUNWattr_rw"
+				test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=0 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh '\"*SUNWattr_rw/stat: -rw-r--r-- *\".ea' $d/ea" ""                 "" 0 ".ea with default SUNWattr_rw but no /stat"
+
+				test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=0 $rh '\"*SUNWattr_ro: *\".ea'                 $d/ea" ""                 "" 0 ".ea no default SUNWattr_ro"
+				test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=0 $rh '\"*SUNWattr_ro/stat: -r--r--r-- *\".ea' $d/ea" ""                 "" 0 ".ea no default SUNWattr_ro but with /stat"
+				test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=0 $rh '\"*SUNWattr_rw: *\".ea'                 $d/ea" ""                 "" 0 ".ea no default SUNWattr_rw"
+				test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=0 $rh '\"*SUNWattr_rw/stat: -rw-r--r-- *\".ea' $d/ea" ""                 "" 0 ".ea no default SUNWattr_rw but with /stat"
+
+				test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh '\"*SUNWattr_ro: *\".ea'                 $d/ea" ""                 "" 0 ".ea no default SUNWattr_ro"
+				test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh '\"*SUNWattr_ro/stat: -r--r--r-- *\".ea' $d/ea" ""                 "" 0 ".ea no default SUNWattr_ro or /stat"
+				test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh '\"*SUNWattr_rw: *\".ea'                 $d/ea" ""                 "" 0 ".ea no default SUNWattr_rw"
+				test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh '\"*SUNWattr_rw/stat: -rw-r--r-- *\".ea' $d/ea" ""                 "" 0 ".ea no default SUNWattr_rw or /stat"
+
+				if $rh -h | grep -q '\.reea'
+				then
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=0 RAWHIDE_SOLARIS_EA_NO_STATINFO=0 $rh '\"SUNWattr_ro:\s\".reea'                $d/ea" "$d/ea\n"   "" 0 ".reea with default SUNWattr_ro"
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=0 RAWHIDE_SOLARIS_EA_NO_STATINFO=0 $rh '\"SUNWattr_ro/stat:\s-r--r--r--\".reea' $d/ea" "$d/ea\n"   "" 0 ".reea with default SUNWattr_ro and /stat"
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=0 RAWHIDE_SOLARIS_EA_NO_STATINFO=0 $rh '\"SUNWattr_rw:\s\".reea'                $d/ea" "$d/ea\n"   "" 0 ".reea with default SUNWattr_rw"
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=0 RAWHIDE_SOLARIS_EA_NO_STATINFO=0 $rh '\"SUNWattr_rw/stat:\s-rw-r--r--\".reea' $d/ea" "$d/ea\n"   "" 0 ".reea with default SUNWattr_rw and /stat"
+
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=0 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh '\"SUNWattr_ro:\s\".reea'                $d/ea" "$d/ea\n"   "" 0 ".reea with default SUNWattr_ro"
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=0 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh '\"SUNWattr_ro/stat:\s-r--r--r--\".reea' $d/ea" ""          "" 0 ".reea with default SUNWattr_ro but no /stat"
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=0 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh '\"SUNWattr_rw:\s\".reea'                $d/ea" "$d/ea\n"   "" 0 ".reea with default SUNWattr_rw"
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=0 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh '\"SUNWattr_rw/stat:\s-rw-r--r--\".reea' $d/ea" ""          "" 0 ".reea with default SUNWattr_rw but no /stat"
+
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=0 $rh '\"SUNWattr_ro:\s\".reea'                $d/ea" ""          "" 0 ".reea no default SUNWattr_ro"
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=0 $rh '\"SUNWattr_ro/stat:\s-r--r--r--\".reea' $d/ea" ""          "" 0 ".reea no default SUNWattr_ro but with /stat"
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=0 $rh '\"SUNWattr_rw:\s\".reea'                $d/ea" ""          "" 0 ".reea no default SUNWattr_rw"
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=0 $rh '\"SUNWattr_rw/stat:\s-rw-r--r--\".reea' $d/ea" ""          "" 0 ".reea no default SUNWattr_rw but with /stat"
+
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh '\"SUNWattr_ro:\s\".reea'                $d/ea" ""          "" 0 ".reea no default SUNWattr_ro"
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh '\"SUNWattr_ro/stat:\s-r--r--r--\".reea' $d/ea" ""          "" 0 ".reea no default SUNWattr_ro or /stat"
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh '\"SUNWattr_rw:\s\".reea'                $d/ea" ""          "" 0 ".reea no default SUNWattr_rw"
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh '\"SUNWattr_rw/stat:\s-rw-r--r--\".reea' $d/ea" ""          "" 0 ".reea no default SUNWattr_rw or /stat"
+
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=0 RAWHIDE_SOLARIS_EA_NO_STATINFO=0 $rh '\"rawhide-attrtest:\sabc\".reea'        $d/ea" "$d/ea\n"   "" 0 ".reea with SUNWattr_ro/rw and /stat (rawhide-attrtest)"
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=0 RAWHIDE_SOLARIS_EA_NO_STATINFO=0 $rh '\"rawhide-attrtest/stat:\s-rw-\".reea'  $d/ea" "$d/ea\n"   "" 0 ".reea with SUNWattr_ro/rw and /stat (rawhide-attrtest/stat)"
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=0 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh '\"rawhide-attrtest:\sabc\".reea'        $d/ea" "$d/ea\n"   "" 0 ".reea with SUNWattr_ro/rw and /stat (rawhide-attrtest)"
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=0 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh '\"rawhide-attrtest/stat:\s-rw-\".reea'  $d/ea" ""          "" 0 ".reea with SUNWattr_ro/rw and /stat (rawhide-attrtest/stat)"
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=0 $rh '\"rawhide-attrtest:\sabc\".reea'        $d/ea" "$d/ea\n"   "" 0 ".reea with SUNWattr_ro/rw and /stat (rawhide-attrtest)"
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=0 $rh '\"rawhide-attrtest/stat:\s-rw-\".reea'  $d/ea" "$d/ea\n"   "" 0 ".reea with SUNWattr_ro/rw and /stat (rawhide-attrtest/stat)"
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh '\"rawhide-attrtest:\sabc\".reea'        $d/ea" "$d/ea\n"   "" 0 ".reea with SUNWattr_ro/rw and /stat (rawhide-attrtest)"
+					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh '\"rawhide-attrtest/stat:\s-rw-\".reea'  $d/ea" ""          "" 0 ".reea with SUNWattr_ro/rw and /stat (rawhide-attrtest/stat)"
+				fi
+
+				test_rawhide_grep "$rh -L '%j\n' $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-L %j (json) with ea"
+			else
+				echo "$t: Skipping EA tests (runat not found)"
+				EA=0
+			fi
+			;;
+
+		CYGWIN*) # setfacl setfattr
+			if [ -x "`which setfattr 2>/dev/null`" ]
+			then
+				setfattr -n user.rawhide-attrtest -v "abc\012def\033ghi\177jkl\200" $d/ea $d/both
+				# getfattr $d/ea
+				# getfattr -e text -n user.rawhide-attrtest $d/ea
+				# getfattr -e hex -n user.rawhide-attrtest $d/ea
+				# getfattr $d/both
+				# getfattr -e text -n user.rawhide-attrtest $d/both
+				# getfattr -e hex -n user.rawhide-attrtest $d/both
+				test_rawhide_grep "$rh    -L '%x\n' $d/none"    "^$"                                                            "" 0 "-L %x (no acl or ea)"
+				test_rawhide_grep "$rh    -L '%x\n' $d/acl"     "^$"                                                            "" 0 "-L %x (acl)"
+				test_rawhide_grep "$rh    -L '%x\n' $d/ea"      "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80" "" 0 "-L %x (ea)"
+				test_rawhide_grep "$rh    -L '%x\n' $d/both"    "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80" "" 0 "-L %x (acl+ea)"
+				# listxattr() fails with symlinks (unless following): Permission denied (now silent)
+				test_rawhide_grep "$rh    -L '%x\n' $d/symnone" "^$"                                                            "" 0 "-L %x (symlink to no acl or ea)"
+				test_rawhide_grep "$rh    -L '%x\n' $d/symacl"  "^$"                                                            "" 0 "-L %x (symlink to acl)"
+				test_rawhide_grep "$rh    -L '%x\n' $d/symea"   "^$"                                                            "" 0 "-L %x (symlink to ea)"
+				test_rawhide_grep "$rh    -L '%x\n' $d/symboth" "^$"                                                            "" 0 "-L %x (symlink to acl+ea)"
+				test_rawhide_grep "$rh -y -L '%x\n' $d/symnone" "^$"                                                            "" 0 "-y -L %x (symlink to no acl or ea)"
+				test_rawhide_grep "$rh -y -L '%x\n' $d/symacl"  "^$"                                                            "" 0 "-y -L %x (symlink to acl)"
+				test_rawhide_grep "$rh -y -L '%x\n' $d/symea"   "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80" "" 0 "-y -L %x (symlink to ea)"
+				test_rawhide_grep "$rh -y -L '%x\n' $d/symboth" "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80" "" 0 "-y -L %x (symlink to acl+ea)"
+				test_rawhide_grep "$rh -Y -L '%x\n' $d/symnone" "^$"                                                            "" 0 "-Y -L %x (symlink to no acl or ea)"
+				test_rawhide_grep "$rh -Y -L '%x\n' $d/symacl"  "^$"                                                            "" 0 "-Y -L %x (symlink to acl)"
+				test_rawhide_grep "$rh -Y -L '%x\n' $d/symea"   "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80" "" 0 "-Y -L %x (symlink to ea)"
+				test_rawhide_grep "$rh -Y -L '%x\n' $d/symboth" "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80" "" 0 "-Y -L %x (symlink to acl+ea)"
+
+				# listxattr() fails with symlinks (unless following), so # skip links
+				test_rawhide      "$rh    '!link && \"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n"                          "" 0 ".ea"
+				test_rawhide      "$rh -y '!link && \"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n"                          "" 0 "-y .ea"
+				test_rawhide      "$rh -Y '         \"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"    "" 0 "-Y .ea"
+
+				test_rawhide      "$rh    '\"*user.rawhide-attrtest: *\".ea' $d/both $d/ea" "$d/both\n$d/ea\n"               "" 0 ".ea with multiple search directories"
+
+				if $rh -h | grep -q '\.iea'
+				then
+					test_rawhide "$rh    '!link && \"*user.rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n"                       "" 0 ".iea"
+					test_rawhide "$rh -y '!link && \"*user.rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n"                       "" 0 "-y .iea"
+					test_rawhide "$rh -Y '         \"*user.rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n" "" 0 "-Y .iea"
+				fi
+				if $rh -h | grep -q '\.reea'
+				then
+					test_rawhide "$rh    '!link && \"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n"                         "" 0 ".reea"
+					test_rawhide "$rh    '!link && \"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n"                         "" 0 ".reiea"
+					test_rawhide "$rh -y '!link && \"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n"                         "" 0 "-y .reea"
+					test_rawhide "$rh -y '!link && \"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n"                         "" 0 "-y .reiea"
+					test_rawhide "$rh -Y '\"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"   "" 0 "-Y .reea"
+					test_rawhide "$rh -Y '\"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"   "" 0 "-Y .reiea"
+				fi
+
+				test_rawhide_grep "$rh -L '%j\n' $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-L %j (json) with ea"
+			else
+				echo "$t: Skipping EA tests (setfattr not found)"
+				EA=0
+			fi
+			;;
+	esac
+fi
+
+if [ $ACL = 1 -a $EA = 1 ]
+then
+	case "`uname`" in
+		CYGWIN*)
+			test_rawhide_grep "$rh -l $d/none" "^-rw-r--r--\+ "  "" 0 "-l none (' ') (added acl)"
+			test_rawhide_grep "$rh -l $d/acl"  "^-rw-r[-w][-x]r--\+ " "" 0 "-l acl ('+') (added acl)"
+			test_rawhide_grep "$rh -l $d/ea"   "^-rw-r--r--\* "  "" 0 "-l ea ('@') (added acl)"
+			test_rawhide_grep "$rh -l $d/both" "^-rw-r[-w][-x]r--\* " "" 0 "-l both ('*') (added acl)"
+
+			test_rawhide "$rh    -L '%3X\n'  $d/none"  "  +\n" "" 0 "-L %X (no acl or ea) [always has acl]"
+			test_rawhide "$rh    -L '%3X\n'  $d/acl"   "  +\n" "" 0 "-L %X (acl)"
+			test_rawhide "$rh    -L '%3X\n'  $d/ea"    "  *\n" "" 0 "-L %X (ea) [always has acl]"
+			test_rawhide "$rh    -L '%3X\n'  $d/both"  "  *\n" "" 0 "-L %X (acl+ea)"
+			test_rawhide "$rh    -L '%-3X\n' $d/none"  "+  \n" "" 0 "-L %X (no acl or ea) [always has acl]"
+			test_rawhide "$rh    -L '%-3X\n' $d/acl"   "+  \n" "" 0 "-L %X (acl)"
+			test_rawhide "$rh    -L '%-3X\n' $d/ea"    "*  \n" "" 0 "-L %X (ea) [always has acl]"
+			test_rawhide "$rh    -L '%-3X\n' $d/both"  "*  \n" "" 0 "-L %X (acl+ea)"
+
+			test_rawhide "$rh    -L '%X\n' $d/none"    "+\n" "" 0 "-L %X (no acl or ea) [always has acl]"
+			test_rawhide "$rh    -L '%X\n' $d/acl"     "+\n" "" 0 "-L %X (acl)"
+			test_rawhide "$rh    -L '%X\n' $d/ea"      "*\n" "" 0 "-L %X (ea) [always has acl]"
+			test_rawhide "$rh    -L '%X\n' $d/both"    "*\n" "" 0 "-L %X (acl+ea)"
+			test_rawhide "$rh    -L '%X\n' $d/symnone" "+\n" "" 0 "-L %X (symlink to no acl or ea) [always has acl]"
+			test_rawhide "$rh    -L '%X\n' $d/symacl"  "+\n" "" 0 "-L %X (symlink to acl)"
+			test_rawhide "$rh    -L '%X\n' $d/symea"   "+\n" "" 0 "-L %X (symlink to ea) [always has acl]"
+			test_rawhide "$rh    -L '%X\n' $d/symboth" "+\n" "" 0 "-L %X (symlink to acl+ea)"
+			test_rawhide "$rh -y -L '%X\n' $d/symnone" "+\n" "" 0 "-y -L %X (symlink to no acl or ea) [always has acl]"
+			test_rawhide "$rh -y -L '%X\n' $d/symacl"  "+\n" "" 0 "-y -L %X (symlink to acl)"
+			test_rawhide "$rh -y -L '%X\n' $d/symea"   "*\n" "" 0 "-y -L %X (symlink to ea) [always has acl]"
+			test_rawhide "$rh -y -L '%X\n' $d/symboth" "*\n" "" 0 "-y -L %X (symlink to acl+ea)"
+			test_rawhide "$rh -Y -L '%X\n' $d/symnone" "+\n" "" 0 "-Y -L %X (symlink to no acl or ea) [always has acl]"
+			test_rawhide "$rh -Y -L '%X\n' $d/symacl"  "+\n" "" 0 "-Y -L %X (symlink to acl)"
+			test_rawhide "$rh -Y -L '%X\n' $d/symea"   "*\n" "" 0 "-Y -L %X (symlink to ea) [always has acl]"
+			test_rawhide "$rh -Y -L '%X\n' $d/symboth" "*\n" "" 0 "-Y -L %X (symlink to acl+ea)"
+			;;
+		*)
+			test_rawhide_grep "$rh -l $d/none" "^-rw-r--r--[ .] "  "" 0 "-l none (' ')"
+			test_rawhide_grep "$rh -l $d/acl"  "^-rw[-x]r[-w][-x]r--\+ " "" 0 "-l acl ('+')"
+			test_rawhide_grep "$rh -l $d/ea"   "^-rw-r--r--@ "  "" 0 "-l ea ('@')"
+			test_rawhide_grep "$rh -l $d/both" "^-rw[-x]r[-w][-x]r--\* " "" 0 "-l both ('*')"
+
+			test_rawhide_either "$rh    -L '%3X\n'  $d/none"  "   \n" "  .\n" "" 0 "-L %3X (no acl or ea)"
+			test_rawhide        "$rh    -L '%3X\n'  $d/acl"   "  +\n"         "" 0 "-L %3X (acl)"
+			test_rawhide        "$rh    -L '%3X\n'  $d/ea"    "  @\n"         "" 0 "-L %3X (ea)"
+			test_rawhide        "$rh    -L '%3X\n'  $d/both"  "  *\n"         "" 0 "-L %3X (acl+ea)"
+			test_rawhide_either "$rh    -L '%-3X\n' $d/none"  "   \n" ".  \n" "" 0 "-L %-3X (no acl or ea)"
+			test_rawhide        "$rh    -L '%-3X\n' $d/acl"   "+  \n"         "" 0 "-L %-3X (acl)"
+			test_rawhide        "$rh    -L '%-3X\n' $d/ea"    "@  \n"         "" 0 "-L %-3X (ea)"
+			test_rawhide        "$rh    -L '%-3X\n' $d/both"  "*  \n"         "" 0 "-L %-3X (acl+ea)"
+
+			test_rawhide_either "$rh    -L '%X\n' $d/none"    " \n" ".\n" "" 0 "-L %X (no acl or ea)"
+			test_rawhide        "$rh    -L '%X\n' $d/acl"     "+\n"       "" 0 "-L %X (acl)"
+			test_rawhide        "$rh    -L '%X\n' $d/ea"      "@\n"       "" 0 "-L %X (ea)"
+			test_rawhide        "$rh    -L '%X\n' $d/both"    "*\n"       "" 0 "-L %X (acl+ea)"
+			test_rawhide_either "$rh    -L '%X\n' $d/symnone" " \n" ".\n" "" 0 "-L %X (symlink to no acl or ea)"
+			test_rawhide        "$rh    -L '%X\n' $d/symacl"  "+\n"       "" 0 "-L %X (symlink to acl)"
+			test_rawhide_either "$rh    -L '%X\n' $d/symea"   " \n" ".\n" "" 0 "-L %X (symlink to ea) [sees acl not ea]"
+			test_rawhide        "$rh    -L '%X\n' $d/symboth" "+\n"       "" 0 "-L %X (symlink to acl+ea) [sees acl not ea]"
+			test_rawhide_either "$rh -y -L '%X\n' $d/symnone" " \n" ".\n" "" 0 "-y -L %X (symlink to no acl or ea)"
+			test_rawhide        "$rh -y -L '%X\n' $d/symacl"  "+\n"       "" 0 "-y -L %X (symlink to acl)"
+			test_rawhide        "$rh -y -L '%X\n' $d/symea"   "@\n"       "" 0 "-y -L %X (symlink to ea)"
+			test_rawhide        "$rh -y -L '%X\n' $d/symboth" "*\n"       "" 0 "-y -L %X (symlink to acl+ea)"
+			test_rawhide_either "$rh -Y -L '%X\n' $d/symnone" " \n" ".\n" "" 0 "-Y -L %X (symlink to no acl or ea)"
+			test_rawhide        "$rh -Y -L '%X\n' $d/symacl"  "+\n"       "" 0 "-Y -L %X (symlink to acl)"
+			test_rawhide        "$rh -Y -L '%X\n' $d/symea"   "@\n"       "" 0 "-Y -L %X (symlink to ea)"
+			test_rawhide        "$rh -Y -L '%X\n' $d/symboth" "*\n"       "" 0 "-Y -L %X (symlink to acl+ea)"
+			;;
+	esac
+fi
+
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:
