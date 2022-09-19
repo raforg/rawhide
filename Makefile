@@ -117,7 +117,7 @@ CPPFLAGS = $(RAWHIDE_DEFINES) $(PCRE2_DEFINES) $(ACL_DEFINES) $(EA_DEFINES) $(DE
 CFLAGS = -O3 -g -Wall -pedantic $(CPPFLAGS) $(PCRE2_CFLAGS) $(ACL_CFLAGS) $(EA_CFLAGS) $(GCOV_CFLAGS)
 LDFLAGS = $(PCRE2_LDFLAGS) $(ACL_LDFLAGS) $(EA_LDLAGS)
 
-OBJS = rhcmds.o rh.o rhparse.o rhdir.o rhdata.o rhstr.o rherr.o rhjson.o
+OBJS = rhcmds.o rh.o rhparse.o rhdir.o rhdata.o rhstr.o rherr.o
 
 $(RAWHIDE_PROG_NAME): Makefile $(OBJS)
 	$(CC) $(CFLAGS) -o $(RAWHIDE_PROG_NAME) $(OBJS) $(LDFLAGS)
@@ -131,7 +131,7 @@ rhcmds.o: Makefile rhcmds.c rh.h rhdir.h rherr.h rhstr.h
 rhdata.o: Makefile rhdata.c rh.h rhdata.h rhcmds.h rherr.h
 	$(CC) $(CFLAGS) -c rhdata.c
 
-rhdir.o: Makefile rhdir.c rh.h rhdata.h rhcmds.h rhdir.h rhstr.h rherr.h rhjson.h
+rhdir.o: Makefile rhdir.c rh.h rhdata.h rhcmds.h rhdir.h rhstr.h rherr.h
 	$(CC) $(CFLAGS) -c rhdir.c
 
 rherr.o: Makefile rherr.c rh.h
@@ -142,9 +142,6 @@ rhparse.o: Makefile rhparse.c rh.h rhdata.h rhcmds.h rhstr.h
 
 rhstr.o: Makefile rhstr.c rh.h rhstr.h
 	$(CC) $(CFLAGS) -c rhstr.c
-
-rhjson.o: Makefile rhjson.c rh.h rhjson.h rh.h rhdir.h rhcmds.h rhstr.h
-	$(CC) $(CFLAGS) -c rhjson.c
 
 clean:
 	rm -f $(RAWHIDE_PROG_NAME) $(OBJS) tags $(RAWHIDE_APP_MANFILE).html $(RAWHIDE_FMT_MANFILE).html README.html
@@ -230,8 +227,8 @@ html2: README.html
 README.html: README.md
 	./md2html $< $@ '$(RAWHIDE_ID) - README'
 
-tags:     Makefile rh.h rh.c rhcmds.h rhcmds.c rhdata.h rhdata.c rhdir.h rhdir.c rhparse.h rhparse.c rherr.h rherr.c rhstr.h rhstr.c rhjson.h rhjson.c
-	ctags Makefile rh.h rh.c rhcmds.h rhcmds.c rhdata.h rhdata.c rhdir.h rhdir.c rhparse.h rhparse.c rherr.h rherr.c rhstr.h rhstr.c rhjson.h rhjson.c
+tags:     Makefile rh.h rh.c rhcmds.h rhcmds.c rhdata.h rhdata.c rhdir.h rhdir.c rhparse.h rhparse.c rherr.h rherr.c rhstr.h rhstr.c
+	ctags Makefile rh.h rh.c rhcmds.h rhcmds.c rhdata.h rhdata.c rhdir.h rhdir.c rhparse.h rhparse.c rherr.h rherr.c rhstr.h rhstr.c
 
 test: $(RAWHIDE_PROG_NAME)
 	./runtests

@@ -60,7 +60,6 @@
 #include "rhdir.h"
 #include "rhstr.h"
 #include "rherr.h"
-#include "rhjson.h"
 
 #ifdef NDEBUG
 #define debug(args)
@@ -1846,6 +1845,117 @@ void visitf_unlink(void)
 			}
 		}
 	}
+}
+
+/*
+
+static int add_field(char *buf, ssize_t sz, const char *name, const char *value);
+
+Add a JSON string field to buf (of sz bytes).
+Encode the value with C-like escape sequences (but without "\a").
+Return the length in bytes (excluding nul).
+
+*/
+
+static int add_field(char *buf, ssize_t sz, const char *name, const char *value)
+{
+	int pos = 0;
+
+	pos += ssnprintf(buf + pos, sz - pos, "\"%s\":\"", name);
+	pos += cescape(buf + pos, sz - pos, value, -1, CESCAPE_JSON);
+	pos += ssnprintf(buf + pos, sz - pos, "\", ");
+
+	return pos;
+}
+
+/*
+
+static char *json(void);
+
+Return all file information in JSON format. The information
+included is path, name, target path, starting path, depth,
+and all the inode metadata (stat(2) structure fields).
+
+*/
+
+static char *json(void)
+{
+	#define JSON_BUFSIZE 262144
+	static char buf[JSON_BUFSIZE];
+	struct passwd *pwd;
+	struct group *grp;
+	char *base, *selinux, *acl, *ea;
+	int pos = 0;
+
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "{");
+
+	pos += add_field(buf + pos, JSON_BUFSIZE - pos, "path", attr.fpath);
+
+	base = ((base = strrchr(attr.fpath, '/')) && base[1]) ? base + 1 : attr.fpath;
+	pos += add_field(buf + pos, JSON_BUFSIZE - pos, "name", base);
+
+	if (islink(attr.statbuf))
+		pos += add_field(buf + pos, JSON_BUFSIZE - pos, "target", read_symlink());
+
+	pos += add_field(buf + pos, JSON_BUFSIZE - pos, "start", attr.search_path);
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"depth\":%lld, ", (llong)attr.depth);
+
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"dev\":%lld, ", (llong)attr.statbuf->st_dev);
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"major\":%lld, ", (llong)major(attr.statbuf->st_dev));
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"minor\":%lld, ", (llong)minor(attr.statbuf->st_dev));
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"ino\":%lld, ", (llong)attr.statbuf->st_ino);
+
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"mode\":%lld, ", (llong)attr.statbuf->st_mode);
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"modestr\":\"%s\", ", modestr(attr.statbuf));
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"type\":\"%s\", ", ytypecode(attr.statbuf));
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"perm\":%d, ", (int)attr.statbuf->st_mode & ~S_IFMT);
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"nlink\":%lld, ", (llong)attr.statbuf->st_nlink);
+
+	if ((pwd = getpwuid(attr.statbuf->st_uid)))
+		pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"user\":\"%s\", ", pwd->pw_name);
+
+	if ((grp = getgrgid(attr.statbuf->st_gid)))
+		pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"group\":\"%s\", ", grp->gr_name);
+
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"uid\":%lld, ", (llong)attr.statbuf->st_uid);
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"gid\":%lld, ", (llong)attr.statbuf->st_uid);
+
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"rdev\":%lld, ", (llong)attr.statbuf->st_rdev);
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"rmajor\":%lld, ", (llong)major(attr.statbuf->st_rdev));
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"rminor\":%lld, ", (llong)minor(attr.statbuf->st_rdev));
+
+	set_dirsize();
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"size\":%lld, ", (llong)attr.statbuf->st_size);
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"blksize\":%lld, ", (llong)attr.statbuf->st_blksize);
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"blocks\":%lld, ", (llong)attr.statbuf->st_blocks);
+
+	pos += strftime(buf + pos, JSON_BUFSIZE - pos, "\"atime\":\"%Y-%m-%d %H:%M:%S %z\", ", localtime(&attr.statbuf->st_atime));
+	pos += strftime(buf + pos, JSON_BUFSIZE - pos, "\"mtime\":\"%Y-%m-%d %H:%M:%S %z\", ", localtime(&attr.statbuf->st_mtime));
+	pos += strftime(buf + pos, JSON_BUFSIZE - pos, "\"ctime\":\"%Y-%m-%d %H:%M:%S %z\", ", localtime(&attr.statbuf->st_ctime));
+
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"atime_unix\":%lld, ", (llong)attr.statbuf->st_atime);
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"mtime_unix\":%lld, ", (llong)attr.statbuf->st_mtime);
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"ctime_unix\":%lld, ", (llong)attr.statbuf->st_ctime);
+
+	if ((acl = get_acl(1)))
+	{
+		pos += add_field(buf + pos, JSON_BUFSIZE - pos, "access_control_list", acl);
+
+		if (attr.facl_verbose)
+			pos += add_field(buf + pos, JSON_BUFSIZE - pos, "access_control_list_verbose", acl);
+	}
+
+	if ((ea = get_ea(1)) && attr.fea_ok)
+		pos += add_field(buf + pos, JSON_BUFSIZE - pos, "extended_attributes", ea);
+
+	if ((selinux = (get_ea(1) && attr.fea_ok && attr.fea_selinux) ? attr.fea_selinux : "") && *selinux)
+		pos += add_field(buf + pos, JSON_BUFSIZE - pos, "selinux_context", selinux);
+
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"acl_ea_indicator\":\"%s\"", aclea());
+
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "}");
+
+	return buf;
 }
 
 /*
