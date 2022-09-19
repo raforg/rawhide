@@ -62,18 +62,6 @@
 #include "rherr.h"
 #include "rhjson.h"
 
-#define isdir(statbuf)  (((statbuf)->st_mode & S_IFMT) == S_IFDIR)
-#define isblk(statbuf)  (((statbuf)->st_mode & S_IFMT) == S_IFBLK)
-#define ischr(statbuf)  (((statbuf)->st_mode & S_IFMT) == S_IFCHR)
-#define islink(statbuf) (((statbuf)->st_mode & S_IFMT) == S_IFLNK)
-#define issock(statbuf) (((statbuf)->st_mode & S_IFMT) == S_IFSOCK)
-#define isfifo(statbuf) (((statbuf)->st_mode & S_IFMT) == S_IFIFO)
-#ifdef S_IFDOOR
-#define isdoor(statbuf) (((statbuf)->st_mode & S_IFMT) == S_IFDOOR)
-#else
-#define isdoor(statbuf) (0)
-#endif
-
 #ifdef NDEBUG
 #define debug(args)
 #define debug_extra(args)

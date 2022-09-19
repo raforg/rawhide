@@ -74,9 +74,6 @@
 #include "rherr.h"
 #include "rhstr.h"
 
-#define isdir(statbuf) (((statbuf)->st_mode & S_IFMT) == S_IFDIR)
-#define islink(statbuf) (((statbuf)->st_mode & S_IFMT) == S_IFLNK)
-
 /* Operators */
 
 void c_le(llong i)     { Stack[SP - 2] = Stack[SP - 2] <= Stack[SP - 1]; SP--; }

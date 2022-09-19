@@ -45,8 +45,6 @@
 #include "rhcmds.h"
 #include "rhstr.h"
 
-#define islink(statbuf) (((statbuf)->st_mode & S_IFMT) == S_IFLNK)
-
 /*
 
 static int add_field(char *buf, ssize_t sz, const char *name, const char *value);
