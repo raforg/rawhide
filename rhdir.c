@@ -1725,7 +1725,6 @@ int remove_danger_from_path(void)
 	src = oldpath;
 	dst = newpath;
 
-#if 1 /* This version is slower (multiple passes) but more convincing */
 	strlcpy(dst, src, strlen(oldpath) + 1);
 
 	for (;;)
@@ -1780,120 +1779,6 @@ int remove_danger_from_path(void)
 
 		break;
 	}
-#else
-	while (*src)
-	{
-		debug_extra(("path %s pos %d c %c", oldpath, src - oldpath, *src));
-		debug_extra(("     %*s%c", src - oldpath, "", '^'));
-
-		if (src == oldpath && src[0] == ':') /* PATH=:/abc -> PATH=/abc */
-		{
-			debug_extra(("[0] PATH=:/abc -> PATH=/abc [+1]"));
-			src += 1;
-
-			continue;
-		}
-
-		if (src == oldpath && src[0] == '.' && src[1] == ':') /* PATH=.:/abc -> PATH=/abc */
-		{
-			debug_extra(("[1] PATH=.:/abc -> PATH=/abc [+2]"));
-			src += 2;
-
-			continue;
-		}
-
-		if (src > oldpath && src[-1] == ':' && src[0] == '.' && src[1] == ':') /* PATH=/abc:.:/def -> PATH=/abc:/def */
-		{
-			debug_extra(("[2] PATH=/abc:.:/def -> PATH=/abc:/def [+2]"));
-			src += 2;
-
-			continue;
-		}
-
-		if (src > oldpath && src[-1] == ':' && src[0] == '.' && src[1] == '\0') /* PATH=/abc:. -> PATH=/abc */
-		{
-			debug_extra(("[3] PATH=/abc:. -> PATH=/abc [+1]"));
-			src += 1; /* Skip trailing . */
-			if (dst > newpath)
-				dst -= 1; /* Remove previous now trailing : */
-
-			continue;
-		}
-
-		if (src[0] == ':' && src[1] == '.' && src[2] == ':') /* PATH=/abc:.:/def -> PATH=/abc:/def */
-		{
-			debug_extra(("[4] PATH=/abc:.:/def -> PATH=/abc:/def [+2]"));
-			src += 2;
-
-			continue;
-		}
-
-		if (src[0] == ':' && src[1] == ':') /* PATH=/abc::/def -> PATH=/abc:/def */
-		{
-			debug_extra(("[5] PATH=/abc::/def -> PATH=/abc:/def [+1]"));
-			src += 1;
-
-			continue;
-		}
-
-		if (src[0] == ':' && src[1] == '.' && src[2] == '\0') /* PATH=/abc:. -> PATH=/abc */
-		{
-			debug_extra(("[6] PATH=/abc:. -> PATH=/abc [+2]"));
-			src += 2;
-
-			continue;
-		}
-
-		if (src[0] == ':' && src[1] == '\0') /* PATH=/abc: -> PATH=/abc */
-		{
-			debug_extra(("[7] PATH=/abc: -> PATH=/abc [+1]"));
-			src += 1;
-
-			continue;
-		}
-
-		if (src == oldpath && src[0] != '/') /* PATH=rel:/abc -> PATH=/abc */
-		{
-			debug_extra(("[8] PATH=rel:/abc -> PATH=/abc [+len+1]"));
-
-			while (*++src && *src != ':')
-				;
-
-			if (*src == ':')
-				++src;
-
-			continue;
-		}
-
-		if (src >= oldpath && src[-1] == ':' && src[0] != '/' && src[0] != ':') /* PATH=rel:/abc -> PATH=/abc */
-		{
-			debug_extra(("[9] PATH=/abc:rel:/def -> PATH=/abc:/def [+len+1]"));
-
-			while (*++src && *src != ':')
-				;
-
-			if (*src == ':')
-				++src;
-
-			continue;
-		}
-
-		if (src[0] == ':' && src[1] != '/') /* PATH=/abc:rel:/def -> PATH=/abc:/def */
-		{
-			debug_extra(("[10] PATH=/abc:rel:/def -> PATH=/abc:/def [+len+1]"));
-
-			while (*++src && *src != ':')
-				;
-
-			continue;
-		}
-
-		debug_extra(("copy %c", *src));
-		*dst++ = *src++;
-	}
-
-	*dst = '\0';
-#endif
 
 	/* If we no longer have a path, use the default */
 
