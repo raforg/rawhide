@@ -54,6 +54,10 @@
 #include <sys/mkdev.h>
 #endif
 
+#ifdef HAVE_ATTR
+#include <ext2fs/ext2_fs.h>
+#endif
+
 #include "rh.h"
 #include "rhdata.h"
 #include "rhcmds.h"
@@ -172,6 +176,12 @@ static void caches_init(void)
 	attr.fea_ok = 0;
 	attr.fea_selinux = NULL;
 	attr.fea_real = 0;
+	attr.attr_done = 0;
+	attr.attr = 0;
+	attr.proj_done = 0;
+	attr.proj = 0;
+	attr.gen_done = 0;
+	attr.gen = 0;
 }
 
 /*
@@ -1870,6 +1880,184 @@ static int add_field(char *buf, ssize_t sz, const char *name, const char *value)
 
 /*
 
+static char *attributes(void);
+
+Return the ext2-style file attributes as a space-separated
+list of attribute names.
+
+*/
+
+static char *attributes(void)
+{
+	#define ATTR_BUFSIZE 256
+	static char buf[ATTR_BUFSIZE];
+	unsigned long flags = get_attr();
+	int pos = 0;
+	char *env;
+
+	buf[pos] = '\0';
+
+	if ((env = getenv("RAWHIDE_TEST_ATTR_FORMAT")) && *env == '1')
+		flags = (unsigned long)-1;
+
+	if (!flags)
+		return buf;
+
+	#ifdef EXT2_SECRM_FL
+	if (flags & EXT2_SECRM_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "secrm");
+	#endif
+
+	#ifdef EXT2_UNRM_FL
+	if (flags & EXT2_UNRM_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "unrm");
+	#endif
+
+	#ifdef EXT2_COMPR_FL
+	if (flags & EXT2_COMPR_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "compr");
+	#endif
+
+	#ifdef EXT2_SYNC_FL
+	if (flags & EXT2_SYNC_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "sync");
+	#endif
+
+	#ifdef EXT2_IMMUTABLE_FL
+	if (flags & EXT2_IMMUTABLE_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "immutable");
+	#endif
+
+	#ifdef EXT2_APPEND_FL
+	if (flags & EXT2_APPEND_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "append");
+	#endif
+
+	#ifdef EXT2_NODUMP_FL
+	if (flags & EXT2_NODUMP_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "nodump");
+	#endif
+
+	#ifdef EXT2_NOATIME_FL
+	if (flags & EXT2_NOATIME_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "noatime");
+	#endif
+
+	#ifdef EXT2_DIRTY_FL
+	if (flags & EXT2_DIRTY_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "dirty");
+	#endif
+
+	#ifdef EXT2_COMPRBLK_FL
+	if (flags & EXT2_COMPRBLK_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "comprblk");
+	#endif
+
+	#ifdef EXT2_NOCOMPR_FL
+	if (flags & EXT2_NOCOMPR_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "nocompr");
+	#endif
+
+	#ifdef EXT4_ENCRYPT_FL
+	if (flags & EXT4_ENCRYPT_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "encrypt");
+	#endif
+
+	#ifdef EXT2_INDEX_FL
+	if (flags & EXT2_INDEX_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "index");
+	#endif
+
+	#ifdef EXT2_IMAGIC_FL
+	if (flags & EXT2_IMAGIC_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "imagic");
+	#endif
+
+	#ifdef EXT3_JOURNAL_DATA_FL
+	if (flags & EXT3_JOURNAL_DATA_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "journal_data");
+	#endif
+
+	#ifdef EXT2_NOTAIL_FL
+	if (flags & EXT2_NOTAIL_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "notail");
+	#endif
+
+	#ifdef EXT2_DIRSYNC_FL
+	if (flags & EXT2_DIRSYNC_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "dirsync");
+	#endif
+
+	#ifdef EXT2_TOPDIR_FL
+	if (flags & EXT2_TOPDIR_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "topdir");
+	#endif
+
+	#ifdef EXT4_HUGE_FILE_FL
+	if (flags & EXT4_HUGE_FILE_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "huge_file");
+	#endif
+
+	#ifdef EXT4_EXTENTS_FL
+	if (flags & EXT4_EXTENTS_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "extents");
+	#endif
+
+	#ifdef EXT4_VERITY_FL
+	if (flags & EXT4_VERITY_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "verity");
+	#endif
+
+	#ifdef EXT4_EA_INODE_FL
+	if (flags & EXT4_EA_INODE_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "ea_inode");
+	#endif
+
+	#ifdef FS_NOCOW_FL
+	if (flags & FS_NOCOW_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "nocow");
+	#endif
+
+	#ifdef EXT4_SNAPFILE_FL
+	if (flags & EXT4_SNAPFILE_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "snapfile");
+	#endif
+
+	#ifdef FS_DAX_FL
+	if (flags & FS_DAX_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "dax");
+	#endif
+
+	#ifdef EXT4_SNAPFILE_DELETED_FL
+	if (flags & EXT4_SNAPFILE_DELETED_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "snapfile_deleted");
+	#endif
+
+	#ifdef EXT4_SNAPFILE_SHRUNK_FL
+	if (flags & EXT4_SNAPFILE_SHRUNK_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "snapfile_shrunk");
+	#endif
+
+	#ifdef EXT4_INLINE_DATA_FL
+	if (flags & EXT4_INLINE_DATA_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "inline_data");
+	#endif
+
+	#ifdef EXT4_PROJINHERIT_FL
+	if (flags & EXT4_PROJINHERIT_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "projinherit");
+	#endif
+
+	#ifdef EXT4_CASEFOLD_FL
+	if (flags & EXT4_CASEFOLD_FL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "casefold");
+	#endif
+
+	return buf;
+}
+
+/*
+
 static char *json(void);
 
 Return all file information in JSON format. The information
@@ -1936,6 +2124,12 @@ static char *json(void)
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"atime_unix\":%lld, ", (llong)attr.statbuf->st_atime);
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"mtime_unix\":%lld, ", (llong)attr.statbuf->st_mtime);
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"ctime_unix\":%lld, ", (llong)attr.statbuf->st_ctime);
+
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"attributes\":\"%s\", ", attributes());
+
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"project\":%lu, ", get_proj());
+
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"generation\":%lu, ", get_gen());
 
 	if ((acl = get_acl(1)))
 	{
@@ -2604,6 +2798,39 @@ void visitf_format(void)
 						ofmt_add('s');
 						debug_extra(("fmt %%Z \"%s\", \"%s\"", ofmt, selinux));
 						printf(ofmt, selinux);
+
+						break;
+					}
+
+					case 'e': /* Ext2-style file attributes */
+					{
+						char *a = attributes();
+
+						ofmt_add('s');
+						debug_extra(("fmt %%e \"%s\", \"%s\"", ofmt, a));
+						printf(ofmt, a);
+
+						break;
+					}
+
+					case 'J': /* Ext2-style project */
+					{
+						unsigned long proj = get_proj();
+
+						ofmt_add_lld();
+						debug_extra(("fmt %%J \"%s\", %lld", ofmt, (llong)proj));
+						printf(ofmt, (llong)proj);
+
+						break;
+					}
+
+					case 'I': /* Ext2-style generation */
+					{
+						unsigned long gen = get_gen();
+
+						ofmt_add_lld();
+						debug_extra(("fmt %%I \"%s\", %lld", ofmt, (llong)gen));
+						printf(ofmt, (llong)gen);
 
 						break;
 					}

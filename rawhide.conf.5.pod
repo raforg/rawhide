@@ -221,30 +221,33 @@ liberties taken):
       STRING NOSPACE "." NOSPACE <reference-file-field>
 
   <reference-file-field> ::=
-        "exists"  | "dev"      | "major"    | "minor"   | "ino"
-      | "mode"    | "type"     | "perm"     | "nlink"   | "uid"
-      | "gid"     | "rdev"     | "rmajor"   | "rminor"  | "size"
-      | "blksize" | "blocks"   | "atime"    | "mtime"   | "ctime"
-      | "strlen"  | "inode"    | "nlinks"   | "user"    | "group"
-      | "sz"      | "accessed" | "modified" | "changed" | "len"
+        "exists"   | "dev"     | "major"     | "minor"   | "ino"
+      | "mode"     | "type"    | "perm"      | "nlink"   | "uid"
+      | "gid"      | "rdev"    | "rmajor"    | "rminor"  | "size"
+      | "blksize"  | "blocks"  | "atime"     | "mtime"   | "ctime"
+      | "attr"     | "proj"    | "gen"       | "strlen"  | "inode"
+      | "nlinks"   | "user"    | "group"     | "sz"      | "accessed"
+      | "modified" | "changed" | "attribute" | "project" | "generation"
+      | "len"
 
   <built-in> ::=
         "dev"      | "major"      | "minor"    | "ino"      | "mode"
       | "nlink"    | "uid"        | "gid"      | "rdev"     | "rmajor"
       | "rminor"   | "size"       | "blksize"  | "blocks"   | "atime"
-      | "mtime"    | "ctime"      | "nouser"   | "nogroup"  | "readable"
-      | "writable" | "executable" | "strlen"   | "depth"    | "prune"
-      | "trim"     | "exit"       | "now"      | "today"    | "second"
-      | "minute"   | "hour"       | "day"      | "week"     | "month"
-      | "year"     | "IFREG"      | "IFDIR"    | "IFLNK"    | "IFCHR"
-      | "IFBLK"    | "IFSOCK"     | "IFIFO"    | "IFDOOR"   | "IFMT"
-      | "ISUID"    | "ISGID"      | "ISVTX"    | "IRWXU"    | "IRUSR"
-      | "IWUSR"    | "IXUSR"      | "IRWXG"    | "IRGRP"    | "IWGRP"
-      | "IXGRP"    | "IRWXO"      | "IROTH"    | "IWOTH"    | "IXOTH"
-      | "texists"  | "tdev"       | "tmajor"   | "tminor"   | "tino"
-      | "tmode"    | "tnlink"     | "tuid"     | "tgid"     | "trdev"
-      | "trmajor"  | "trminor"    | "tsize"    | "tblksize" | "tblocks"
-      | "tatime"   | "tmtime"     | "tctime"   | "tstrlen"
+      | "mtime"    | "ctime"      | "attr"     | "proj"     | "gen"
+      | "nouser"   | "nogroup"    | "readable" | "writable" | "executable"
+      | "strlen"   | "depth"      | "prune"    | "trim"     | "exit"
+      | "now"      | "today"      | "second"   | "minute"   | "hour"
+      | "day"      | "week"       | "month"    | "year"     | "IFREG"
+      | "IFDIR"    | "IFLNK"      | "IFCHR"    | "IFBLK"    | "IFSOCK"
+      | "IFIFO"    | "IFDOOR"     | "IFMT"     | "ISUID"    | "ISGID"
+      | "ISVTX"    | "IRWXU"      | "IRUSR"    | "IWUSR"    | "IXUSR"
+      | "IRWXG"    | "IRGRP"      | "IWGRP"    | "IXGRP"    | "IRWXO"
+      | "IROTH"    | "IWOTH"      | "IXOTH"    | "texists"  | "tdev"
+      | "tmajor"   | "tminor"     | "tino"     | "tmode"    | "tnlink"
+      | "tuid"     | "tgid"       | "trdev"    | "trmajor"  | "trminor"
+      | "tsize"    | "tblksize"   | "tblocks"  | "tatime"   | "tmtime"
+      | "tctime"   | "tstrlen"
 
   <function-call> ::=
       IDENTIFIER <arguments>
@@ -560,6 +563,54 @@ is the C<st_mtime> field of the corresponding I<stat(2)> structure.
 
 The time that the current candidate file's inode was last changed. This is
 the C<st_ctime> field of the corresponding I<stat(2)> structure.
+
+=item C<attr>
+
+On I<Linux>, the current candidate file's I<ext2>-style file attribute bit
+mask. Not all file systems support all file attributes. See I<chattr(1)> and
+I<lsattr(1)> for details. See C</etc/rawhide.conf.d/attributes> for all the
+related predicate functions (e.g., C<immutable>, C<append>, C<nodump>,
+C<nocow>, C<dax>, ...).
+
+Note: If the current candidate file is a symlink, it is never followed for
+the purpose of obtaining the file attributes. This is a decision made by
+I<libe2p>. This is not affected by the C<-y> or C<-Y> options. Also note
+that symlinks do not have their own file attributes (i.e., C<attr> is zero).
+
+Note: This is only available on I<Linux> systems with I<libe2p>. On I<Linux>
+systems without I<libe2p>, this is not a built-in symbol. Instead, this is a
+place-holder function that returns zero. On other systems, this doesn't
+exist at all.
+
+=item C<proj>
+
+On I<Linux>, the current candidate file's I<ext2>-style file project
+number. Not all file systems support all file attributes. See I<chattr(1)> and
+I<lsattr(1)> for details.
+
+Note: If the current candidate file is a symlink, it is always followed for
+the purpose of obtaining the file project. This is not affected by the C<-y>
+or C<-Y> options.
+
+Note: This is only available on I<Linux> systems with I<libe2p>. On I<Linux>
+systems without I<libe2p>, this is not a built-in symbol. Instead, this is a
+place-holder function that returns zero. On other systems, this doesn't
+exist at all.
+
+=item C<gen>
+
+On I<Linux>, the current candidate file's I<ext2>-style version/generation
+number. Not all file systems support all file attributes. See I<chattr(1)>
+and I<lsattr(1)> for details.
+
+Note: If the current candidate file is a symlink, it is always followed for
+the purpose of obtaining the file version/generation. This is not affected
+by the C<-y> or C<-Y> options.
+
+Note: This is only available on I<Linux> systems with I<libe2p>. On I<Linux>
+systems without I<libe2p>, this is not a built-in symbol. Instead, this is a
+place-holder function that returns zero. On other systems, this doesn't
+exist at all.
 
 =item C<nouser>
 
@@ -1694,6 +1745,56 @@ C<st_ctime> field of the corresponding I<stat(2)> structure.
 It is an error to use this if the reference file does not exist. See
 C<exists> above.
 
+=item C<attr>
+
+On I<Linux>, the reference file's I<ext2>-style file attribute bit mask. Not
+all file systems support all file attributes. See I<chattr(1)> and
+I<lsattr(1)> for details. See C</etc/rawhide.conf.d/attributes> for all the
+related constants (e.g., C<ATTR_IMMUTABLE>, C<ATTR_APPEND>, ...).
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+Note: If the reference file is a symlink, it is never followed for the
+purpose of obtaining the file attributes. This is a decision made by
+I<libe2p>. This is not affected by the C<-y> or C<-Y> options. Also note
+that symlinks do not have their own file attributes (i.e., C<attr> is zero).
+
+Note: This is only available on I<Linux> systems with I<libe2p>. On other
+systems, this doesn't exist at all.
+
+=item C<proj>
+
+On I<Linux>, the reference file's I<ext2>-style file project number. Not all
+file systems support all file attributes. See I<chattr(1)> and I<lsattr(1)>
+for details.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+Note: If the reference file is a symlink, it is always followed for the
+purpose of obtaining the file project. This is not affected by the C<-y> or
+C<-Y> options.
+
+Note: This is only available on I<Linux> systems with I<libe2p>. On other
+systems, this doesn't exist at all.
+
+=item C<gen>
+
+On I<Linux>, the reference file's I<ext2>-style version/generation
+number. Not all file systems support all file attributes. See I<chattr(1)> and
+I<lsattr(1)> for details.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+Note: If the reference file is a symlink, it is always followed for the
+purpose of obtaining the file version/generation. This is not affected by
+the C<-y> or C<-Y> options.
+
+Note: This is only available on I<Linux> systems with I<libe2p>. On other
+systems, this doesn't exist at all.
+
 =item C<strlen>
 
 The length in bytes of the base name of the reference file. Note that this
@@ -2205,6 +2306,128 @@ uses for these identifiers.
   mth { month }
   yr  { year }
 
+On I<Linux> systems with I<libe2p>, this is the
+C</etc/rawhide.conf.d/attributes> library:
+
+  # /etc/rawhide.conf.d/attributes
+  # See rh(1) and rawhide.conf(5) for more information.
+  
+  /*
+  This file defines aliases for the built-in symbols for the
+  Linux ext2-style file attributes, and the related constants
+  and predicates. See <e2p/e2p.h> and <ext2fs/ext2_fs.h>.
+  */
+  
+  // Aliases for the Linux ext2-style attribute built-ins
+  
+  attrs      { attr }
+  attribute  { attr }
+  attributes { attr }
+  project    { proj }
+  generation { gen }
+  
+  // Attribute constants from <ext2fs/ext2_fs.h>
+  
+  ATTR_SECRM            { 0x00000001 } # Secure deletion
+  ATTR_UNRM             { 0x00000002 } # Undelete
+  ATTR_COMPR            { 0x00000004 } # Compress file
+  ATTR_SYNC             { 0x00000008 } # Synchronous updates
+  ATTR_IMMUTABLE        { 0x00000010 } # Immutable file
+  ATTR_APPEND           { 0x00000020 } # Writes to file may only append
+  ATTR_NODUMP           { 0x00000040 } # Do not dump file
+  ATTR_NOATIME          { 0x00000080 } # Do not update atime
+  ATTR_DIRTY            { 0x00000100 }
+  ATTR_COMPRBLK         { 0x00000200 } # One or more compressed clusters
+  ATTR_NOCOMPR          { 0x00000400 } # Access raw compressed data
+  ATTR_ENCRYPT          { 0x00000800 } # Encrypted
+  ATTR_BTREE            { 0x00001000 } # Btree format directory
+  ATTR_INDEX            { 0x00001000 } # Hash-indexed directory
+  ATTR_IMAGIC           { 0x00002000 }
+  ATTR_JOURNAL_DATA     { 0x00004000 } # File data should be journaled
+  ATTR_NOTAIL           { 0x00008000 } # File tail should not be merged
+  ATTR_DIRSYNC          { 0x00010000 } # Synchronous directory modifications
+  ATTR_TOPDIR           { 0x00020000 } # Top of directory hierarchies
+  ATTR_HUGE_FILE        { 0x00040000 } # Set to each huge file
+  ATTR_EXTENTS          { 0x00080000 } # Inode uses extents
+  ATTR_VERITY           { 0x00100000 } # Verity protected inode
+  ATTR_EA_INODE         { 0x00200000 } # Inode used for large EA
+  ATTR_NOCOW            { 0x00800000 } # Do not cow file
+  ATTR_SNAPFILE         { 0x01000000 } # Inode is a snapshot
+  ATTR_DAX              { 0x02000000 } # Inode is DAX
+  ATTR_SNAPFILE_DELETED { 0x04000000 } # Snapshot is being deleted
+  ATTR_SNAPFILE_SHRUNK  { 0x08000000 } # Snapshot shrink has completed
+  ATTR_INLINE_DATA      { 0x10000000 } # Inode has inline data
+  ATTR_PROJINHERIT      { 0x20000000 } # Create with parents projid
+  ATTR_CASEFOLD         { 0x40000000 } # Casefolded file
+  
+  // Attribute predicates (canonical, aliases)
+  
+  secrm            { attr & ATTR_SECRM }
+  unrm             { attr & ATTR_UNRM }
+  compr            { attr & ATTR_COMPR }
+  sync             { attr & ATTR_SYNC }
+  immutable        { attr & ATTR_IMMUTABLE }
+  append           { attr & ATTR_APPEND }
+  nodump           { attr & ATTR_NODUMP }
+  noatime          { attr & ATTR_NOATIME }
+  dirty            { attr & ATTR_DIRTY }
+  comprblk         { attr & ATTR_COMPRBLK }
+  nocompr          { attr & ATTR_NOCOMPR }
+  encrypt          { attr & ATTR_ENCRYPT }
+  btree            { attr & ATTR_BTREE }
+  index            { attr & ATTR_INDEX }
+  imagic           { attr & ATTR_IMAGIC }
+  journal_data     { attr & ATTR_JOURNAL_DATA }
+  notail           { attr & ATTR_NOTAIL }
+  dirsync          { attr & ATTR_DIRSYNC }
+  topdir           { attr & ATTR_TOPDIR }
+  huge_file        { attr & ATTR_HUGE_FILE }
+  extents          { attr & ATTR_EXTENTS }
+  verity           { attr & ATTR_VERITY }
+  ea_inode         { attr & ATTR_EA_INODE }
+  nocow            { attr & ATTR_NOCOW }
+  snapfile         { attr & ATTR_SNAPFILE }
+  dax              { attr & ATTR_DAX }
+  snapfile_deleted { attr & ATTR_SNAPFILE_DELETED }
+  snapfile_shrunk  { attr & ATTR_SNAPFILE_SHRUNK }
+  inline_data      { attr & ATTR_INLINE_DATA }
+  projinherit      { attr & ATTR_PROJINHERIT }
+  casefold         { attr & ATTR_CASEFOLD }
+  
+  secure_deletion  { secrm }
+  undelete         { unrm }
+  compressed       { compr }
+  synchronous      { sync }
+  append_only      { append }
+  nocompression    { nocompr }
+  encrypted        { encrypt }
+  indexed          { index }
+  direct_access    { dax }
+  inherit_project  { projinherit }
+  
+  attr_s { secrm }
+  attr_u { unrm }
+  attr_c { compr }
+  attr_S { sync }
+  attr_i { immutable }
+  attr_a { append }
+  attr_d { nodump }
+  attr_A { noatime }
+  attr_m { nocompr }
+  attr_E { encrypt }
+  attr_I { index }
+  attr_j { journal_data }
+  attr_t { notail }
+  attr_D { dirsync }
+  attr_T { topdir }
+  attr_e { extents }
+  attr_V { verity }
+  attr_C { nocow }
+  attr_x { dax }
+  attr_N { inline_data }
+  attr_P { projinherit }
+  attr_F { casefold }
+
 See I<rh(1)> for more examples.
 
 =head1 FILES
@@ -2240,7 +2463,7 @@ derived from it by appending C<".d">.
 I<rh(1)>, I<stat(2)>, I<mktime(3)>, I<fnmatch(3)>, I<glob(7)>, I<perlre(1)>,
 I<pcre2pattern(3)>, I<pcre2syntax(3)>, I<access(2)>, I<acl(2)> or I<acl(3)>
 or I<acl(5)>, I<xattr(1)> or I<xattr(7)> or I<extattr(2)> or I<fsattr(7)>,
-I<jq(1)>, I<The C programming language>.
+I<chattr(1)>, I<lsattr(1)>, I<jq(1)>, I<The C programming language>.
 
 =head1 AUTHORS
 

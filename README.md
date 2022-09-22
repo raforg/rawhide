@@ -159,27 +159,29 @@ makes *rh* easy to use. See *rawhide.conf(5)* for details.
        dev           major         minor         ino           mode
        nlink         uid           gid           rdev          rmajor
        rminor        size          blksize       blocks        atime
-       mtime         ctime         nouser        nogroup       readable
-       writable      executable    strlen        depth         prune
-       trim          exit          now           today         second
-       minute        hour          day           week          month
-       year          IFREG         IFDIR         IFLNK         IFCHR
-       IFBLK         IFSOCK        IFIFO         IFDOOR        IFMT
-       ISUID         ISGID         ISVTX         IRWXU         IRUSR
-       IWUSR         IXUSR         IRWXG         IRGRP         IWGRP
-       IXGRP         IRWXO         IROTH         IWOTH         IXOTH
-       texists       tdev          tmajor        tminor        tino
-       tmode         tnlink        tuid          tgid          trdev
-       trmajor       trminor       tsize         tblksize      tblocks
-       tatime        tmtime        tctime        tstrlen
+       mtime         ctime         attr          proj          gen
+       nouser        nogroup       readable      writable      executable
+       strlen        depth         prune         trim          exit
+       now           today         second        minute        hour
+       day           week          month         year          IFREG
+       IFDIR         IFLNK         IFCHR         IFBLK         IFSOCK
+       IFIFO         IFDOOR        IFMT          ISUID         ISGID
+       ISVTX         IRWXU         IRUSR         IWUSR         IXUSR
+       IRWXG         IRGRP         IWGRP         IXGRP         IRWXO
+       IROTH         IWOTH         IXOTH         texists       tdev
+       tmajor        tminor        tino          tmode         tnlink
+       tuid          tgid          trdev         trmajor       trminor
+       tsize         tblksize      tblocks       tatime        tmtime
+       tctime        tstrlen
 
      Reference file fields:
        .exists       .dev          .major        .minor        .ino
        .mode         .type         .perm         .nlink        .uid
        .gid          .rdev         .rmajor       .rminor       .size
-       .blksize      .blocks       .atime        .mtime        .ctime
-       .strlen       .inode        .nlinks       .user         .group
-       .sz           .accessed     .modified     .changed      .len
+       .attr         .proj         .gen          .strlen       .inode
+       .nlinks       .user         .group        .sz           .accessed
+       .modified     .changed      .attribute    .project      .generation
+       .len
 
      System-wide and user-specific functions can be defined here:
        /etc/rawhide.conf          ~/.rhrc
@@ -427,6 +429,11 @@ Find files on *Linux* by their *selinux(8)* context (any):
         $ rh '"*security.selinux: *_u:*_r:*_t:s[0-3]*".ea'
         $ rh '"^security\.selinux:\ .*_u:.*_r:.*_t:s[0-3]".reea'
 
+Find files on *Linux* that are immutable or append-only:
+
+        $ rh / 'immutable || append'
+        $ rh / 'attr_i || attr_a'
+
 Find files on *Solaris* with setuid executable extended attributes (silly):
 
         $ rh / '"*/stat: -rws*".ea'
@@ -505,8 +512,9 @@ While optional, it is very highly recommended that *libpcre2-8* be
 installed. It adds so much more fun. On *macOS*, *libpcre2-8* can be
 installed via *macports* or *homebrew*.
 
-On *Linux*, installing *libacl* is also recommended, if it's not already
-installed. And *pkg-config* is needed (to find and use *libacl*).
+On *Linux*, *libacl* (for access control lists) and *libe2p* (for
+*ext2*-style file attributes) are also recommended. And *pkg-config* is
+needed (to find and use them).
 
 To build and install from the *git* repository, *pod2man* (which comes with
 *perl*) is needed to produce the manual entries. The source distribution

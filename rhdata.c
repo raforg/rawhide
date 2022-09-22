@@ -91,6 +91,14 @@ static symbol_t init_syms[] =
 	{ "mtime",   FIELD, 0, c_mtime,   NULL },
 	{ "ctime",   FIELD, 0, c_ctime,   NULL },
 
+	/* Linux ext2-style file attributes */
+
+#ifdef HAVE_ATTR
+	{ "attr",    FIELD, 0, c_attr,   NULL },
+	{ "proj",    FIELD, 0, c_proj,   NULL },
+	{ "gen",     FIELD, 0, c_gen,    NULL },
+#endif
+
 	/* Miscellaneous functions and control flow */
 
 	{ "nouser",     FIELD, 0, c_nouser,     NULL },
@@ -187,6 +195,11 @@ static symbol_t init_syms[] =
 	{ ".atime",    REFFILE, 0, r_atime,   NULL },
 	{ ".mtime",    REFFILE, 0, r_mtime,   NULL },
 	{ ".ctime",    REFFILE, 0, r_ctime,   NULL },
+#ifdef HAVE_ATTR
+	{ ".attr",     REFFILE, 0, r_attr,    NULL },
+	{ ".proj",     REFFILE, 0, r_proj,    NULL },
+	{ ".gen",      REFFILE, 0, r_gen,     NULL },
+#endif
 	{ ".strlen",   REFFILE, 0, r_strlen,  NULL },
 
 	{ ".inode",    REFFILE, 0, r_ino,     NULL },
@@ -197,6 +210,11 @@ static symbol_t init_syms[] =
 	{ ".accessed", REFFILE, 0, r_atime,   NULL },
 	{ ".modified", REFFILE, 0, r_mtime,   NULL },
 	{ ".changed",  REFFILE, 0, r_ctime,   NULL },
+#ifdef HAVE_ATTR
+	{ ".attribute",  REFFILE, 0, r_attr,  NULL },
+	{ ".project",    REFFILE, 0, r_proj,  NULL },
+	{ ".generation", REFFILE, 0, r_gen,   NULL },
+#endif
 	{ ".len",      REFFILE, 0, r_strlen,  NULL },
 
 	/* Pattern modifiers */

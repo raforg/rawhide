@@ -69,6 +69,11 @@
 #include <sys/extattr.h>
 #endif
 
+#ifdef HAVE_ATTR
+#include <e2p/e2p.h>
+#include <ext2fs/ext2_fs.h>
+#endif
+
 #include "rh.h"
 #include "rhdir.h"
 #include "rherr.h"
@@ -218,6 +223,57 @@ void c_depth(llong i)   { Stack[SP++] = attr.depth; }
 void c_prune(llong i)   { Stack[SP++] = 1; attr.prune = attr.pruned = 1; }
 void c_trim(llong i)    { Stack[SP++] = 1; attr.prune = 1; }
 void c_exit(llong i)    { Stack[SP++] = 1; attr.exit = 1; }
+
+unsigned long get_attr(void)
+{
+	#ifdef HAVE_ATTR
+
+	if (!attr.attr_done)
+	{
+		attr.attr_done = 1;
+		(void)fgetflags(attr.fpath, &attr.attr);
+	}
+
+	#endif
+
+	return attr.attr;
+}
+
+unsigned long get_proj(void)
+{
+	#ifdef HAVE_ATTR
+
+	if (!attr.proj_done)
+	{
+		attr.proj_done = 1;
+		(void)fgetproject(attr.fpath, &attr.proj);
+	}
+
+	#endif
+
+	return attr.proj;
+}
+
+unsigned long get_gen(void)
+{
+	#ifdef HAVE_ATTR
+
+	if (!attr.gen_done)
+	{
+		attr.gen_done = 1;
+		(void)fgetversion(attr.fpath, &attr.gen);
+	}
+
+	#endif
+
+	return attr.gen;
+}
+
+#ifdef HAVE_ATTR
+void c_attr(llong i) { Stack[SP++] = get_attr(); }
+void c_proj(llong i) { Stack[SP++] = get_proj(); }
+void c_gen(llong i)  { Stack[SP++] = get_gen(); }
+#endif
 
 void c_strlen(llong i)
 {
@@ -1230,6 +1286,49 @@ void r_ctime(llong i)   { check_reference(i, "ctime");   Stack[SP++] = RefFile[i
 void r_type(llong i)    { check_reference(i, "type");    Stack[SP++] = RefFile[i].statbuf->st_mode & S_IFMT; }
 void r_perm(llong i)    { check_reference(i, "perm");    Stack[SP++] = RefFile[i].statbuf->st_mode & ~S_IFMT; }
 
+#ifdef HAVE_ATTR
+
+void r_attr(llong i)
+{
+	check_reference(i, "attr");
+
+	if (!RefFile[i].attr_done)
+	{
+		RefFile[i].attr_done = 1;
+		(void)fgetflags(Strbuf + RefFile[i].fpathi, &RefFile[i].attr);
+	}
+
+	Stack[SP++] = RefFile[i].attr;
+}
+
+void r_proj(llong i)
+{
+	check_reference(i, "proj");
+
+	if (!RefFile[i].proj_done)
+	{
+		RefFile[i].proj_done = 1;
+		(void)fgetproject(Strbuf + RefFile[i].fpathi, &RefFile[i].proj);
+	}
+
+	Stack[SP++] = RefFile[i].proj;
+}
+
+void r_gen(llong i)
+{
+	check_reference(i, "gen");
+
+	if (!RefFile[i].gen_done)
+	{
+		RefFile[i].gen_done = 1;
+		(void)fgetversion(Strbuf + RefFile[i].fpathi, &RefFile[i].gen);
+	}
+
+	Stack[SP++] = RefFile[i].gen;
+}
+
+#endif
+
 /* Symlink targets */
 
 void prepare_target(void)
@@ -1329,6 +1428,11 @@ char *instruction_name(void (*func)(llong))
 		(func == c_atime) ? "atime" :
 		(func == c_mtime) ? "mtime" :
 		(func == c_ctime) ? "ctime" :
+		#ifdef HAVE_ATTR
+		(func == c_attr) ? "cattr" :
+		(func == c_proj) ? "cproj" :
+		(func == c_gen) ? "cgen" :
+		#endif
 		(func == c_depth) ? "depth" :
 		(func == c_prune) ? "prune" :
 		(func == c_trim) ? "trim" :
@@ -1394,6 +1498,11 @@ char *instruction_name(void (*func)(llong))
 		(func == r_atime) ? "ratime" :
 		(func == r_mtime) ? "rmtime" :
 		(func == r_ctime) ? "rctime" :
+		#ifdef HAVE_ATTR
+		(func == r_attr) ? "rattr" :
+		(func == r_proj) ? "rproj" :
+		(func == r_gen) ? "rgen" :
+		#endif
 		(func == r_strlen) ? "rstrlen" :
 		(func == r_type) ? "rtype" :
 		(func == r_perm) ? "rperm" :

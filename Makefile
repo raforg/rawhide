@@ -96,6 +96,11 @@ RAWHIDE_DEFINES = \
 #EA_CFLAGS =
 #EA_LDFLAGS =
 
+# Linux ext2-style file attributes
+#ATTR_DEFINES =
+#ATTR_CFLAGS =
+#ATTR_LDFLAGS =
+
 # For major() and minor() on Linux
 #HAVE_SYS_SYSMACROS = -DHAVE_SYS_SYSMACROS=1
 
@@ -107,15 +112,15 @@ RAWHIDE_DEFINES = \
 #DEBUG_DEFINES = -DNDEBUG
 
 # Test coverage (gcov): Uncomment this, run tests (as non-root and as root),
-# then run gcov *.c then examine *.c.gcov or run gcov_summary (96.53% overall)
+# then run gcov *.c then examine *.c.gcov or run gcov_summary (96.65% on Linux)
 #GCOV_CFLAGS = -fprofile-arcs -ftest-coverage
 
 CC = cc
 #CC = gcc
 #CC = other
-CPPFLAGS = $(RAWHIDE_DEFINES) $(PCRE2_DEFINES) $(ACL_DEFINES) $(EA_DEFINES) $(DEBUG_DEFINES) $(HAVE_SYS_SYSMACROS) $(HAVE_SYS_MKDEV)
-CFLAGS = -O3 -g -Wall -pedantic $(CPPFLAGS) $(PCRE2_CFLAGS) $(ACL_CFLAGS) $(EA_CFLAGS) $(GCOV_CFLAGS)
-LDFLAGS = $(PCRE2_LDFLAGS) $(ACL_LDFLAGS) $(EA_LDLAGS)
+CPPFLAGS = $(RAWHIDE_DEFINES) $(PCRE2_DEFINES) $(ACL_DEFINES) $(EA_DEFINES) $(ATTR_DEFINES) $(DEBUG_DEFINES) $(HAVE_SYS_SYSMACROS) $(HAVE_SYS_MKDEV)
+CFLAGS = -O3 -g -Wall -pedantic $(CPPFLAGS) $(PCRE2_CFLAGS) $(ACL_CFLAGS) $(EA_CFLAGS) $(ATTR_CFLAGS) $(GCOV_CFLAGS)
+LDFLAGS = $(PCRE2_LDFLAGS) $(ACL_LDFLAGS) $(EA_LDLAGS) $(ATTR_LDFLAGS)
 
 OBJS = rhcmds.o rh.o rhparse.o rhdir.o rhdata.o rhstr.o rherr.o
 
@@ -242,7 +247,7 @@ tests: test
 
 dist: clobber man
 	@set -e; \
-	./configure --disable-pcre2 --disable-acl --disable-ea --disable-ndebug --disable-gcov --disable-cc-other --disable-mangz --disable-major --static=large; \
+	./configure --disable-pcre2 --disable-acl --disable-ea --disable-attr --disable-ndebug --disable-gcov --disable-cc-other --disable-mangz --disable-major --static=large; \
 	up="`pwd`/.."; \
 	src=`basename \`pwd\``; \
 	dst=$(RAWHIDE_ID); \
@@ -267,7 +272,7 @@ help:
 	@echo "  make quiet=1 test - Run tests with just one line per test suite"
 	@echo "  make vg=1 test    - Run tests and produce valgrind.out analysis (~40m)"
 	@echo 
-	@echo "To run tests for test coverage analysis (96.53%):"
+	@echo "To run tests for test coverage analysis (96.65% on Linux):"
 	@echo
 	@echo "  ./configure --enable-gcov"
 	@echo "  make"

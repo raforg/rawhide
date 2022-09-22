@@ -345,7 +345,6 @@ case "`uname`" in
 esac
 
 test_rawhide "$rh -L ' %M\n'            $d/f" " -rw-r--r--\n"                              ""                                         0 "-L '%M\\\\n' $d/f"
-test_rawhide "$rh -L ' %M\n'            $d/f" " -rw-r--r--\n"                              ""                                         0 "-L '%M\\\\n' $d/f"
 test_rawhide "$rh -L ' %15M\n'          $d/f" "      -rw-r--r--\n"                         ""                                         0 "-L '%15M\\\\n' $d/f"
 test_rawhide "$rh -L ' %-15M\n'         $d/f" " -rw-r--r--     \n"                         ""                                         0 "-L '%-15M\\\\n' $d/f"
 test_rawhide "$rh -L ' %15.5M\n'        $d/f" "           -rw-r\n"                         ""                                         0 "-L '%15.5M\\\\n' $d/f"
@@ -354,14 +353,12 @@ test_rawhide "$rh -L ' %-15.5M\n'       $d/f" " -rw-r          \n"              
 case "`uname`" in
 	Darwin|FreeBSD|OpenBSD|NetBSD)
 		test_rawhide "$rh -L ' %M\n'            $d/l" " lrwxr-xr-x\n"                              ""                                         0 "-L '%M\\\\n' $d/l"
-		test_rawhide "$rh -L ' %M\n'            $d/l" " lrwxr-xr-x\n"                              ""                                         0 "-L '%M\\\\n' $d/l"
 		test_rawhide "$rh -L ' %15M\n'          $d/l" "      lrwxr-xr-x\n"                         ""                                         0 "-L '%15M\\\\n' $d/l"
 		test_rawhide "$rh -L ' %-15M\n'         $d/l" " lrwxr-xr-x     \n"                         ""                                         0 "-L '%-15M\\\\n' $d/l"
 		test_rawhide "$rh -L ' %15.5M\n'        $d/l" "           lrwxr\n"                         ""                                         0 "-L '%15.5M\\\\n' $d/l"
 		test_rawhide "$rh -L ' %-15.5M\n'       $d/l" " lrwxr          \n"                         ""                                         0 "-L '%-15.5M\\\\n' $d/l"
 		;;
 	*)
-		test_rawhide "$rh -L ' %M\n'            $d/l" " lrwxrwxrwx\n"                              ""                                         0 "-L '%M\\\\n' $d/l"
 		test_rawhide "$rh -L ' %M\n'            $d/l" " lrwxrwxrwx\n"                              ""                                         0 "-L '%M\\\\n' $d/l"
 		test_rawhide "$rh -L ' %15M\n'          $d/l" "      lrwxrwxrwx\n"                         ""                                         0 "-L '%15M\\\\n' $d/l"
 		test_rawhide "$rh -L ' %-15M\n'         $d/l" " lrwxrwxrwx     \n"                         ""                                         0 "-L '%-15M\\\\n' $d/l"
@@ -609,6 +606,69 @@ test_rawhide_grep "$rh -L '%-------------------------010i\n'  $d/f"  "^$num *\$"
 test_rawhide      "$rh -L '%--------------------------010i\n'  $d/f" ""                    "./rh: invalid -L argument: %%--------------------------010i\\\\n (conversion flags/width/precision too long)\n" 1 "-L '%--------------------------010i' (too long)"
 
 # For -L %x %X see tests/t27
+
+# %e (ext2-style attributes) %J (project) %I (generation) (requires e2fsprogs (libe2p and chattr))
+
+if [ "`whoami`" = root ]
+then
+	if $rh -h | grep -wq attr
+	then
+		if [ -n "`which chattr`" ]
+		then
+			test_rawhide_post_hook() { test_rh_sort_post_hook; }
+			mkdir $d/d
+			touch $d/f
+			ln -s d $d/ld
+			ln -s f $d/lf
+			chattr +a $d/d
+			chattr +a $d/f
+
+			test_rawhide_grep "$rh -e 'd && attr & 0x00000020' -L '%p %e\n' $d" "$d/d .*append.*" "" 0 "-L %e (attribute) d"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%p %e\n' $d" "$d/f .*append.*" "" 0 "-L %e (attribute) f"
+			test_rawhide_grep "$rh -e 'd && attr & 0x00000020' -L '%p %J\n' $d" "$d/d [0-9]+"     "" 0 "-L %J (project) d"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%p %J\n' $d" "$d/f [0-9]+"     "" 0 "-L %J (project) f"
+			test_rawhide_grep "$rh -e 'd && attr & 0x00000020' -L '%p %I\n' $d" "$d/d [0-9]+"     "" 0 "-L %I (version/generation) d"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%p %I\n' $d" "$d/f [0-9]+"     "" 0 "-L %I (version/generation) f"
+
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%e\n'      $d/f" "^[^ ].*[^ ]$" "" 0 "-L '%e\\\\n' $d/f"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%15e\n'    $d/f" "^ +.+$"       "" 0 "-L '%15e\\\\n' $d/f"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%-15e\n'   $d/f" "^.+ +$"       "" 0 "-L '%-15e\\\\n' $d/f"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%15.5e\n'  $d/f" "^ +.....$"    "" 0 "-L '%15.5e\\\\n' $d/f"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%-15.5e\n' $d/f" "^..... +$"    "" 0 "-L '%-15.5e\\\\n' $d/f"
+
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%J\n'      $d/f" "^$num\$"     "" 0 "-L '%J\\\\n'"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%25J\n'    $d/f" "^ +$num\$"   "" 0 "-L '%25J\\\\n'"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%025J\n'   $d/f" "^0$num\$"    "" 0 "-L '%025J\\\\n'"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '% 25J\n'   $d/f" "^ +$num\$"   "" 0 "-L '% 25J\\\\n'"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%+25J\n'   $d/f" "^ +\+$num\$" "" 0 "-L '%+25J\\\\n'"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%-25J\n'   $d/f" "^$num +\$"   "" 0 "-L '%-25J\\\\n'"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%#25J\n'   $d/f" "^ +$num\$"   "" 0 "-L '%#25J\\\\n'"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%.5J\n'    $d/f" "^$num\$"     "" 0 "-L '%.5J\\\\n'"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%25.5J\n'  $d/f" "^ +$num\$"   "" 0 "-L '%25.5J\\\\n'"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%-25.5J\n' $d/f" "^$num +\$"   "" 0 "-L '%-25.5J\\\\n'"
+
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%I\n'      $d/f" "^$num\$"     "" 0 "-L '%I\\\\n'"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%25I\n'    $d/f" "^ +$num\$"   "" 0 "-L '%25I\\\\n'"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%025I\n'   $d/f" "^0$num\$"    "" 0 "-L '%025I\\\\n'"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '% 25I\n'   $d/f" "^ +$num\$"   "" 0 "-L '% 25I\\\\n'"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%+25I\n'   $d/f" "^ +\+$num\$" "" 0 "-L '%+25I\\\\n'"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%-25I\n'   $d/f" "^$num +\$"   "" 0 "-L '%-25I\\\\n'"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%#25I\n'   $d/f" "^ +$num\$"   "" 0 "-L '%#25I\\\\n'"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%.5I\n'    $d/f" "^$num\$"     "" 0 "-L '%.5I\\\\n'"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%25.5I\n'  $d/f" "^ +$num\$"   "" 0 "-L '%25.5I\\\\n'"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%-25.5I\n' $d/f" "^$num +\$"   "" 0 "-L '%-25.5I\\\\n'"
+
+			# For test coverage
+			test_rawhide_grep "RAWHIDE_TEST_ATTR_FORMAT=1 $rh -e 'd && attr & 0x00000020' -L '%p %e\n' $d" "$d/d secrm unrm compr sync immutable append nodump noatime dirty comprblk nocompr encrypt index imagic journal_data notail dirsync topdir huge_file extents verity ea_inode nocow snapfile dax snapfile_deleted snapfile_shrunk inline_data projinherit casefold" "" 0 "-L %e (attribute) d all attributes"
+
+			chattr -a $d/d
+			chattr -a $d/f
+			rm $d/ld $d/lf $d/f
+			rmdir $d/d
+			test_rawhide_post_hook() { true; }
+		fi
+	fi
+fi
 
 finish
 

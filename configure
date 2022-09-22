@@ -19,7 +19,7 @@
 #
 # 20220330 raf <raf@raf.org>
 
-die() { echo "$0: $@" >&2; exit 1; }
+# Show the usage messge for --help
 
 for opt in "$@"
 do
@@ -41,6 +41,8 @@ do
 			echo "  --disable-acl      - Disable ACL support"
 			echo "  --enable-ea        - Enable EA support (default when possible)"
 			echo "  --disable-ea       - Disable EA support"
+			echo "  --enable-attr      - Enable ext2 attr support (default when possible)"
+			echo "  --disable-attr     - Disable ext2 attr support"
 			echo "  --enable-ndebug    - Enable NDEBUG (remove debugging code)"
 			echo "  --disable-ndebug   - Disable NDEBUG (keep debugging code - default)"
 			echo "  --enable-mangz     - Enable gzipped manpages (default on some systems)"
@@ -108,6 +110,8 @@ do
 	esac
 done
 
+# Record --verbose and --test early (for editconf)
+
 test=0
 verbose=0
 for opt in "$@"
@@ -122,6 +126,12 @@ do
 	esac
 done
 
+# Fatal error message (for editconf)
+
+die() { echo "$0: $@" >&2; exit 1; }
+
+# Modify a file (Makefile) with sed (honours --verbose and --test)
+
 editconf()
 {
 	fname="$1"; shift
@@ -134,6 +144,8 @@ editconf()
 		sed "$@" < "$fname" > "$fname.tmp" && mv "$fname.tmp" "$fname" || die "failed to edit $fname"
 	fi
 }
+
+# Operating system preferences (installation locations and manual compression)
 
 case "`uname`" in
 	Linux*) # prefix=/usr/local etcdir=/etc mandir=$prefix/share/man manzip=1
@@ -571,6 +583,154 @@ case "$*" in
 		;;
 esac
 
+# Look for Linux ext2-style attributes (pkg-config libe2p)
+
+create_attr_linux_code()
+{
+	cat > configchk.c << END
+#include <e2p/e2p.h>
+#include <ext2fs/ext2_fs.h>
+int main(int ac, char **av)
+{
+	char *fname = (ac > 1) ? av[1] : ".";
+	unsigned long flags, project, generation;
+
+	printf("%s:\n", fname);
+
+	if (fgetflags(fname, &flags) == -1)
+		perror("fgetflags");
+
+	if (fgetproject(fname, &project) == -1)
+		perror("fgetproject");
+
+	if (fgetversion(fname, &generation) == -1)
+		perror("fgetversion");
+
+	#define prflag(mask, label) if (flags & mask) printf("%s\n", label)
+	#ifdef EXT2_SECRM_FL
+	prflag(EXT2_SECRM_FL, " secrm");
+	#endif
+	#ifdef EXT2_UNRM_FL
+	prflag(EXT2_UNRM_FL, " unrm");
+	#endif
+	#ifdef EXT2_COMPR_FL
+	prflag(EXT2_COMPR_FL, " compr");
+	#endif
+	#ifdef EXT2_SYNC_FL
+	prflag(EXT2_SYNC_FL, " sync");
+	#endif
+	#ifdef EXT2_IMMUTABLE_FL
+	prflag(EXT2_IMMUTABLE_FL, " immutable");
+	#endif
+	#ifdef EXT2_APPEND_FL
+	prflag(EXT2_APPEND_FL, " append");
+	#endif
+	#ifdef EXT2_NODUMP_FL
+	prflag(EXT2_NODUMP_FL, " nodump");
+	#endif
+	#ifdef EXT2_NOATIME_FL
+	prflag(EXT2_NOATIME_FL, " noatime");
+	#endif
+	#ifdef EXT2_DIRTY_FL
+	prflag(EXT2_DIRTY_FL, " dirty");
+	#endif
+	#ifdef EXT2_COMPRBLK_FL
+	prflag(EXT2_COMPRBLK_FL, " comprblk");
+	#endif
+	#ifdef EXT2_NOCOMPR_FL
+	prflag(EXT2_NOCOMPR_FL, " nocompr");
+	#endif
+	#ifdef EXT4_ENCRYPT_FL
+	prflag(EXT4_ENCRYPT_FL, " encrypt");
+	#endif
+	#ifdef EXT2_INDEX_FL
+	prflag(EXT2_INDEX_FL, " index");
+	#endif
+	#ifdef EXT2_IMAGIC_FL
+	prflag(EXT2_IMAGIC_FL, " imagic");
+	#endif
+	#ifdef EXT3_JOURNAL_DATA_FL
+	prflag(EXT3_JOURNAL_DATA_FL, " journal_data");
+	#endif
+	#ifdef EXT2_NOTAIL_FL
+	prflag(EXT2_NOTAIL_FL, " notail");
+	#endif
+	#ifdef EXT2_DIRSYNC_FL
+	prflag(EXT2_DIRSYNC_FL, " dirsync");
+	#endif
+	#ifdef EXT2_TOPDIR_FL
+	prflag(EXT2_TOPDIR_FL, " topdir");
+	#endif
+	#ifdef EXT4_HUGE_FILE_FL
+	prflag(EXT4_HUGE_FILE_FL, " huge_file");
+	#endif
+	#ifdef EXT4_EXTENTS_FL
+	prflag(EXT4_EXTENTS_FL, " extents");
+	#endif
+	#ifdef EXT4_VERITY_FL
+	prflag(EXT4_VERITY_FL, " verity");
+	#endif
+	#ifdef EXT4_EA_INODE_FL
+	prflag(EXT4_EA_INODE_FL, " ea_inode");
+	#endif
+	#ifdef FS_NOCOW_FL
+	prflag(FS_NOCOW_FL, " nocow");
+	#endif
+	#ifdef EXT4_SNAPFILE_FL
+	prflag(EXT4_SNAPFILE_FL, " snapfile");
+	#endif
+	#ifdef FS_DAX_FL
+	prflag(FS_DAX_FL, " dax");
+	#endif
+	#ifdef EXT4_SNAPFILE_DELETED_FL
+	prflag(EXT4_SNAPFILE_DELETED_FL, " snapfile_deleted");
+	#endif
+	#ifdef EXT4_SNAPFILE_SHRUNK_FL
+	prflag(EXT4_SNAPFILE_SHRUNK_FL, " snapfile_shrunk");
+	#endif
+	#ifdef EXT4_INLINE_DATA_FL
+	prflag(EXT4_INLINE_DATA_FL, " inline_data");
+	#endif
+	#ifdef EXT4_PROJINHERIT_FL
+	prflag(EXT4_PROJINHERIT_FL, " projinherit");
+	#endif
+	#ifdef EXT4_CASEFOLD_FL
+	prflag(EXT4_CASEFOLD_FL, " casefold");
+	#endif
+	printf("project %lu\n", project);
+	printf("generation %lu\n", generation);
+	return 0;
+}
+END
+}
+
+test_attr_linux_libe2p()
+{
+	create_attr_linux_code
+	TEST_CFLAGS="`pkg-config --cflags e2p 2>/dev/null`"
+	[ $? = 0 ] || return 1
+	TEST_LDFLAGS="`pkg-config --libs e2p 2>/dev/null`"
+	compile_test || return 1
+	echo "Configuring --enable-attr$attr_reason"
+	editconf Makefile \
+		-e 's:^#\(ATTR_DEFINES =\).*$:\1 -DHAVE_ATTR=1:' \
+		-e 's:^#\(ATTR_CFLAGS =\)$:\1 '"$TEST_CFLAGS"':' \
+		-e 's:^#\(ATTR_LDFLAGS =\)$:\1 '"$TEST_LDFLAGS"':'
+	HAVE_ATTR=1
+	TEST_CFLAGS=""
+	TEST_LDFLAGS=""
+	return 0
+}
+
+case "$*" in
+	*--disable-attr*)
+		;;
+	*)
+		case "$*" in *--enable-attr*) attr_reason="";; *) attr_reason=" (default)";; esac
+		test_attr_linux_libe2p
+		;;
+esac
+
 # Look for PCRE2 (pkg-config/pcre2-config libpcre2-8)
 
 case "$*" in
@@ -783,6 +943,18 @@ do
 				-e 's,^\(EA_DEFINES =\).*$,#\1,' \
 				-e 's,^\(EA_CFLAGS =\).*$,#\1,' \
 				-e 's,^\(EA_LDFLAGS =\).*$,#\1,' \
+			;;
+
+		--enable-attr)
+			[ "x$HAVE_ATTR" != x1 ] && echo "Failed to identify attribute support"
+			;;
+
+		--disable-attr)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^\(ATTR_DEFINES =\).*$,#\1,' \
+				-e 's,^\(ATTR_CFLAGS =\).*$,#\1,' \
+				-e 's,^\(ATTR_LDFLAGS =\).*$,#\1,' \
 			;;
 
 		--disable-major)

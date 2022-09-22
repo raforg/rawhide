@@ -120,27 +120,30 @@ I<rh> - (I<rawhide>) find files using pretty I<C> expressions
    dev           major         minor         ino           mode
    nlink         uid           gid           rdev          rmajor
    rminor        size          blksize       blocks        atime
-   mtime         ctime         nouser        nogroup       readable
-   writable      executable    strlen        depth         prune
-   trim          exit          now           today         second
-   minute        hour          day           week          month
-   year          IFREG         IFDIR         IFLNK         IFCHR
-   IFBLK         IFSOCK        IFIFO         IFDOOR        IFMT
-   ISUID         ISGID         ISVTX         IRWXU         IRUSR
-   IWUSR         IXUSR         IRWXG         IRGRP         IWGRP
-   IXGRP         IRWXO         IROTH         IWOTH         IXOTH
-   texists       tdev          tmajor        tminor        tino
-   tmode         tnlink        tuid          tgid          trdev
-   trmajor       trminor       tsize         tblksize      tblocks
-   tatime        tmtime        tctime        tstrlen
+   mtime         ctime         attr          proj          gen
+   nouser        nogroup       readable      writable      executable
+   strlen        depth         prune         trim          exit
+   now           today         second        minute        hour
+   day           week          month         year          IFREG
+   IFDIR         IFLNK         IFCHR         IFBLK         IFSOCK
+   IFIFO         IFDOOR        IFMT          ISUID         ISGID
+   ISVTX         IRWXU         IRUSR         IWUSR         IXUSR
+   IRWXG         IRGRP         IWGRP         IXGRP         IRWXO
+   IROTH         IWOTH         IXOTH         texists       tdev
+   tmajor        tminor        tino          tmode         tnlink
+   tuid          tgid          trdev         trmajor       trminor
+   tsize         tblksize      tblocks       tatime        tmtime
+   tctime        tstrlen
 
  Reference file fields:
    .exists       .dev          .major        .minor        .ino
    .mode         .type         .perm         .nlink        .uid
    .gid          .rdev         .rmajor       .rminor       .size
    .blksize      .blocks       .atime        .mtime        .ctime
-   .strlen       .inode        .nlinks       .user         .group
-   .sz           .accessed     .modified     .changed      .len
+   .attr         .proj         .gen          .strlen       .inode
+   .nlinks       .user         .group        .sz           .accessed
+   .modified     .changed      .attribute    .project      .generation
+   .len
 
  System-wide and user-specific functions can be defined here:
    /etc/rawhide.conf          ~/.rhrc
@@ -991,6 +994,57 @@ either the at sign (C<"@">), for the number of seconds since the I<UNIX>
 epoch, or a conversion specifier character for the I<C> I<strftime(3)>
 function. See I<strftime(3)> for details.
 
+=item C<%e>
+
+The I<ext2>-style file attributes as a space-separated list of attribute
+names. This is available on I<Linux> systems with I<libe2p>. See
+I<chattr(1)> and I<lsattr(1)> for details. On other systems, this is the
+empty string.
+
+The possible I<ext2>-style file attribute names are:
+C<secrm>,
+C<unrm>,
+C<compr>,
+C<sync>,
+C<immutable>,
+C<append>,
+C<nodump>,
+C<noatime>,
+C<dirty>,
+C<comprblk>,
+C<nocompr>,
+C<encrypt>,
+C<index>,
+C<imagic>,
+C<journal_data>,
+C<notail>,
+C<dirsync>,
+C<topdir>,
+C<huge_file>,
+C<extents>,
+C<verity>,
+C<ea_inode>,
+C<nocow>,
+C<snapfile>,
+C<dax>,
+C<snapfile_deleted>,
+C<snapfile_shrunk>,
+C<inline_data>,
+C<projinherit>,
+and C<casefold>.
+
+=item C<%J>
+
+The I<ext2>-style project number. This is available on I<Linux> systems with
+I<libe2p>. See I<chattr(1)> and I<lsattr(1)> for details. On other systems,
+this is the empty string.
+
+=item C<%I>
+
+The I<ext2>-style version/generation number. This is available on I<Linux>
+systems with I<libe2p>. See I<chattr(1)> and I<lsattr(1)> for details. On
+other systems, this is the empty string.
+
 =item C<%z>
 
 The access control list (ACL) as a comma-separated list of items. This is
@@ -1138,6 +1192,12 @@ the following possible attributes:
 
 =item C<ctime_unix> (integer) (same as C<%C@>)
 
+=item C<attributes> (string) (same as C<%e>) (only if available)
+
+=item C<project> (integer) (same as C<%J>) (only if available)
+
+=item C<generation> (integer) (same as C<%I>) (only if available)
+
 =item C<access_control_list> (string) (like C<%z> without the C<-v> option, but not reformatted as a comma-separated list) (only if present)
 
 =item C<access_control_list_verbose> (string) (like C<%z> with the C<-v> option, but not reformatted as a comma-separated list) (only if present)
@@ -1195,6 +1255,9 @@ and I<find(1)> doesn't do I<rh>'s
 C<%z> (access control list),
 C<%x> (extended attributes),
 C<%X> (ACL/EA indicator),
+C<%e> (attributes),
+C<%J> (project),
+C<%I> (generation),
 C<%V> (C<dev> major device number),
 C<%v> (C<dev> minor device number),
 C<%E> (C<rdev> device number),
@@ -1448,7 +1511,8 @@ by a file test expression, which is optionally terminated by a semicolon
 
 There are built-in symbols that represent the inode metadata (i.e.,
 I<stat(2)> structure fields) of candidate files (e.g., C<mode>, C<uid>,
-C<size>, C<mtime>, ...), other useful file information (e.g., C<nouser>,
+C<size>, C<mtime>, ...), I<Linux> I<ext2>-style file attributes (i.e.,
+I<attr>, I<proj>, I<gen>), other useful file information (e.g., C<nouser>,
 C<nogroup>, C<readable>, C<writable>, ...), control flow (i.e., C<prune>,
 C<trim>, C<exit>), useful values and constants (e.g., C<now>, C<today>,
 C<minute>, C<hour>, C<day>, ...), and more constants from I<C>'s
@@ -1469,6 +1533,11 @@ C<imaywrite>, C<iw>, ...); size units (e.g., C<KiB>, C<MiB>, C<GiB>, C<KB>,
 C<MB>, C<GB>, ...); and miscellaneous helper functions (e.g., C<ago()>,
 C<old()>, C<past()>, C<empty>, C<roots>, C<mine>, C<broken>, C<gmtoday>,
 ...).
+
+On I<Linux> systems, there is an additional library of functions in
+C</etc/rawhide.conf.d/attributes>. It contains constants and predicates for
+I<ext2>-style file attributes (e.g., C<immutable>, C<append>, C<nodump>,
+C<nocow>, C<dax>, ...).
 
 By default, string literals (C<">I<pattern>C<">) represent a file glob
 pattern match against the file name. Pattern modifiers
@@ -1728,6 +1797,11 @@ Find files on I<Linux> by their I<selinux(8)> context (any):
 
     $ rh '"*security.selinux: *_u:*_r:*_t:s[0-3]*".ea'
     $ rh '"^security\.selinux:\ .*_u:.*_r:.*_t:s[0-3]".reea'
+
+Find files on I<Linux> that are immutable or append-only:
+
+    $ rh / 'immutable || append'
+    $ rh / 'attr_i || attr_a'
 
 Find files on I<Solaris> with setuid executable extended attributes (silly):
 
@@ -2465,7 +2539,7 @@ I<pcre2syntax(3)>, I<system(3)>, I<sh(1)>, I<printf(3)>, I<strftime(3)>,
 I<ctime(3)>, I<acl(2)> or I<acl(3)> or I<acl(5)>, I<xattr(1)> or I<xattr(7)>
 or I<extattr(2)> or I<fsattr(7)>, I<chmod(1)>, I<setfacl(1)>, I<getfacl(1)>,
 I<setfattr(1)>, I<getfattr(1)>, I<selinux(8)>, I<runat(1)>, I<mount(8)>,
-I<The C programming language>.
+I<chattr(1)>, I<lsattr(1)>, I<The C programming language>.
 
 =head1 AUTHORS
 

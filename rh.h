@@ -161,6 +161,13 @@ struct runtime_t
 	int fea_solaris_no_sunwattr; /* Suppress ubiquitous SUNWattr_ro/SUNWattr_rw EAs */
 	int fea_solaris_no_statinfo; /* Suppress artificial stat(2) info EAs */
 
+	int attr_done;          /* Have we loaded the Linux ext2-style attributes? */
+	unsigned long attr;     /* Linux ext2-style attributes */
+	int proj_done;          /* Have we loaded the Linux ext2-style project? */
+	unsigned long proj;     /* Linux ext2-style project */
+	int gen_done;           /* Have we loaded the Linux ext2-style generation? */
+	unsigned long gen;      /* Linux ext2-style generation */
+
 	char *ttybuf;           /* Temp space for printf_sanitized() (long-lived, on-demand) */
 	char *formatbuf;        /* Temp space for visitf_format() (long-lived, on-demand) */
 
@@ -250,6 +257,12 @@ struct reffile_t
 	llong baselen;          /* The length of the base name */
 	struct stat statbuf[1]; /* The stat structure for the referenced file */
 	int dirsize_done;       /* Have we counted a directory's contents yet? */
+	int attr_done;          /* Have we loaded the Linux ext2-style attributes? */
+	unsigned long attr;     /* Linux ext2-style attributes */
+	int proj_done;          /* Have we loaded the Linux ext2-style project? */
+	unsigned long proj;     /* Linux ext2-style project */
+	int gen_done;           /* Have we loaded the Linux ext2-style generation? */
+	unsigned long gen;      /* Linux ext2-style generation */
 };
 
 /* Global variables */

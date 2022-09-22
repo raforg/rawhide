@@ -66,6 +66,14 @@ void c_blocks(llong i);
 void c_atime(llong i);
 void c_mtime(llong i);
 void c_ctime(llong i);
+unsigned long get_attr(void);
+unsigned long get_proj(void);
+unsigned long get_gen(void);
+#ifdef HAVE_ATTR
+void c_attr(llong i);
+void c_proj(llong i);
+void c_gen(llong i);
+#endif
 void c_depth(llong i);
 void c_prune(llong i);
 void c_trim(llong i);
@@ -133,6 +141,11 @@ void r_blocks(llong i);
 void r_atime(llong i);
 void r_mtime(llong i);
 void r_ctime(llong i);
+#ifdef HAVE_ATTR
+void r_attr(llong i);
+void r_proj(llong i);
+void r_gen(llong i);
+#endif
 void r_strlen(llong i);
 void r_type(llong i);
 void r_perm(llong i);

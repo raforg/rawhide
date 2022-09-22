@@ -387,6 +387,34 @@ test_rawhide "$rh -e 'changed != \"rh\".changed - 3600'    $d" "$d\n$d/e\n" "" 0
 test_rawhide "$rh -e 'f && \"rh\".exists && \"rh\".size && \"rh\".mtime' $d" "$d/e\n" "" 0 "explicit reference file path reuse"
 test_rawhide "$rh -e 'f && \"rh\".exists && \"\".size && \"\".mtime' $d" "$d/e\n" "" 0 "implicit reference file path reuse"
 
+# Reference file fields for Linux ext2-style file attributes: attr proj gen (requires e2fsprogs (libe2p and chattr))
+
+if [ "`whoami`" = root ]
+then
+	if $rh -h | grep -wq attr
+	then
+		if [ -n "`which chattr`" ]
+		then
+			mkdir $d/d
+			touch $d/f
+			ln -s d $d/ld
+			ln -s f $d/lf
+			chattr +a $d/d
+			chattr +a $d/f
+
+			test_rawhide "$rh -e 'attr == \"$d/f\".attr      && proj == \"\".proj    && gen == \"\".gen'        $d" "$d/f\n" "" 0 "reference file field f attr proj gen"
+			test_rawhide "$rh -e 'attr == \"$d/d\".attr      && proj == \"\".proj    && gen == \"\".gen'        $d" "$d/d\n" "" 0 "reference file field d attr proj gen"
+			test_rawhide "$rh -e 'attr == \"$d/f\".attribute && proj == \"\".project && gen == \"\".generation' $d" "$d/f\n" "" 0 "reference file field f attribute project generation"
+			test_rawhide "$rh -e 'attr == \"$d/d\".attribute && proj == \"\".project && gen == \"\".generation' $d" "$d/d\n" "" 0 "reference file field d attribute project generation"
+
+			chattr -a $d/d
+			chattr -a $d/f
+			rm $d/ld $d/lf $d/f
+			rmdir $d/d
+		fi
+	fi
+fi
+
 finish
 
 exit $errors
