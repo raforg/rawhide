@@ -402,10 +402,10 @@ then
 			chattr +a $d/d
 			chattr +a $d/f
 
-			test_rawhide "$rh -e 'attr == \"$d/f\".attr      && proj == \"\".proj    && gen == \"\".gen'        $d" "$d/f\n" "" 0 "reference file field f attr proj gen"
-			test_rawhide "$rh -e 'attr == \"$d/d\".attr      && proj == \"\".proj    && gen == \"\".gen'        $d" "$d/d\n" "" 0 "reference file field d attr proj gen"
-			test_rawhide "$rh -e 'attr == \"$d/f\".attribute && proj == \"\".project && gen == \"\".generation' $d" "$d/f\n" "" 0 "reference file field f attribute project generation"
-			test_rawhide "$rh -e 'attr == \"$d/d\".attribute && proj == \"\".project && gen == \"\".generation' $d" "$d/d\n" "" 0 "reference file field d attribute project generation"
+			test_rawhide "$rh -e 'f && attr == \"$d/f\".attr      && proj == \"\".proj    && gen == \"\".gen'        $d" "$d/f\n" "" 0 "reference file field f attr proj gen"
+			test_rawhide "$rh -e 'd && attr == \"$d/d\".attr      && proj == \"\".proj    && gen == \"\".gen'        $d" "$d/d\n" "" 0 "reference file field d attr proj gen"
+			test_rawhide "$rh -e 'f && attr == \"$d/f\".attribute && proj == \"\".project && gen == \"\".generation' $d" "$d/f\n" "" 0 "reference file field f attribute project generation"
+			test_rawhide "$rh -e 'd && attr == \"$d/d\".attribute && proj == \"\".project && gen == \"\".generation' $d" "$d/d\n" "" 0 "reference file field d attribute project generation"
 
 			chattr -a $d/d
 			chattr -a $d/f
