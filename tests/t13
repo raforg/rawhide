@@ -328,6 +328,8 @@ test_rawhide "$rh -e 'lnk && tstrlen == 0' $d" "$d/lroota\n$d/lrootb\n" "" 0 "ts
 test_rawhide "$rh -e 'lnk && tstrlen == 1' $d" "$d/l1a\n$d/l1b\n"       "" 0 "tstrlen == 1 for 1 and 1/// (trailing / removal)"
 test_rawhide "$rh -e 'lnk && tstrlen == 3' $d" "$d/ldot3a\n$d/ldot3b\n" "" 0 "tstrlen == 3 for ./123 and ./123/// (trailing / removal)"
 
+rm $d/lroot[ab] $d/l1[ab] $d/ldot3[ab]
+
 # Linux ext2-style file attributes: attr proj gen (requires e2fsprogs (libe2p and chattr))
 
 if [ "`whoami`" = root ]
