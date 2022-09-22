@@ -1,3 +1,5 @@
+#!/bin/sh
+
 # rawhide - find files using pretty C expressions
 # https://raf.org/rawhide
 # https://github.com/raforg/rawhide
