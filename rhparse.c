@@ -1455,8 +1455,26 @@ static int _get_token(void)
 		if (!(tokensym = locate_symbol(Strbuf + reffield)) || (tokensym->type != REFFILE && tokensym->type != PATMOD))
 			parser_error("invalid string suffix: %s (expected pattern modifier or reference file field)", ok(Strbuf + reffield));
 
+		/* When / is present, replace i with ipath, re with repath, and rei with reipath */
+
 		if (tokensym->type == PATMOD)
+		{
+			if (strchr(Strbuf + tokenval, '/'))
+			{
+				#ifdef FNM_CASEFOLD
+				if (!strcmp(tokensym->name, ".i"))
+					tokensym = locate_symbol(".ipath");
+				#endif
+				#ifdef HAVE_PCRE2
+				if (!strcmp(tokensym->name, ".re"))
+					tokensym = locate_symbol(".repath");
+				else if (!strcmp(tokensym->name, ".rei"))
+					tokensym = locate_symbol(".reipath");
+				#endif
+			}
+
 			return PATMOD;
+		}
 
 		/* Strip trailing / */
 

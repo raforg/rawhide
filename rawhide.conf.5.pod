@@ -1200,6 +1200,13 @@ available on the local system.
 Like the C<path> modifier, but apply the glob pattern without
 case-sensitivity. This is available on most systems, but maybe not all.
 
+Note: Since a slash character can never appear in a file's base name, if a
+glob pattern string with the C<i> pattern modifier does contain a slash
+character (e.g., C<"/".i>), then instead of attempting (and failing) to
+match it against the file's base name, an implicit C<ipath> pattern modifier
+is assumed (e.g., C<"/".ipath>), and it will be matched against the file's
+full path starting from the search directory instead.
+
 =item C<ilink>
 
 Like the C<link> modifier, but apply the glob pattern without
@@ -1281,6 +1288,13 @@ variable C<RAWHIDE_PCRE2_UTF8_DEFAULT=1>.
 Like the C<re> modifier, but apply the regex to each candidate file's full
 path starting from the search directory, not just its base name.
 
+Note: Since a slash character can never appear in a file's base name, if a
+regex pattern string with the C<re> pattern modifier does contain a slash
+character (e.g., C<"/".re>), then instead of attempting (and failing) to
+match it against the file's base name, an implicit C<repath> pattern
+modifier is assumed (e.g., C<"/".repath>), and it will be matched against
+the file's full path starting from the search directory instead.
+
 =item C<relink>
 
 Like the C<re> modifier, but apply the regex to each candidate symlink's
@@ -1293,6 +1307,13 @@ Like the C<re> modifier, but apply the regex without case-sensitivity.
 =item C<reipath>
 
 Like the C<repath> modifier, but apply the regex without case-sensitivity.
+
+Note: Since a slash character can never appear in a file's base name, if a
+regex pattern string with the C<rei> pattern modifier does contain a slash
+character (e.g., C<"/".rei>), then instead of attempting (and failing) to
+match it against the file's base name, an implicit C<reipath> pattern
+modifier is assumed (e.g., C<"/".reipath>), and it will be matched against
+the file's full path starting from the search directory instead.
 
 =item C<reilink>
 
