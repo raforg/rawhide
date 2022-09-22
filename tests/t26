@@ -659,7 +659,7 @@ then
 			test_rawhide_grep "$rh -e 'f && attr & 0x00000020' -L '%-25.5I\n' $d/f" "^$num +\$"   "" 0 "-L '%-25.5I\\\\n'"
 
 			# For test coverage
-			test_rawhide_grep "RAWHIDE_TEST_ATTR_FORMAT=1 $rh -e 'd && attr & 0x00000020' -L '%p %e\n' $d" "$d/d secrm unrm compr sync immutable append nodump noatime dirty comprblk nocompr encrypt index imagic journal_data notail dirsync topdir huge_file extents verity ea_inode nocow snapfile dax snapfile_deleted snapfile_shrunk inline_data projinherit casefold" "" 0 "-L %e (attribute) d all attributes"
+			test_rawhide_grep "RAWHIDE_TEST_ATTR_FORMAT=1 $rh -e 'd && attr & 0x00000020' -L '%p %e\n' $d" "$d/d secrm unrm .*" "" 0 "-L %e (attribute) d all attributes"
 
 			chattr -a $d/d
 			chattr -a $d/f
