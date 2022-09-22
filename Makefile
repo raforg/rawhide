@@ -168,7 +168,15 @@ install-config:
 	cp $(RAWHIDE_CONF) $(DESTDIR)$(APP_CFGDIR)
 	chmod 644 $(DESTDIR)$(APP_CFGDIR)/$(RAWHIDE_CONF)
 	mkdir -p $(DESTDIR)$(APP_CFGDIR)/$(RAWHIDE_CONFD)
-	[ "`uname`" != Linux ] || cp $(RAWHIDE_CONFD_LINUX_ATTRIBUTES_RESERVE) $(DESTDIR)$(APP_CFGDIR)/$(RAWHIDE_CONFD)/$(RAWHIDE_CONFD_LINUX_ATTRIBUTES)
+	if [ "`uname`" = Linux ]; \
+	then \
+		if ./$(RAWHIDE_PROG_NAME) -h | grep -wq attr; \
+		then \
+			cp $(RAWHIDE_CONFD_LINUX_ATTRIBUTES) $(DESTDIR)$(APP_CFGDIR)/$(RAWHIDE_CONFD)/$(RAWHIDE_CONFD_LINUX_ATTRIBUTES); \
+		else \
+			cp $(RAWHIDE_CONFD_LINUX_ATTRIBUTES_RESERVE) $(DESTDIR)$(APP_CFGDIR)/$(RAWHIDE_CONFD)/$(RAWHIDE_CONFD_LINUX_ATTRIBUTES); \
+		fi; \
+	fi
 	[ "`uname`" != Linux ] || chmod 644 $(DESTDIR)$(APP_CFGDIR)/$(RAWHIDE_CONFD)/$(RAWHIDE_CONFD_LINUX_ATTRIBUTES)
 
 install-man: install-man-app install-man-fmt
