@@ -112,7 +112,7 @@ RAWHIDE_DEFINES = \
 #DEBUG_DEFINES = -DNDEBUG
 
 # Test coverage (gcov): Uncomment this, run tests (as non-root and as root),
-# then run gcov *.c then examine *.c.gcov or run gcov_summary (96.65% on Linux)
+# then run gcov *.c then examine *.c.gcov or run gcov_summary (96.66% on Linux)
 #GCOV_CFLAGS = -fprofile-arcs -ftest-coverage
 
 CC = cc
@@ -253,9 +253,11 @@ gcov:
 check: test
 tests: test
 
-dist: clobber man
+default:
+	./configure --disable-pcre2 --disable-acl --disable-ea --disable-attr --disable-ndebug --disable-gcov --disable-cc-other --disable-mangz --disable-major --static=large
+
+dist: clobber man default
 	@set -e; \
-	./configure --disable-pcre2 --disable-acl --disable-ea --disable-attr --disable-ndebug --disable-gcov --disable-cc-other --disable-mangz --disable-major --static=large; \
 	up="`pwd`/.."; \
 	src=`basename \`pwd\``; \
 	dst=$(RAWHIDE_ID); \
@@ -280,7 +282,7 @@ help:
 	@echo "  make quiet=1 test - Run tests with just one line per test suite"
 	@echo "  make vg=1 test    - Run tests and produce valgrind.out analysis (~40m)"
 	@echo 
-	@echo "To run tests for test coverage analysis (96.65% on Linux):"
+	@echo "To run tests for test coverage analysis (96.66% on Linux):"
 	@echo
 	@echo "  ./configure --enable-gcov"
 	@echo "  make"
@@ -300,6 +302,7 @@ help:
 	@echo "  html2   - Create README file as HTML (needs python3 and markdown module)"
 	@echo "  check   - Same as test"
 	@echo "  tests   - Same as test"
+	@echo "  default - Reset Makefile to its default configuration"
 	@echo
 	@echo "See also:"
 	@echo
