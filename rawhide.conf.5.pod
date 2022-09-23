@@ -1162,12 +1162,19 @@ See I<fnmatch(3)> and I<glob(7)> for more details.
 Pattern modifiers (C<">I<pattern>C<".>I<modifier>) are suffixes to string
 literals that change how the string is interpreted, and what is done with
 it. There must be no spaces around the dot between the string literal and
-the modifier name. The following modifiers exist, but not all are available
-on all systems.
+the modifier name.
+
+Pattern modifier names can be supplied in full (e.g.,
+C<">I<pattern>C<".path>), but a unique prefix is sufficient (e.g.,
+C<">I<pattern>C<".pat>, C<">I<pattern>C<".pa>, or C<">I<pattern>C<".p>). For
+each of the pattern modifiers below, both the full name and the shortest
+unique prefix is shown.
+
+The following modifiers exist, but not all are available on all systems.
 
 =over 4
 
-=item C<path>
+=item C<path> (or C<p>)
 
 Apply the glob pattern to each candidate file's full path starting from the
 search directory, not just its base name. Slash characters (C<"/">) are not
@@ -1181,7 +1188,7 @@ the file's base name, an implicit C<path> pattern modifier is assumed (e.g.,
 C<"/".path>), and it will be matched against the file's full path starting
 from the search directory instead.
 
-=item C<link>
+=item C<link> (or C<l>)
 
 Apply the glob pattern to each candidate symlink's target path, rather than
 its base name. Slash characters (C<"/">) are not treated as special
@@ -1195,7 +1202,7 @@ systems, but maybe not all.
 The output of S<C<rh --help>> states if case-insensitive glob matching is
 available on the local system.
 
-=item C<ipath>
+=item C<ipath> (or C<ip>)
 
 Like the C<path> modifier, but apply the glob pattern without
 case-sensitivity. This is available on most systems, but maybe not all.
@@ -1207,7 +1214,7 @@ match it against the file's base name, an implicit C<ipath> pattern modifier
 is assumed (e.g., C<"/".ipath>), and it will be matched against the file's
 full path starting from the search directory instead.
 
-=item C<ilink>
+=item C<ilink> (or C<il>)
 
 Like the C<link> modifier, but apply the glob pattern without
 case-sensitivity. This is available on most systems, but maybe not all.
@@ -1283,7 +1290,7 @@ variable includes C<"UTF-8">). When the locale doesn't use I<UTF-8>, and you
 want I<rh> to assume that everything is I<UTF-8> anyway, set the environment
 variable C<RAWHIDE_PCRE2_UTF8_DEFAULT=1>.
 
-=item C<repath>
+=item C<repath> (or C<rep>)
 
 Like the C<re> modifier, but apply the regex to each candidate file's full
 path starting from the search directory, not just its base name.
@@ -1295,7 +1302,7 @@ match it against the file's base name, an implicit C<repath> pattern
 modifier is assumed (e.g., C<"/".repath>), and it will be matched against
 the file's full path starting from the search directory instead.
 
-=item C<relink>
+=item C<relink> (or C<rel>)
 
 Like the C<re> modifier, but apply the regex to each candidate symlink's
 target path, rather than its base name.
@@ -1304,7 +1311,7 @@ target path, rather than its base name.
 
 Like the C<re> modifier, but apply the regex without case-sensitivity.
 
-=item C<reipath>
+=item C<reipath> (or C<reip>)
 
 Like the C<repath> modifier, but apply the regex without case-sensitivity.
 
@@ -1315,11 +1322,11 @@ match it against the file's base name, an implicit C<reipath> pattern
 modifier is assumed (e.g., C<"/".reipath>), and it will be matched against
 the file's full path starting from the search directory instead.
 
-=item C<reilink>
+=item C<reilink> (or C<reil>)
 
 Like the C<relink> modifier, but apply the regex without case-sensitivity.
 
-=item C<acl>
+=item C<acl> (or C<a>)
 
 Apply the glob pattern to each candidate file's access control list (ACL),
 rather than its base name.
@@ -1391,12 +1398,12 @@ trivially identical to the file permission bits. This can be convenient, but
 if it seems like noise, it can be silenced (but only on I<Solaris>) by
 setting the environment variable C<RAWHIDE_SOLARIS_ACL_NO_TRIVIAL=1>.
 
-=item C<iacl>
+=item C<iacl> (or C<ia>)
 
 Like the C<acl> modifier, but apply the glob pattern without
 case-sensitivity. This might not be available on all systems.
 
-=item C<reacl>
+=item C<reacl> (or C<rea>)
 
 Like the C<acl> modifier, but match each candidate file's access control
 list (ACL) against a I<Perl>-compatible regular expression (regex) instead
@@ -1404,11 +1411,11 @@ of a glob pattern. This is available on systems that have I<libpcre2-8>
 installed, and supported access control lists. See the C<re> modifier above
 for more information.
 
-=item C<reiacl>
+=item C<reiacl> (or C<reia>)
 
 Like the C<reacl> modifier, but apply the regex without case-sensitivity.
 
-=item C<ea>
+=item C<ea> (or C<e>)
 
 Apply the glob pattern to each candidate file's extended attributes (EA),
 rather than its base name.
@@ -1490,12 +1497,12 @@ search (glob or regex).
 These artificial extended attributes can be suppressed by setting the
 environment variable C<RAWHIDE_SOLARIS_EA_NO_STATINFO=1>.
 
-=item C<iea>
+=item C<iea> (or C<ie>)
 
 Like the C<ea> modifier, but apply the glob pattern without
 case-sensitivity. This might not be available on all systems.
 
-=item C<reea>
+=item C<reea> (or C<ree>)
 
 Like the C<ea> modifier, but match each candidate file's extended attributes
 (EA) against a I<Perl>-compatible regular expression (regex) instead of a
@@ -1503,11 +1510,11 @@ glob pattern. This is available on systems that have I<libpcre2-8>
 installed, and supported extended attributes. See the C<re> modifier above
 for more information.
 
-=item C<reiea>
+=item C<reiea> (or C<reie>)
 
 Like the C<reea> modifier, but apply the regex without case-sensitivity.
 
-=item C<sh>
+=item C<sh> (or C<s>)
 
 This interprets the string literal, not as a pattern at all, but as an
 external shell command to execute via I<system(3)> (i.e., via

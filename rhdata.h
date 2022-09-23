@@ -28,6 +28,7 @@ void rawhide_init(void);
 void rawhide_finish(void);
 symbol_t *insert_symbol(char *name, int toktype, llong val);
 symbol_t *locate_symbol(char *name);
+symbol_t *locate_patmod_prefix(char *name);
 int rawhide_instruction(void (*func)(llong), llong value);
 llong rawhide_execute(void);
 

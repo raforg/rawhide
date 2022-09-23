@@ -1432,7 +1432,7 @@ static int _get_token(void)
 			return PATMOD;
 		}
 
-		/* Get the reference file field name */
+		/* Get the pattern modifier or reference file field name */
 
 		reffield = refstrfree = strfree;
 
@@ -1452,7 +1452,12 @@ static int _get_token(void)
 		ungetch(c);
 		Strbuf[refstrfree] = '\0';
 
-		if (!(tokensym = locate_symbol(Strbuf + reffield)) || (tokensym->type != REFFILE && tokensym->type != PATMOD))
+		/* Look for the symbol (it can be a unique prefix of a pattern modifier) */
+
+		if (!(tokensym = locate_symbol(Strbuf + reffield)))
+			tokensym = locate_patmod_prefix(Strbuf + reffield);
+
+		if (!tokensym || (tokensym->type != REFFILE && tokensym->type != PATMOD))
 			parser_error("invalid string suffix: %s (expected pattern modifier or reference file field)", ok(Strbuf + reffield));
 
 		/* When / is present, replace i with ipath, re with repath, and rei with reipath */

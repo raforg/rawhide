@@ -386,6 +386,37 @@ symbol_t *locate_symbol(char *name)
 
 /*
 
+symbol_t *locate_patmod_prefix(char *name);
+
+Search for a pattern modifier symbol in the symbol table.
+The name parameter is hopefully a unique prefix of a symbol,
+but it is not a complete symbol.
+
+*/
+
+symbol_t *locate_patmod_prefix(char *name)
+{
+	symbol_t *s, *match = NULL;
+
+	for (s = symbols; s; s = s->next)
+	{
+		if (s->type != PATMOD)
+			continue;
+
+		if (!strncmp(name, s->name, strlen(name)))
+		{
+			if (match)
+				return NULL; /* Not a unique prefix */
+
+			match = s;
+		}
+	}
+
+	return match;
+}
+
+/*
+
 int rawhide_instruction(void (*func)(llong), llong value);
 
 Append a rawhide instruction to the Program array.
