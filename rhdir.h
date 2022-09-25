@@ -27,10 +27,7 @@
 llong env_int(char *envname, llong min_value, llong max_value, llong default_value);
 int rawhide_search(char *fpath);
 int following_symlinks(void);
-const char *ytypecode(struct stat *statbuf);
 const char *modestr(struct stat *statbuf);
-const char *aclea(void);
-int fcntl_set_fdflag(int fd, int flag);
 void visitf_default(void);
 void visitf_long(void);
 void visitf_execute(void);

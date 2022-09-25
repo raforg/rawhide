@@ -242,6 +242,28 @@ int following_symlinks(void)
 
 /*
 
+static int fcntl_set_fdflag(int fd, int flag);
+
+Shorthand for setting the file descriptor flag, flag, on the file
+descriptor fd, using fcntl. All other file descriptor flags are
+unaffected. On success, returns 0. On error, returns -1 with errno
+set by fcntl with F_GETFD or F_SETFD as the command. The only
+file descriptor flag at time of writing is FD_CLOEXEC.
+
+*/
+
+static int fcntl_set_fdflag(int fd, int flag)
+{
+	int flags;
+
+	if ((flags = fcntl(fd, F_GETFD, 0)) == -1)
+		return -1;
+
+	return fcntl(fd, F_SETFD, flags | flag);
+}
+
+/*
+
 static void rawhide_traverse(char *nul_posp, int parent_fd, char *basename);
 
 Traverse the directory tree, evaluating search criteria, and calling the
@@ -910,14 +932,14 @@ static char *ftypecode(struct stat *statbuf)
 
 /*
 
-const char *ytypecode(struct stat *statbuf);
+static const char *ytypecode(struct stat *statbuf);
 
 Return a pointer to a static buffer containing the file type code in ls -l
 format, but with f for regular files (for -L %y and %Y).
 
 */
 
-const char *ytypecode(struct stat *statbuf)
+static const char *ytypecode(struct stat *statbuf)
 {
 	char *code = ftypecode(statbuf);
 
@@ -966,13 +988,13 @@ const char *modestr(struct stat *statbuf)
 
 /*
 
-const char *aclea(void);
+static const char *aclea(void);
 
 Return a pointer to a static buffer containing the ACL/EA indicator.
 
 */
 
-const char *aclea(void)
+static const char *aclea(void)
 {
 	int acl = has_real_acl();
 	int ea = has_real_ea();
@@ -1491,28 +1513,6 @@ void visitf_execute(void)
 
 	if (syscmd(command))
 		attr.exit_status = EXIT_FAILURE;
-}
-
-/*
-
-int fcntl_set_fdflag(int fd, int flag);
-
-Shorthand for setting the file descriptor flag, flag, on the file
-descriptor fd, using fcntl. All other file descriptor flags are
-unaffected. On success, returns 0. On error, returns -1 with errno
-set by fcntl with F_GETFD or F_SETFD as the command. The only
-file descriptor flag at time of writing is FD_CLOEXEC.
-
-*/
-
-int fcntl_set_fdflag(int fd, int flag)
-{
-	int flags;
-
-	if ((flags = fcntl(fd, F_GETFD, 0)) == -1)
-		return -1;
-
-	return fcntl(fd, F_SETFD, flags | flag);
 }
 
 /*
