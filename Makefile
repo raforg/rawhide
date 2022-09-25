@@ -112,7 +112,7 @@ RAWHIDE_DEFINES = \
 #DEBUG_DEFINES = -DNDEBUG
 
 # Test coverage (gcov): Uncomment this, run tests (as non-root and as root),
-# then run gcov *.c then examine *.c.gcov or run gcov_summary (96.66% on Linux)
+# then run gcov *.c then examine *.c.gcov or run gcov_summary (96.73% on Linux)
 #GCOV_CFLAGS = -fprofile-arcs -ftest-coverage
 
 CC = cc
@@ -281,14 +281,18 @@ help:
 	@echo "  make test         - Run tests showing every test (thousands)"
 	@echo "  make quiet=1 test - Run tests with just one line per test suite"
 	@echo "  make vg=1 test    - Run tests and produce valgrind.out analysis (~40m)"
+	@echo "  vim valgrind.out  - Examine the results (delete the noise, check the rest)"
 	@echo 
-	@echo "To run tests for test coverage analysis (96.66% on Linux):"
+	@echo "To run tests for test coverage analysis (96.73% on Linux):"
 	@echo
 	@echo "  ./configure --enable-gcov"
 	@echo "  make"
 	@echo "  make quiet=1 test"
-	@echo "  sudo make quiet=1 test"
+	@echo "  sudo make quiet=1 RAWHIDE_TEST_MULTIBYTE_USER_GROUP=1 test"
 	@echo "  make gcov"
+	@echo
+	@echo "But be warned that including RAWHIDE_TEST_MULTIBYTE_USER_GROUP=1 above"
+	@echo "includes tests that add and remove new users and groups (Linux only)."
 	@echo
 	@echo "Other make targets:"
 	@echo

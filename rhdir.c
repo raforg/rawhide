@@ -21,7 +21,7 @@
 * 20220330 raf <raf@raf.org>
 */
 
-#define _GNU_SOURCE /* For FNM_EXTMATCH and FNM_CASEFOLD in <fnmatch.h> */
+#define _GNU_SOURCE /* For FNM_EXTMATCH and FNM_CASEFOLD in <fnmatch.h> and wcswidth() in <wchar.h> */
 #define _FILE_OFFSET_BITS 64 /* For 64-bit off_t on 32-bit systems (Not AIX) */
 
 #include <stdlib.h>
@@ -36,6 +36,7 @@
 #include <errno.h>
 #include <ctype.h>
 #include <fcntl.h>
+#include <wchar.h>
 #include <pwd.h>
 #include <grp.h>
 #include <sys/stat.h>
@@ -260,6 +261,75 @@ static int fcntl_set_fdflag(int fd, int flag)
 		return -1;
 
 	return fcntl(fd, F_SETFD, flags | flag);
+}
+
+/*
+
+static ssize_t wcoffset(const char *str);
+
+When a string contains multi-byte UTF-8-encoded characters,
+the length of the string is more than the display width.
+Return the difference between the two. If any errors are
+encountered (e.g. invalid characters for the locale,
+or out of memory), an offset of zero is returned.
+An internal dynamically allocated buffer might be needed.
+To deallocate it when finished, call with a NULL argument.
+
+*/
+
+static ssize_t wcoffset(const char *str)
+{
+	static wchar_t *wcs = NULL;
+	static size_t wcssize = 0;
+
+	ssize_t num_wchars;
+	size_t num_bytes;
+	int width;
+
+	/* Release the long-lived wide char buffer when finished */
+
+	if (!str)
+	{
+		if (wcs)
+		{
+			free(wcs);
+			wcs = NULL;
+			wcssize = 0;
+		}
+
+		return 0;
+	}
+
+	/* If there are no multi-byte characters, return a zero offset */
+
+	num_wchars = (ssize_t)mbstowcs(NULL, str, 0);
+	num_bytes = strlen(str);
+
+	if (num_wchars == -1 || num_wchars == num_bytes)
+		return 0;
+
+	/* Allocate a long-lived wide char buffer (grows as needed) */
+
+	if (wcssize < num_wchars + 1)
+	{
+		wchar_t *new_wcs = realloc(wcs, sizeof(wchar_t) * (num_wchars + 1));
+
+		if (!new_wcs)
+			return 0;
+
+		wcs = new_wcs;
+		wcssize = num_wchars;
+	}
+
+	/* Convert str to wide chars, then determine its display width */
+
+	(void)mbstowcs(wcs, str, num_wchars);
+
+	width = wcswidth(wcs, num_wchars);
+
+	/* The offset is the difference between the bytes and the width */
+
+	return (width == -1) ? 0 : num_bytes - width;
 }
 
 /*
@@ -629,6 +699,8 @@ int rawhide_search(char *fpath)
 		free(attr.ttybuf);
 		attr.ttybuf = NULL;
 	}
+
+	(void)wcoffset(NULL);
 
 	return rc;
 }
@@ -1190,8 +1262,10 @@ void visitf_long(void)
 		}
 		else
 		{
-			if ((w = ssnprintf(buf + pos, CMDBUFSIZE - pos, "%-*s", attr.user_column_width, pwd->pw_name)) > attr.user_column_width)
-				attr.user_column_width = w;
+			ssize_t off = wcoffset(pwd->pw_name);
+
+			if ((w = ssnprintf(buf + pos, CMDBUFSIZE - pos, "%-*s", attr.user_column_width + off, pwd->pw_name)) - off > attr.user_column_width)
+				attr.user_column_width = w - off;
 		}
 
 		pos += w;
@@ -1213,8 +1287,10 @@ void visitf_long(void)
 		}
 		else
 		{
-			if ((w = ssnprintf(buf + pos, CMDBUFSIZE - pos, "%-*s", attr.group_column_width, grp->gr_name)) > attr.group_column_width)
-				attr.group_column_width = w;
+			ssize_t off = wcoffset(grp->gr_name);
+
+			if ((w = ssnprintf(buf + pos, CMDBUFSIZE - pos, "%-*s", attr.group_column_width + off, grp->gr_name)) - off > attr.group_column_width)
+				attr.group_column_width = w - off;
 		}
 
 		pos += w;

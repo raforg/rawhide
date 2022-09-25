@@ -557,8 +557,137 @@ then
 	echo "$t: Set RAWHIDE_TEST_LARGE=1 to allow tests that create large files (1.2G)"
 fi
 
+# Test column widths for user/group names containing multi-byte chars (single- or double-width)
+# Note: I don't recommend that anyone else run these tests.
+# They add and remove users and groups.
+# I run it for coverage, and only on Debian Linux.
+
+case "$LANG" in
+	*.UTF-8)
+		if [ "`uname`" = Linux -a "`whoami`" = root -a -x "`which adduser 2>/dev/null`" -a -x "`which addgroup 2>/dev/null`" -a -x "`which deluser 2>/dev/null`" -a -x "`which delgroup 2>/dev/null`" -a -x "`which perl 2>/dev/null`" ]
+		then
+			if adduser -h 2>/dev/null | grep -q force-badname && addgroup -h 2>/dev/null | grep -q force-badname
+			then
+				if [ "x$RAWHIDE_TEST_MULTIBYTE_USER_GROUP" = x ]
+				then
+					echo "$t: Set RAWHIDE_TEST_MULTIBYTE_USER_GROUP=1 to allow tests that create/remove new user/group names (not worth it)"
+				elif [ "x$RAWHIDE_TEST_MULTIBYTE_USER_GROUP" = x1 ]
+				then
+					if grep -q 'notauser-temp1' /etc/passwd
+					then
+						echo "$t: User notauser-temp1 already exists (skipping)"
+					elif grep -q 'notauser-temp2' /etc/passwd
+					then
+						echo "$t: User notauser-temp2 already exists (skipping)"
+					elif grep -q 'notauser-temp3' /etc/passwd
+					then
+						echo "$t: User notauser-temp3 already exists (skipping)"
+					elif grep -q 'notagroup-temp1' /etc/group
+					then
+						echo "$t: Group notagroup-temp1 already exists (skipping)"
+					elif grep -q 'notagroup-temp2' /etc/group
+					then
+						echo "$t: Group notagroup-temp2 already exists (skipping)"
+					elif grep -q 'notagroup-temp3' /etc/group
+					then
+						echo "$t: Group notagroup-temp3 already exists (skipping)"
+					elif grep -q 'notauser-cedric' /etc/passwd
+					then
+						echo "$t: User notauser-cedric already exists (skipping)"
+					elif grep -q 'notauser-çedric' /etc/passwd
+					then
+						echo "$t: User notauser-çedric already exists (skipping)"
+					elif grep -q 'notauser-🙂' /etc/passwd
+					then
+						echo "$t: User notauser-🙂 already exists (skipping)"
+					elif grep -q 'notagroup-cedric' /etc/group
+					then
+						echo "$t: Group notagroup-cedric already exists (skipping)"
+					elif grep -q 'notagroup-çedric' /etc/group
+					then
+						echo "$t: Group notagroup-çedric already exists (skipping)"
+					elif grep -q 'notagroup-🙂' /etc/group
+					then
+						echo "$t: Group notagroup-🙂 already exists (skipping)"
+					else
+						# Add users/groups evading badname checks
+						addgroup --quiet notagroup-temp1
+						addgroup --quiet notagroup-temp2
+						addgroup --quiet notagroup-temp3
+						adduser --quiet --disabled-login --disabled-password --no-create-home --gecos '' --ingroup notagroup-temp1 notauser-temp1
+						adduser --quiet --disabled-login --disabled-password --no-create-home --gecos '' --ingroup notagroup-temp1 notauser-temp2
+						adduser --quiet --disabled-login --disabled-password --no-create-home --gecos '' --ingroup notagroup-temp2 notauser-temp3
+
+						perl -pi -e '
+							s/^notauser-temp1:/notauser-cedric:/;
+							s/^notauser-temp2:/notauser-çedric:/;
+							s/^notauser-temp3:/notauser-🙂:/;
+						' /etc/passwd /etc/shadow
+						perl -pi -e '
+							s/^notagroup-temp1:/notagroup-cedric:/;
+							s/^notagroup-temp2:/notagroup-çedric:/;
+							s/^notagroup-temp3:/notagroup-🙂:/;
+						' /etc/group
+
+						touch $d/a
+						chmod 644 $d/a
+						chown notauser-cedric $d/a
+						chgrp notagroup-cedric $d/a
+						touch $d/b
+						chmod 644 $d/b
+						chown notauser-çedric $d/b
+						chgrp notagroup-çedric $d/b
+						touch $d/c
+						chmod 644 $d/c
+						chown notauser-🙂 $d/c
+						chgrp notagroup-🙂 $d/c
+
+						test_rawhide_post_hook() { perl -pi -e "s,^$mode$__$nlink$__,,; s,$size$__$time$__,," $stdout; }
+
+						test_rawhide "$rh -l $d/a $d/b $d/c" "notauser-cedric notagroup-cedric $d/a\nnotauser-çedric notagroup-çedric $d/b\nnotauser-🙂     notagroup-🙂     $d/c\n" "" 0 "multi-byte user/group names: a b c"
+						test_rawhide "$rh -l $d/a $d/c $d/b" "notauser-cedric notagroup-cedric $d/a\nnotauser-🙂     notagroup-🙂     $d/c\nnotauser-çedric notagroup-çedric $d/b\n" "" 0 "multi-byte user/group names: a c b"
+						test_rawhide "$rh -l $d/b $d/a $d/c" "notauser-çedric notagroup-çedric $d/b\nnotauser-cedric notagroup-cedric $d/a\nnotauser-🙂     notagroup-🙂     $d/c\n" "" 0 "multi-byte user/group names: b a c"
+						test_rawhide "$rh -l $d/b $d/c $d/a" "notauser-çedric notagroup-çedric $d/b\nnotauser-🙂     notagroup-🙂     $d/c\nnotauser-cedric notagroup-cedric $d/a\n" "" 0 "multi-byte user/group names: b c a"
+						test_rawhide "$rh -l $d/c $d/a $d/b" "notauser-🙂 notagroup-🙂 $d/c\nnotauser-cedric notagroup-cedric $d/a\nnotauser-çedric notagroup-çedric $d/b\n"         "" 0 "multi-byte user/group names: c a b"
+						test_rawhide "$rh -l $d/c $d/b $d/a" "notauser-🙂 notagroup-🙂 $d/c\nnotauser-çedric notagroup-çedric $d/b\nnotauser-cedric notagroup-cedric $d/a\n"         "" 0 "multi-byte user/group names: c b a"
+
+						test_rawhide "LANG=C $rh -l $d/a $d/b $d/c" "notauser-cedric notagroup-cedric $d/a\nnotauser-çedric notagroup-çedric $d/b\nnotauser-🙂    notagroup-🙂    $d/c\n"   "" 0 "multi-byte user/group names: LANG=C a b c"
+						test_rawhide "LANG=C $rh -l $d/a $d/c $d/b" "notauser-cedric notagroup-cedric $d/a\nnotauser-🙂   notagroup-🙂   $d/c\nnotauser-çedric notagroup-çedric $d/b\n"     "" 0 "multi-byte user/group names: LANG=C a c b"
+						test_rawhide "LANG=C $rh -l $d/b $d/a $d/c" "notauser-çedric notagroup-çedric $d/b\nnotauser-cedric  notagroup-cedric  $d/a\nnotauser-🙂    notagroup-🙂    $d/c\n" "" 0 "multi-byte user/group names: LANG=C b a c"
+						test_rawhide "LANG=C $rh -l $d/b $d/c $d/a" "notauser-çedric notagroup-çedric $d/b\nnotauser-🙂    notagroup-🙂    $d/c\nnotauser-cedric  notagroup-cedric  $d/a\n" "" 0 "multi-byte user/group names: LANG=C b c a"
+						test_rawhide "LANG=C $rh -l $d/c $d/a $d/b" "notauser-🙂 notagroup-🙂 $d/c\nnotauser-cedric notagroup-cedric $d/a\nnotauser-çedric notagroup-çedric $d/b\n"         "" 0 "multi-byte user/group names: LANG=C c a b"
+						test_rawhide "LANG=C $rh -l $d/c $d/b $d/a" "notauser-🙂 notagroup-🙂 $d/c\nnotauser-çedric notagroup-çedric $d/b\nnotauser-cedric  notagroup-cedric  $d/a\n"       "" 0 "multi-byte user/group names: LANG=C c b a"
+
+						test_rawhide_post_hook() { true; }
+
+						rm $d/a $d/b $d/c
+
+						perl -pi -e '
+							s/^notauser-cedric:/notauser-temp1:/;
+							s/^notauser-çedric:/notauser-temp2:/;
+							s/^notauser-🙂:/notauser-temp3:/;
+						' /etc/passwd /etc/shadow
+						perl -pi -e '
+							s/^notagroup-cedric:/notagroup-temp1:/;
+							s/^notagroup-çedric:/notagroup-temp2:/;
+							s/^notagroup-🙂:/notagroup-temp3:/;
+						' /etc/group
+
+						deluser --quiet notauser-temp3
+						deluser --quiet notauser-temp2
+						deluser --quiet notauser-temp1
+						delgroup --quiet notagroup-temp3
+						delgroup --quiet notagroup-temp2
+						delgroup --quiet notagroup-temp1
+					fi
+				fi
+			fi
+		fi
+	;;
+esac
+
 finish
 
 exit $errors
 
-# vi:set ts=4 sw=4:
+# vi:set ts=4 sw=4 fenc=utf-8:

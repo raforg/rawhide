@@ -1,4 +1,1 @@
-Add support for unique prefixes to identify pattern modifiers ?
-Add symlink target-related reference file fields ("/path".texists, ...) ?
 Fix "path is too long" bug for actual paths encountered during traversal
-Fix column width bug when user/group names contain multi-byte characters
