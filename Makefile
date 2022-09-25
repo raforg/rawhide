@@ -220,17 +220,17 @@ man: $(RAWHIDE_APP_MANFILE) $(RAWHIDE_FMT_MANFILE)
 html: $(RAWHIDE_APP_MANFILE).html $(RAWHIDE_FMT_MANFILE).html
 
 $(RAWHIDE_APP_MANFILE): $(RAWHIDE_APP_MANFILE).pod
-	sed 's/C</B</g' $< | pod2man --section='$(APP_MANSECT)' --center='$(APP_MANSECTNAME)' --name='$(RAWHIDE_PROG_NAME_UPPER)' --release='$(RAWHIDE_ID)' --date='$(RAWHIDE_DATE)' --quotes=none > $@
+	sed 's/C</B</g' $(RAWHIDE_APP_MANFILE).pod | pod2man --section='$(APP_MANSECT)' --center='$(APP_MANSECTNAME)' --name='$(RAWHIDE_PROG_NAME_UPPER)' --release='$(RAWHIDE_ID)' --date='$(RAWHIDE_DATE)' --quotes=none > $@
 
 $(RAWHIDE_APP_MANFILE).html: $(RAWHIDE_APP_MANFILE).pod
-	pod2html --noindex --title='$(RAWHIDE_ID) - $(RAWHIDE_PROG_NAME)($(APP_MANSECT))' < $< > $@ 2>/dev/null
+	pod2html --noindex --title='$(RAWHIDE_ID) - $(RAWHIDE_PROG_NAME)($(APP_MANSECT))' < $(RAWHIDE_APP_MANFILE).pod > $@ 2>/dev/null
 	rm -r pod2htm*.tmp
 
 $(RAWHIDE_FMT_MANFILE): $(RAWHIDE_FMT_MANFILE).pod
-	sed 's/C</B</g' $< | pod2man --section='$(FMT_MANSECT)' --center='$(FMT_MANSECTNAME)' --name='$(RAWHIDE_CONF_UPPER)' --release='$(RAWHIDE_ID)' --date='$(RAWHIDE_DATE)' --quotes=none > $@
+	sed 's/C</B</g' $(RAWHIDE_FMT_MANFILE).pod | pod2man --section='$(FMT_MANSECT)' --center='$(FMT_MANSECTNAME)' --name='$(RAWHIDE_CONF_UPPER)' --release='$(RAWHIDE_ID)' --date='$(RAWHIDE_DATE)' --quotes=none > $@
 
 $(RAWHIDE_FMT_MANFILE).html: $(RAWHIDE_FMT_MANFILE).pod
-	pod2html --noindex --title='$(RAWHIDE_ID) - $(RAWHIDE_CONF)($(FMT_MANSECT))' < $< > $@ 2>/dev/null
+	pod2html --noindex --title='$(RAWHIDE_ID) - $(RAWHIDE_CONF)($(FMT_MANSECT))' < $(RAWHIDE_FMT_MANFILE).pod > $@ 2>/dev/null
 	rm -r pod2htm*.tmp
 
 # html2 is for internal use (requires python3 and its markdown module)
@@ -238,7 +238,7 @@ $(RAWHIDE_FMT_MANFILE).html: $(RAWHIDE_FMT_MANFILE).pod
 html2: README.html
 
 README.html: README.md
-	./md2html $< $@ '$(RAWHIDE_ID) - README'
+	./md2html README.md $@ '$(RAWHIDE_ID) - README'
 
 tags:     Makefile rh.h rh.c rhcmds.h rhcmds.c rhdata.h rhdata.c rhdir.h rhdir.c rhparse.h rhparse.c rherr.h rherr.c rhstr.h rhstr.c
 	ctags Makefile rh.h rh.c rhcmds.h rhcmds.c rhdata.h rhdata.c rhdir.h rhdir.c rhparse.h rhparse.c rherr.h rherr.c rhstr.h rhstr.c
