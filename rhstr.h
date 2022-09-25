@@ -46,6 +46,6 @@ const char *oklen(const char *s, size_t len);
 #define CESCAPE_JSON   5
 #define CESCAPE_BIN    10
 
-#define isquotable(c) iscntrl(c)
+#define isquotable(c) iscntrl((int)(unsigned char)(c))
 
 #endif
