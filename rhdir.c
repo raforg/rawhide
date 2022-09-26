@@ -334,13 +334,13 @@ static ssize_t wcoffset(const char *str)
 
 /*
 
-static void rawhide_traverse(char *nul_posp, int parent_fd, char *basename);
+static void rawhide_traverse(size_t nul_posi, int parent_fd, char *basename);
 
 Traverse the directory tree, evaluating search criteria, and calling the
 visit function, for each match.
 
-The nul_posp parameter points to the nul byte at the end of attr.fpath.
-There can be a trailing "/" before nul_posp (but usually not).
+The nul_posi parameter is the offset to the nul byte at the end of attr.fpath.
+There can be a trailing "/" before nul_posi (but usually not).
 
 The parent_fd parameter is a file descriptor for the current entry's parent
 directory.
@@ -353,7 +353,7 @@ race conditions. When called by rawhide_search() they are AT_FDCWD and NULL.
 
 */
 
-static int rawhide_traverse(char *nul_posp, int parent_fd, char *basename)
+static int rawhide_traverse(size_t nul_posi, int parent_fd, char *basename)
 {
 	int dir_fd;
 	DIR *dir = NULL;
@@ -365,7 +365,7 @@ static int rawhide_traverse(char *nul_posp, int parent_fd, char *basename)
 	char *name;
 	char *env;
 
-	debug(("rawhide_traverse(fpath=%s, offset=%d, parent_fd=%d, basename=%s, depth=%d)", attr.fpath, (int)(nul_posp - attr.fpath), parent_fd, (basename) ? basename : "N/A", attr.depth));
+	debug(("rawhide_traverse(fpath=%s, offset=%d, parent_fd=%d, basename=%s, depth=%d)", attr.fpath, (int)nul_posi, parent_fd, (basename) ? basename : "N/A", attr.depth));
 
 	/* Check the depth (Can't happen: depth <= max_depth always) */
 
@@ -502,15 +502,25 @@ static int rawhide_traverse(char *nul_posp, int parent_fd, char *basename)
 
 		/* Ensure that there's a trailing "/" */
 
-		post_slash_nul_posi = nul_posp - attr.fpath;
+		post_slash_nul_posi = nul_posi;
 
 		if (attr.fpath[post_slash_nul_posi - 1] != '/')
 		{
 			if (post_slash_nul_posi + 1 >= attr.fpath_size)
 			{
-				closedir(dir); /* This closes pid_fd */
+				/* This shouldn't happen (unless we've crossed a filesystem boundary) */
 
-				return error("path is too long: %s/", ok(attr.fpath));
+				char *new_fpath = realloc(attr.fpath, attr.fpath_size * 2);
+
+				if (!new_fpath)
+				{
+					closedir(dir); /* This closes pid_fd */
+
+					return error("path is too long (out of memory): %s/", ok(attr.fpath));
+				}
+
+				attr.fpath = new_fpath;
+				attr.fpath_size *= 2;
 			}
 
 			attr.fpath[post_slash_nul_posi++] = '/';
@@ -534,16 +544,31 @@ static int rawhide_traverse(char *nul_posp, int parent_fd, char *basename)
 
 			if ((len = strlcpy(attr.fpath + post_slash_nul_posi, entry->d_name, remaining)) >= remaining)
 			{
-				attr.fpath[post_slash_nul_posi] = '\0';
-				error("path is too long: %s%s", ok(attr.fpath), ok2(entry->d_name));
-				rc = -1;
+				/* This shouldn't happen (unless we've crossed a filesystem boundary) */
 
-				continue;
+				#define max(a, b) ((a) > (b) ? (a) : (b))
+				size_t new_fpath_size = max(attr.fpath_size * 2, post_slash_nul_posi + len + 1);
+				#undef max
+				char *new_fpath = realloc(attr.fpath, new_fpath_size);
+
+				if (!new_fpath)
+				{
+					attr.fpath[post_slash_nul_posi] = '\0';
+					error("path is too long (out of memory): %s%s", ok(attr.fpath), ok2(entry->d_name));
+					rc = -1;
+
+					continue;
+				}
+
+				attr.fpath = new_fpath;
+				attr.fpath_size = new_fpath_size;
+				remaining = attr.fpath_size - post_slash_nul_posi;
+				(void)strlcpy(attr.fpath + post_slash_nul_posi, entry->d_name, remaining);
 			}
 
 			debug(("dir entry %s", attr.fpath));
 
-			if (rawhide_traverse(attr.fpath + post_slash_nul_posi + len, (dir_fd == -1) ? AT_FDCWD : dir_fd, attr.fpath + post_slash_nul_posi) == -1)
+			if (rawhide_traverse(post_slash_nul_posi + len, (dir_fd == -1) ? AT_FDCWD : dir_fd, attr.fpath + post_slash_nul_posi) == -1)
 				rc = -1;
 		}
 
@@ -555,7 +580,7 @@ static int rawhide_traverse(char *nul_posp, int parent_fd, char *basename)
 
 		/* Remove the trailing slash and directory entry name */
 
-		*nul_posp = '\0';
+		attr.fpath[nul_posi] = '\0';
 	}
 
 	/* Test this entry and respond (if searching depth-first) */
@@ -666,7 +691,7 @@ int rawhide_search(char *fpath)
 
 	/* Search */
 
-	rc = rawhide_traverse(attr.fpath + len, AT_FDCWD, NULL);
+	rc = rawhide_traverse(len, AT_FDCWD, NULL);
 
 	/* Cleanup */
 

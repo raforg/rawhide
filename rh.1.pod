@@ -2354,16 +2354,6 @@ accessed time is changed. It is only updated for other changes to the
 inode. This relates to the C<ctime> and C<tctime> built-in symbols, and the
 C<ctime> reference file field (see I<rawhide.conf(5)>).
 
-=head1 BUGS
-
-Every filesystem has its own maximum path length. The maximum path length is
-determined for each starting search path, but if a search crosses a
-filesystem boundary (i.e., enters a mountpoint for another filesystem), the
-new filesystem's maximum path length is not taken into account. So it's
-conceivable that a valid path could be incorrectly determined to be too
-long. But it's unlikely that any real path will approach the maximum path
-length of any filesystem.
-
 =head1 EXIT STATUS
 
 I<rh>'s exit status is zero upon success, or non-zero upon failure. Possible
@@ -2374,8 +2364,8 @@ with a non-zero exit status; failure to change the current working
 directory; attempt to use a I<stat(2)> structure field of a reference file
 that does not exist or cannot be reached; failure to follow a symlink (but
 not by default); failure to obtain an access control list; failure to obtain
-extended attributes; traversing too deeply; paths being longer than their
-filesystem claims to support; failure to allocate memory; C<-x>, C<-X>, or
+extended attributes; traversing too deeply; a starting search path being too
+long for its filesystem; failure to allocate memory; C<-x>, C<-X>, or
 C<">I<cmd>C<".sh> commands being too large; attempt to divide by zero; too
 much code; too much data (i.e., patterns, reference file paths, and shell
 commands); stack overflow.

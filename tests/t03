@@ -43,26 +43,29 @@ test_pathbufsize()
 }
 
 # Where buf size checks are:
-# 1 - ftrw initial fpath
-# 2 - ftrw appending trailing /
-# 3 - ftw1 - appending d_name
-# 4 - ftw1 - appending trailing /
+# 1 - rawhide_search   - initial fpath
+# 2 - rawhide_search   - appending trailing /
+# 3 - rawhide_traverse - appending d_name
+# 4 - rawhide_traverse - appending trailing /
+#
+# For 3 and 4, fpath grows as needed (in case we cross a filesystem boundary)
 
-# This requires a path buf size of at least 44 to succeed
+# This requires a path buf size of at least 44 to succeed without forcing
+# the path buf to grow
 # tests/.t03/0123456789/0123456789/0123456789
 
-test_pathbufsize 10 "$rh $d" ""                                                                                                               "./rh: path is too long: tests/.$t\n"                                  1 "too big - initial path"
-test_pathbufsize 11 "$rh $d" "tests/.$t\n"                                                                                                    "./rh: path is too long: tests/.$t/\n"                                 1 "too big - appending / to initial path"
-test_pathbufsize 12 "$rh $d" "tests/.$t\n"                                                                                                    "./rh: path is too long: tests/.$t/0123456789\n"                       1 "too big - appending d_name to initial path"
-test_pathbufsize 21 "$rh $d" "tests/.$t\n"                                                                                                    "./rh: path is too long: tests/.$t/0123456789\n"                       1 "too big - appending d_name to initial path"
-test_pathbufsize 22 "$rh $d" "tests/.$t\ntests/.$t/0123456789\n"                                                                              "./rh: path is too long: tests/.$t/0123456789/\n"                      1 "too big - appending / to subpath"
-test_pathbufsize 23 "$rh $d" "tests/.$t\ntests/.$t/0123456789\n"                                                                              "./rh: path is too long: tests/.$t/0123456789/0123456789\n"            1 "too big - appending d_name to subpath"
-test_pathbufsize 32 "$rh $d" "tests/.$t\ntests/.$t/0123456789\n"                                                                              "./rh: path is too long: tests/.$t/0123456789/0123456789\n"            1 "too big - appending d_name to subpath"
-test_pathbufsize 33 "$rh $d" "tests/.$t\ntests/.$t/0123456789\ntests/.$t/0123456789/0123456789\n"                                             "./rh: path is too long: tests/.$t/0123456789/0123456789/\n"           1 "too big - appending / to subsubpath"
-test_pathbufsize 34 "$rh $d" "tests/.$t\ntests/.$t/0123456789\ntests/.$t/0123456789/0123456789\n"                                             "./rh: path is too long: tests/.$t/0123456789/0123456789/0123456789\n" 1 "too big - appending d_name to subsubpath"
-test_pathbufsize 43 "$rh $d" "tests/.$t\ntests/.$t/0123456789\ntests/.$t/0123456789/0123456789\n"                                             "./rh: path is too long: tests/.$t/0123456789/0123456789/0123456789\n" 1 "too big - appending d_name to subsubpath"
-test_pathbufsize 44 "$rh $d" "tests/.$t\ntests/.$t/0123456789\ntests/.$t/0123456789/0123456789\ntests/.$t/0123456789/0123456789/0123456789\n" ""                                                                     0 "max"
-test_pathbufsize 99 "$rh $d" "tests/.$t\ntests/.$t/0123456789\ntests/.$t/0123456789/0123456789\ntests/.$t/0123456789/0123456789/0123456789\n" ""                                                                     0 "small"
+test_pathbufsize 10 "$rh $d" ""                                                                                   "./rh: path is too long: $d\n" 1 "too big - [10] initial path"
+test_pathbufsize 11 "$rh $d" "$d\n$d/0123456789\n$d/0123456789/0123456789\n$d/0123456789/0123456789/0123456789\n" ""                             0 "too big - [11] appending / to initial path - so buffer grows (4)"
+test_pathbufsize 12 "$rh $d" "$d\n$d/0123456789\n$d/0123456789/0123456789\n$d/0123456789/0123456789/0123456789\n" ""                             0 "too big - [12] appending d_name to initial path - so buffer grows (3)"
+test_pathbufsize 21 "$rh $d" "$d\n$d/0123456789\n$d/0123456789/0123456789\n$d/0123456789/0123456789/0123456789\n" ""                             0 "too big - [21] appending d_name to initial path - so buffer grows (3)"
+test_pathbufsize 22 "$rh $d" "$d\n$d/0123456789\n$d/0123456789/0123456789\n$d/0123456789/0123456789/0123456789\n" ""                             0 "too big - [22] appending / to subpath - so buffer grows (4)"
+test_pathbufsize 23 "$rh $d" "$d\n$d/0123456789\n$d/0123456789/0123456789\n$d/0123456789/0123456789/0123456789\n" ""                             0 "too big - [23] appending d_name to subpath - so buffer grows (3)"
+test_pathbufsize 32 "$rh $d" "$d\n$d/0123456789\n$d/0123456789/0123456789\n$d/0123456789/0123456789/0123456789\n" ""                             0 "too big - [32] appending d_name to subpath - so buffer grows (3)"
+test_pathbufsize 33 "$rh $d" "$d\n$d/0123456789\n$d/0123456789/0123456789\n$d/0123456789/0123456789/0123456789\n" ""                             0 "too big - [33] appending / to subsubpath - so buffer grows (4)"
+test_pathbufsize 34 "$rh $d" "$d\n$d/0123456789\n$d/0123456789/0123456789\n$d/0123456789/0123456789/0123456789\n" ""                             0 "too big - [34] appending d_name to subsubpath - so buffer grows (3)"
+test_pathbufsize 43 "$rh $d" "$d\n$d/0123456789\n$d/0123456789/0123456789\n$d/0123456789/0123456789/0123456789\n" ""                             0 "too big - [43] appending d_name to subsubpath - so buffer grows (3)"
+test_pathbufsize 44 "$rh $d" "$d\n$d/0123456789\n$d/0123456789/0123456789\n$d/0123456789/0123456789/0123456789\n" ""                             0 "[44] max"
+test_pathbufsize 99 "$rh $d" "$d\n$d/0123456789\n$d/0123456789/0123456789\n$d/0123456789/0123456789/0123456789\n" ""                             0 "[99] small"
 
 finish
 
