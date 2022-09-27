@@ -25,7 +25,7 @@ C</etc/rawhide.conf> - configuration file for I<rh(1)>
 
 =head1 DESCRIPTION
 
-The C</etc/rawhide.conf> file (or similar) contains a "standard" library of
+The C</etc/rawhide.conf> file (or similar) contains a standard library of
 functions that can be used by all users of I<rh(1)>. It is the first file
 read by I<rh(1)>. Any files in the C</etc/rawhide.conf.d> directory (or
 similar) whose names do not start with dot (C<".">) are then read (in
@@ -480,9 +480,8 @@ of the corresponding I<stat(2)> structure.
 
 The mode of the current candidate file. This is the C<st_mode> field of the
 corresponding I<stat(2)> structure. This contains the file type and
-permissions. The "standard" library provides the C<type> and C<perm>
-functions (among others) for extracting the file type and permissions from
-C<mode>.
+permissions. The standard library provides the C<type> and C<perm> functions
+(among others) for extracting the file type and permissions from C<mode>.
 
 =item C<nlink>
 
@@ -875,7 +874,7 @@ seen will be broken ones, and this built-in will return zero.
 
 The mode of the current candidate symlink's ultimate target. This is the
 C<st_mode> field of the corresponding I<stat(2)> structure. This contains
-the file type and permissions. The "standard" library provides the C<ttype>
+the file type and permissions. The standard library provides the C<ttype>
 and C<tperm> functions (among others) for extracting the file type and
 permissions from C<tmode>.
 
@@ -1893,13 +1892,14 @@ An alias for C<strlen>.
 
 =head1 EXAMPLES
 
-This is the default C</etc/rawhide.conf> "standard" library:
+This is the default C</etc/rawhide.conf> standard library:
 
   # /etc/rawhide.conf: rh system-wide configuration.
   # See rh(1) and rawhide.conf(5) for more information.
   
+  
   /*
-  This file constitutes the rawhide "standard" library.
+  This file constitutes the rawhide standard library.
   
   On some systems, this file could be somewhere other than /etc
   (e.g., /usr/local/etc, /opt/local/etc, /usr/pkg/etc).
@@ -1913,6 +1913,7 @@ This is the default C</etc/rawhide.conf> "standard" library:
   functions in ~/.rhrc and ~/.rhrc.d/*. They'll be read
   by rh in the same manner after these system-wide files.
   */
+  
   
   
   // File types (canonical, aliases)
@@ -2302,7 +2303,7 @@ This is the default C</etc/rawhide.conf> "standard" library:
   // ack(x, y) { !x ? y+1 : !y ? ack(x-1, 1) : ack(x-1, ack(x, y-1)) }
 
 The following aliases provide greater brevity for some built-ins. Perhaps
-they could have gone into the "standard" library, but you might have better
+they could have gone into the standard library, but you might have better
 uses for these identifiers.
 
   // Brevity (aliases)

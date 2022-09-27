@@ -58,9 +58,9 @@ Functions are a means of referring to an expression by name. They allow
 complex expressions to be composed of simpler ones. They also allow you to
 create your own lexicon of search terms for finding files.
 
-There is a default "standard" library of functions to start with. It
-provides a high-level interface to the built-in symbols mentioned above, and
-makes *rh* easy to use. See *rawhide.conf(5)* for details.
+There is a default standard library of functions to start with. It provides
+a high-level interface to the built-in symbols mentioned above, and makes
+*rh* easy to use. See *rawhide.conf(5)* for details.
 
 # SYNOPSIS
 
@@ -191,8 +191,8 @@ makes *rh* easy to use. See *rawhide.conf(5)* for details.
 
 The following are examples of *rh* expressions. Where multiple versions are
 given, the first one only uses built-in symbols, and the rest usually make
-use of the "standard" library in `/etc/rawhide.conf` (or similar) as well.
-See *rawhide.conf(5)* for details.
+use of the standard library in `/etc/rawhide.conf` (or similar) as well. See
+*rawhide.conf(5)* for details.
 
 Find files that are owned by the user `drew`, and are writable by other
 people:

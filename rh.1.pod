@@ -205,9 +205,9 @@ Functions are a means of referring to an expression by name. They allow
 complex expressions to be composed of simpler ones. They also allow you to
 create your own lexicon of search terms for finding files.
 
-There is a default "standard" library of functions to start with. It
-provides a high-level interface to the built-in symbols mentioned above, and
-makes I<rh> easy to use. See I<rawhide.conf(5)> for details.
+There is a default standard library of functions to start with. It provides
+a high-level interface to the built-in symbols mentioned above, and makes
+I<rh> easy to use. See I<rawhide.conf(5)> for details.
 
 =head1 OPTIONS
 
@@ -1437,7 +1437,7 @@ this option will still be accepted, but there will be no debug messages.
 
 See I<rawhide.conf(5)> for details on the search criteria language used in
 system-wide and user-specific configuration files, C<-f> option files, and
-C<-e> option arguments. It also includes details on the "standard" library
+C<-e> option arguments. It also includes details on the standard library
 that builds on the language, and makes I<rh> easy to use. Now would be a
 good time to read it. The rest of this manual entry should make more
 sense. But here's a brief introduction.
@@ -1521,7 +1521,7 @@ C<< <sys/stat.h> >> header file (e.g., C<IFMT>, C<IFDIR>, C<IRUSR>,
 candidate symlink targets (e.g., C<tmode>, C<tuid>, C<tsize>, C<tmtime>,
 ...).
 
-There is also a "standard" library of functions in C</etc/rawhide.conf> (or
+There is also a standard library of functions in C</etc/rawhide.conf> (or
 similar). It contains both readable and concise functions for various things
 like: file types (e.g., C<file>, C<f>, C<directory>, C<dir>, C<d>,
 C<symlink>, C<link>, C<l>, ...); file permissions (e.g., C<user_readable>,
@@ -1559,7 +1559,7 @@ See I<rawhide.conf(5)> for all the details. See below for some examples.
 
 The following are examples of I<rh> expressions. Where multiple versions are
 given, the first one only uses built-in symbols, and the rest usually make
-use of the "standard" library in C</etc/rawhide.conf> (or similar) as
+use of the standard library in C</etc/rawhide.conf> (or similar) as
 well. See I<rawhide.conf(5)> for details.
 
 Find files that are owned by the user C<drew>, and are writable by other
@@ -2511,8 +2511,8 @@ were needed to make it a viable modern alternative to I<GNU find(1)> for all
 my file-finding needs. So I spent the next month or so fixing it all up,
 enhancing it in many fun ways, testing it ruthlessly, and documenting it
 thoroughly. It now has a lean flexible command line interface, many new
-capabilities (and even some novel ones), and a "standard" library of
-functions to make it really pretty, and easy to use, and easy to remember.
+capabilities (and even some novel ones), and a standard library of functions
+to make it really pretty, and easy to use, and easy to remember.
 
 =head1 TRIVIA
 
