@@ -2226,11 +2226,13 @@ static char *json(void)
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"mtime_unix\":%lld, ", (llong)attr.statbuf->st_mtime);
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"ctime_unix\":%lld, ", (llong)attr.statbuf->st_ctime);
 
+	#ifdef HAVE_ATTR
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"attributes\":\"%s\", ", attributes());
 
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"project\":%lu, ", get_proj());
 
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"generation\":%lu, ", get_gen());
+	#endif
 
 	if ((acl = get_acl(1)))
 	{
