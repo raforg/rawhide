@@ -253,14 +253,19 @@ that behaviour.
 =item C<-f> I<fname>
 
 After reading any configuration files, this option causes I<rh> to read code
-from the file specified by I<fname>. If I<fname> is C<"-">, then code is
-read from standard input (I<stdin>). It is an error to supply the C<-f>
-option more than once.
+from the file specified by I<fname>. If there is a directory whose name is
+I<fname> followed by C<".d">, then I<rh> reads (in lexicographic order) any
+files there whose names do not start with dot (C<".">). If I<fname>
+specifies a directory, then I<rh> reads any files there in the same
+manner. If I<fname> is C<"-">, then code is read from standard input (I<stdin>). The
+C<-f> option can be supplied more than once, but it is an error to use
+C<"-"> (for I<stdin>) more than once.
 
-The file can contain zero or more function definitions, and/or a trailing
-file test expression. If the file does contain a trailing file test
-expression, it is used to match files, unless a file test expression is
-supplied via the C<-e> option, or in any remaining command line arguments.
+Each file can contain zero or more function definitions, and/or a trailing
+file test expression. If a file does contain a trailing file test
+expression, it is used to match files, unless another file test expression
+is supplied via a subsequent C<-f> option file, or via the C<-e> option, or
+in any remaining command line arguments.
 
 =item C<-e> C<'>I<expr>C<'>
 
@@ -268,8 +273,8 @@ Read code from the I<expr> argument itself. It is an error to supply the
 C<-e> option more than once.
 
 The I<expr> argument can contain zero or more function definitions, and/or a
-trailing file test expression. The C<-e> option is processed after the C<-f>
-option, and so can make use of any functions defined via the C<-f>
+trailing file test expression. The C<-e> option is processed after any C<-f>
+options, and so can make use of any functions defined via the C<-f>
 option. If the I<expr> argument contains a file test expression (which is expected),
 it overrides any default file test expression from a configuration file or
 C<-f> option file.

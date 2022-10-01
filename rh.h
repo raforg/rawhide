@@ -88,6 +88,7 @@ typedef long long unsigned int ullong;
 
 /* Define macros for file types */
 
+#define isreg(statbuf)  (((statbuf)->st_mode & S_IFMT) == S_IFREG)
 #define isdir(statbuf)  (((statbuf)->st_mode & S_IFMT) == S_IFDIR)
 #define isblk(statbuf)  (((statbuf)->st_mode & S_IFMT) == S_IFBLK)
 #define ischr(statbuf)  (((statbuf)->st_mode & S_IFMT) == S_IFCHR)

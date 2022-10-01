@@ -54,6 +54,8 @@ test_pathbufsize()
 # the path buf to grow
 # tests/.t03/0123456789/0123456789/0123456789
 
+ln -s rawhide.conf rc # Avoid errors about rawhide.conf.d being too long
+rh="./rh -Nn -f rc"
 test_pathbufsize 10 "$rh $d" ""                                                                                   "./rh: path is too long: $d\n" 1 "too big - [10] initial path"
 test_pathbufsize 11 "$rh $d" "$d\n$d/0123456789\n$d/0123456789/0123456789\n$d/0123456789/0123456789/0123456789\n" ""                             0 "too big - [11] appending / to initial path - so buffer grows (4)"
 test_pathbufsize 12 "$rh $d" "$d\n$d/0123456789\n$d/0123456789/0123456789\n$d/0123456789/0123456789/0123456789\n" ""                             0 "too big - [12] appending d_name to initial path - so buffer grows (3)"
@@ -66,6 +68,7 @@ test_pathbufsize 34 "$rh $d" "$d\n$d/0123456789\n$d/0123456789/0123456789\n$d/01
 test_pathbufsize 43 "$rh $d" "$d\n$d/0123456789\n$d/0123456789/0123456789\n$d/0123456789/0123456789/0123456789\n" ""                             0 "too big - [43] appending d_name to subsubpath - so buffer grows (3)"
 test_pathbufsize 44 "$rh $d" "$d\n$d/0123456789\n$d/0123456789/0123456789\n$d/0123456789/0123456789/0123456789\n" ""                             0 "[44] max"
 test_pathbufsize 99 "$rh $d" "$d\n$d/0123456789\n$d/0123456789/0123456789\n$d/0123456789/0123456789/0123456789\n" ""                             0 "[99] small"
+rm rc
 
 finish
 

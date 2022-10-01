@@ -70,18 +70,19 @@ test_rawhide_post_hook() { true; }
 # Test -f and -f-
 
 rh="$builtin_rh"
-test_rawhide "$rh -f tests/missing $d"                               ""             "./rh: tests/missing: No such file or directory\n" 1 "-f with missing file"
+test_rawhide "$rh -f tests/missing $d"                               ""             "./rh: invalid -f option argument: tests/missing (not found)\n" 1 "-f with missing file"
 
 echo "yes() { 1 }" > $d.conf
+echo "no() { 0 }" > $d.conf2
 test_rawhide "$rh -f $d.conf $d"                                     "$d\n$d/abc\n" ""                                                 0 "-f ok but unused"
-test_rawhide "$rh -f $d.conf -f $d.conf $d"                          ""             "./rh: too many -f options\n"                      1 "-f twice (not allowed - is that acceptable?)"
+test_rawhide "$rh -f $d.conf -f $d.conf2 $d"                         "$d\n$d/abc\n" ""                                                 0 "-f twice (allowed)"
 test_rawhide "$rh -f $d.conf -e yes $d"                              "$d\n$d/abc\n" ""                                                 0 "-e using code from -f"
 test_rawhide "$rh -e 1 -e 1 $d"                                      ""             "./rh: too many -e options\n"                      1 "-e twice (not allowed)"
 
-test_rawhide "cat $d.conf | $rh -f- $d"                              "$d\n$d/abc\n" ""                                                 0 "-f- ok but unused "
-test_rawhide "cat $d.conf | $rh -f- -f $d.conf $d"                   ""             "./rh: too many -f options\n"                      1 "-f- and -f (-f twice) (not allowed - is that acceptable?)"
-test_rawhide "cat $d.conf | $rh -f- -f- $d"                          ""             "./rh: too many -f options\n"                      1 "-f- twice (not allowed - definitely acceptable)"
-test_rawhide "cat $d.conf | $rh -f- -e yes $d"                       "$d\n$d/abc\n" ""                                                 0 "-e using code from -f-"
+test_rawhide "cat $d.conf | $rh -f- $d"                              "$d\n$d/abc\n" ""                                                                    0 "-f- ok but unused "
+test_rawhide "cat $d.conf | $rh -f- -f $d.conf2 $d"                  "$d\n$d/abc\n" ""                                                                    0 "-f- and -f (-f twice) (allowed)"
+test_rawhide "cat $d.conf | $rh -f- -f- $d"                          ""             "./rh: invalid -f option argument: - (stdin can only be read once)\n" 1 "-f- twice (not allowed)"
+test_rawhide "cat $d.conf | $rh -f- -e yes $d"                       "$d\n$d/abc\n" ""                                                                    0 "-e using code from -f-"
 
 # Add a file test expression to the -f file (i.e. a stored default test)
 echo "(mode & IFMT) == IFDIR" >> $d.conf
@@ -93,11 +94,38 @@ test_rawhide "cat $d.conf | $rh -f - $d"                             "$d\n"     
 test_rawhide "cat $d.conf | $rh -f - -e '(mode & IFMT) == IFREG' $d" "$d/abc\n"     ""                                                 0 "-f- with stored default file test expression overridden by explicit -e"
 test_rawhide "cat $d.conf | $rh -f -    '(mode & IFMT) == IFREG' $d" "$d/abc\n"     ""                                                 0 "-f- with stored default file test expression overridden by implicit -e"
 
+mkdir $d.conf.d $d.conf2.d
+echo "f1 { 1 }" > $d.conf.d/a
+echo "f2 { f1 }" > $d.conf.d/b
+echo "f3 { f2 }" > $d.conf.d/c
+echo "f4 { f3 }" > $d.conf2.d/a
+echo "f5 { f4 }" > $d.conf2.d/b
+echo "f6 { f5 }" > $d.conf2.d/c
+test_rawhide "$rh -f $d.conf   -f $d.conf2   f6 $d" "$d\n$d/abc\n" "" 0 "multiple -f with corresponding directories"
+test_rawhide "$rh -f $d.conf.d -f $d.conf2.d f6 $d" "$d\n$d/abc\n" "" 0 "multiple -f that are directories"
+rm $d.conf $d.conf2
+test_rawhide "$rh -f $d.conf   -f $d.conf2   f6 $d" "$d\n$d/abc\n" "" 0 "multiple -f with only corresponding directories"
+rm -rf $d.conf.d $d.conf2.d
+
 test_rawhide "$rh -e"    "" "./rh: missing -e option argument (see ./rh -h for help)\n" 1 "-e with no argument"
 test_rawhide "$rh -f ''" "" "./rh: missing -f option argument (see ./rh -h for help)\n" 1 "-f with empty argument"
 test_rawhide "$rh -f"    "" "./rh: missing -f option argument (see ./rh -h for help)\n" 1 "-f with no argument"
 
-rm $d.conf
+if [ "`whoami`" != root ]
+then
+	touch $d.conf
+	chmod 000 $d.conf
+	test_rawhide "$rh -f $d.conf" "" "./rh: $d.conf: Permission denied\n" 1 "-f with unreadable file"
+	chmod 644 $d.conf
+	rm $d.conf
+fi
+
+if [ -x "`which mkfifo 2>/dev/null`" ] && mkfifo $d.fifo >/dev/null 2>/dev/null
+then
+	test_rawhide "$rh -f $d.fifo $d" "" "./rh: invalid -f option argument: $d.fifo (not a file or directory)\n" 1 "-f with non-file-or-directory"
+	rm $d.fifo
+fi
+
 finish
 
 exit $errors

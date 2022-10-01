@@ -243,22 +243,23 @@ static void debugf(const char *format, ...)
 
 /*
 
-static void load_program_file(void);
+static void load_program_file(char *fname);
 
-Compile the file expfname.
+Compile the given file.
 
 */
 
-static void load_program_file(void)
+static void load_program_file(char *fname)
 {
 	struct stat statbuf[1];
 
-	if (stat(expfname, statbuf) == -1 || (statbuf->st_mode & S_IFMT) != S_IFREG)
-		error("%s is not a file", ok(expfname));
-	else if (!(expfile = fopen(expfname, "r")))
-		errorsys("%s", ok(expfname));
+	if (stat(fname, statbuf) == -1 || !isreg(statbuf))
+		error("%s is not a file", ok(fname));
+	else if (!(expfile = fopen(fname, "r")))
+		errorsys("%s", ok(fname));
 	else
 	{
+		expfname = fname;
 		parse_program();
 		fclose(expfile);
 		expfile = NULL;
@@ -293,6 +294,71 @@ static int env_flag(char *envname)
 	char *env;
 
 	return (env = getenv(envname)) && !strcmp(env, "1");
+}
+
+/*
+
+static void load_program_dir(const char *initdir, char *initpattern, llong pathbufsize);
+
+Compile the files (in lexicographic order) that are in the
+directory named in initdir. The initpattern buffer will be
+used to construct the glob pattern. The pathbufsize is the
+size of the two buffers.
+
+*/
+
+static void load_program_dir(const char *initdir, char *initpattern, llong pathbufsize)
+{
+	strlcpy(initpattern, initdir, pathbufsize);
+
+	if (strlcat(initpattern, "/*", pathbufsize) >= pathbufsize)
+		error("path is too long: %s/*", ok(initdir));
+	else
+	{
+		glob_t glob_state[1];
+		int i;
+
+		if (glob(initpattern, 0, NULL, glob_state) == 0)
+			for (i = 0; i < glob_state->gl_pathc; i++)
+				load_program_file(glob_state->gl_pathv[i]);
+
+		globfree(glob_state);
+	}
+}
+
+/*
+
+static void load_config_dir(const char *initfile, char *initdir, char *initpattern, llong pathbufsize);
+
+Compile the files (in lexicographic order) that are in the
+directory corresponding to the file named in initfile. The
+initdir and initpattern buffers will be used to construct
+the directory name (by appending ".d") and the glob pattern.
+The pathbufsize is the size of the buffers.
+
+*/
+
+static int load_config_dir(const char *initfile, char *initdir, char *initpattern, llong pathbufsize)
+{
+	struct stat statbuf[1];
+
+	strlcpy(initdir, initfile, pathbufsize);
+
+	if (strlcat(initdir, DOTDDIR, pathbufsize) >= pathbufsize)
+		error("path is too long: %s%s", ok(initfile), ok2(DOTDDIR));
+	else if (stat(initdir, statbuf) != -1)
+	{
+		if (!isdir(statbuf))
+			error("%s is not a directory", ok(initdir));
+		else
+		{
+			load_program_dir(initdir, initpattern, pathbufsize);
+
+			return 1;
+		}
+	}
+
+	return 0;
 }
 
 /*
@@ -341,13 +407,12 @@ be supplied three times.
 
 int main(int argc, char *argv[])
 {
-	char *opt_e, *opt_f, *initfile, *initdir, *initpattern, *endptr;
-	int opt_h, opt_V, opt_l, opt_r, opt_N, opt_n, opt_U;
+	char *opt_e, *initfile, *initdir, *initpattern, *endptr, **opt_f_list;
+	int opt_f, opt_h, opt_V, opt_l, opt_r, opt_N, opt_n, opt_U;
 	llong opt_m, opt_M, optarg_int, opt_e_expr = 0;
 	llong max_pathlen, pathbufsize;
-	glob_t glob_state[1];
-	int o, i, j, expr_index = 0, any = 0;
 	struct stat statbuf[1];
+	int o, i, expr_index = 0, any = 0, stdin_read = 0;
 
 	setlocale(LC_ALL, "");
 	prog_name = argv[0];
@@ -358,7 +423,8 @@ int main(int argc, char *argv[])
 	opt_V = 0;                  /* -V (version) */
 	opt_N = 0;                  /* -N (suppress /etc/rawhide.conf)*/
 	opt_n = 0;                  /* -n (suppress ~/.rhrc) */
-	opt_f = NULL;               /* -f fname (read code from file/stdin) */
+	opt_f = 0;                  /* -f fname (read code from file/stdin) */
+	opt_f_list = NULL;
 	opt_e = NULL;               /* -e expr (read code from arg) */
 
 	opt_r = 0;                  /* -r (only search 1 level down) */
@@ -465,10 +531,10 @@ int main(int argc, char *argv[])
 				if (!optarg || !*optarg)
 					fatal("missing -f option argument (see %s -h for help)", prog_name);
 
-				if (opt_f)
-					fatal("too many -f options");
+				if (!(opt_f_list = realloc(opt_f_list, ++opt_f * sizeof(*opt_f_list))))
+					fatalsys("out of memory");
 
-				opt_f = optarg;
+				opt_f_list[opt_f - 1] = optarg;
 
 				break;
 			}
@@ -909,47 +975,11 @@ int main(int argc, char *argv[])
 		char *conf, *env;
 
 		conf = (geteuid() && (env = getenv("RAWHIDE_CONFIG")) && *env) ? env : RAWHIDE_CONF;
-		expfname = initfile;
 
-		if (strlcpy(expfname, conf, pathbufsize) >= pathbufsize)
-			error("path is too long: %s", ok(conf));
-		else
-		{
-			if (stat(expfname, statbuf) != -1)
-				load_program_file();
+		if (stat(conf, statbuf) != -1)
+			load_program_file(conf);
 
-			strlcpy(initdir, initfile, pathbufsize);
-
-			if (strlcat(initdir, DOTDDIR, pathbufsize) >= pathbufsize)
-				error("path is too long: %s%s", ok(initfile), ok2(DOTDDIR));
-			else if (stat(initdir, statbuf) != -1)
-			{
-				if ((statbuf->st_mode & S_IFMT) != S_IFDIR)
-					error("%s is not a directory", ok(initdir));
-				else
-				{
-					strlcpy(initpattern, initdir, pathbufsize);
-
-					if (strlcat(initpattern, "/*", pathbufsize) >= pathbufsize)
-						error("path is too long: %s/*", ok(initdir));
-					else
-					{
-						if (glob(initpattern, 0, NULL, glob_state) == 0)
-						{
-							for (j = 0; j < glob_state->gl_pathc; j++)
-							{
-								if (strlcpy(expfname, glob_state->gl_pathv[j], pathbufsize) >= pathbufsize)
-									error("path is too long: %s", ok(glob_state->gl_pathv[j]));
-								else
-									load_program_file();
-							}
-						}
-
-						globfree(glob_state);
-					}
-				}
-			}
-		}
+		load_config_dir(conf, initdir, initpattern, pathbufsize);
 	}
 
 	/* Load ~/.rhrc and ~/.rhrc.d (unless -n) */
@@ -964,50 +994,73 @@ int main(int argc, char *argv[])
 		else if ((pwd = getpwuid(getuid())))
 			home = pwd->pw_dir;
 
-		expfname = initfile;
-		*expfname = '\0';
+		*initfile = '\0';
 
-		if (rc && strlcpy(expfname, rc, pathbufsize) >= pathbufsize)
+		if (rc && strlcpy(initfile, rc, pathbufsize) >= pathbufsize)
 			error("path is too long: %s", ok(rc));
-		else if (home && (strlcpy(expfname, home, pathbufsize) >= pathbufsize || strlcat(expfname, RAWHIDE_RC, pathbufsize) >= pathbufsize))
+		else if (home && (strlcpy(initfile, home, pathbufsize) >= pathbufsize || strlcat(initfile, RAWHIDE_RC, pathbufsize) >= pathbufsize))
 			error("path is too long: %s%s", ok(home), ok2(RAWHIDE_RC));
 		else
 		{
-			if (stat(expfname, statbuf) != -1)
-				load_program_file();
+			if (stat(initfile, statbuf) != -1)
+				load_program_file(initfile);
 
-			strlcpy(initdir, initfile, pathbufsize);
-
-			if (strlcat(initdir, DOTDDIR, pathbufsize) >= pathbufsize)
-				error("path is too long: %s%s", ok(initfile), ok2(DOTDDIR));
-			else if (stat(initdir, statbuf) != -1)
-			{
-				if ((statbuf->st_mode & S_IFMT) != S_IFDIR)
-					error("%s is not a directory", ok(initdir));
-				else
-				{
-					strlcpy(initpattern, initdir, pathbufsize);
-
-					if (strlcat(initpattern, "/*", pathbufsize) >= pathbufsize)
-						error("path is too long: %s/*", ok(initdir));
-					else
-					{
-						if (glob(initpattern, 0, NULL, glob_state) == 0)
-						{
-							for (j = 0; j < glob_state->gl_pathc; j++)
-							{
-								if (strlcpy(expfname, glob_state->gl_pathv[j], pathbufsize) >= pathbufsize)
-									error("path is too long: %s", ok(glob_state->gl_pathv[j]));
-								else
-									load_program_file();
-							}
-						}
-
-						globfree(glob_state);
-					}
-				}
-			}
+			load_config_dir(initfile, initdir, initpattern, pathbufsize);
 		}
+	}
+
+	/* Load the -f file ("-" is stdin) */
+
+	for (i = 0; i < opt_f; ++i)
+	{
+		debug(("-f option: %s", opt_f_list[i]));
+
+		if (!strcmp(opt_f_list[i], "-"))
+		{
+			if (stdin_read)
+				fatal("invalid -f option argument: - (stdin can only be read once)");
+
+			stdin_read = 1;
+			expfname = "stdin";
+			expfile = stdin;
+			parse_program();
+			expfile = NULL;
+		}
+		else
+		{
+			int found1 = 0, found2 = 0;
+
+			if (stat(opt_f_list[i], statbuf) != -1)
+			{
+				found1 = 1;
+
+				if (isreg(statbuf))
+				{
+					if (!(expfile = fopen(opt_f_list[i], "r")))
+						fatalsys("%s", ok(opt_f_list[i]));
+
+					expfname = opt_f_list[i];
+					parse_program();
+					fclose(expfile);
+					expfile = NULL;
+				}
+				else if (isdir(statbuf))
+					load_program_dir(opt_f_list[i], initpattern, pathbufsize);
+				else
+					fatal("invalid -f option argument: %s (not a file or directory)", ok(opt_f_list[i]));
+			}
+
+			found2 = load_config_dir(opt_f_list[i], initdir, initpattern, pathbufsize);
+
+			if (!found1 && !found2)
+				fatal("invalid -f option argument: %s (not found)", ok(opt_f_list[i]));
+		}
+	}
+
+	if (opt_f_list)
+	{
+		free(opt_f_list);
+		opt_f_list = NULL;
 	}
 
 	free(initfile);
@@ -1018,32 +1071,6 @@ int main(int argc, char *argv[])
 
 	free(initpattern);
 	initpattern = NULL;
-
-	/* Load the -f file ("-" is stdin) */
-
-	if (opt_f)
-	{
-		debug(("explicit -f option: %s", opt_f));
-
-		if (!strcmp(opt_f, "-"))
-		{
-			expfname = "stdin";
-			expfile = stdin;
-			parse_program();
-			expfile = NULL;
-		}
-		else
-		{
-			expfname = opt_f;
-
-			if (!(expfile = fopen(expfname, "r")))
-				fatalsys("%s", ok(expfname));
-
-			parse_program();
-			fclose(expfile);
-			expfile = NULL;
-		}
-	}
 
 	/* Parse the -e argument */
 

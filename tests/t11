@@ -42,15 +42,15 @@ test_configpathbufsize()
 
 # Where config buf size checks are:
 #
-# (#1) - main - /etc/rawhide.conf
-# (#2) - main - /etc/rawhide.conf.d
-# (#3) - main - /etc/rawhide.conf.d/*
-# (#4) - main - /etc/rawhide.conf.d/d_name
-# (#5) - main - ~
-# (#6) - main - ~/.rhrc and $RAWHIDE_RC (separate checks)
-# (#7) - main - ~/.rhrc.d
-# (#8) - main - ~/.rhrc.d/*
-# (#9) - main - ~/.rhrc.d/d_name
+# (#1) /etc/rawhide.conf [no longer, just used as is]
+# (#2) /etc/rawhide.conf.d
+# (#3)/etc/rawhide.conf.d/*
+# (#4) /etc/rawhide.conf.d/d_name [no longer, because they're real]
+# (#5) ~
+# (#6) ~/.rhrc and $RAWHIDE_RC (separate checks)
+# (#7) ~/.rhrc.d
+# (#8) ~/.rhrc.d/*
+# (#9) ~/.rhrc.d/d_name [no longer, because they're real]
 
 mkdir tests/etc
 touch tests/etc/rawhide.conf        # 23
@@ -71,26 +71,28 @@ touch tests/home/.rhrc.d/aaaa       # 24
 
 [ "`whoami`" = root ] && root=1 || root=0
 
+test_rawhide_grep "RAWHIDE_TEST_PATHLEN_MAX=2 ./rh $d 2>&1" "^\./rh: path is too long: (/.*/rawhide\.conf\.d|/.*/\.rhrc|$d)$" "" 1 "[2] too big - /etc/rawhide.conf (#2 was #1) - ~ (#5 and #6) without RAWHIDE_CONFIG or RAWHIDE_RC"
+
 if [ $root = 0 ]
 then
 	rh="RAWHIDE_CONFIG=tests/etc/rawhide.conf RAWHIDE_RC=tests/home/.rhrc ./rh"
-	test_configpathbufsize  10 "$rh $d" ""     "./rh: path is too long: tests/etc/rawhide.conf\n./rh: path is too long: tests/home/.rhrc\n./rh: path is too long: $d\n"                                                                           1 "[10] too big - /etc/rawhide.conf (#1) - ~ (#5)"
-	test_configpathbufsize  11 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf\n./rh: path is too long: tests/home/.rhrc\n"                                                                                                       0 "[11] too big - /etc/rawhide.conf (#1) - ~/.rhrc (#6) - but search path buffer grows"
-	test_configpathbufsize  16 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf\n./rh: path is too long: tests/home/.rhrc\n"                                                                                                       0 "[16] too big - /etc/rawhide.conf (#1) - ~/.rhrc (#6)"
-	test_configpathbufsize  17 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf\n./rh: path is too long: tests/home/.rhrc.d\n"                                                                                                     0 "[17] too big - /etc/rawhide.conf (#1) - ~/.rhrc.d (#7)"
-	test_configpathbufsize  18 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf\n./rh: path is too long: tests/home/.rhrc.d\n"                                                                                                     0 "[18] too big - /etc/rawhide.conf (#1) - ~/.rhrc.d (#7)"
-	test_configpathbufsize  19 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf\n./rh: path is too long: tests/home/.rhrc.d/*\n"                                                                                                   0 "[19] too big - /etc/rawhide.conf (#1) - ~/.rhrc.d/* (#8)"
-	test_configpathbufsize  20 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf\n./rh: path is too long: tests/home/.rhrc.d/*\n"                                                                                                   0 "[20] too big - /etc/rawhide.conf (#1) - ~/.rhrc.d/* (#8)"
-	test_configpathbufsize  21 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf\n./rh: path is too long: tests/home/.rhrc.d/aa\n./rh: path is too long: tests/home/.rhrc.d/aaa\n./rh: path is too long: tests/home/.rhrc.d/aaaa\n" 0 "[21] too big - /etc/rawhide.conf (#1) - ~/.rhrc.d/aa aaa aaaa (#9)"
-	test_configpathbufsize  22 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf\n./rh: path is too long: tests/home/.rhrc.d/aaa\n./rh: path is too long: tests/home/.rhrc.d/aaaa\n"                                                0 "[22] too big - /etc/rawhide.conf (#1) - ~/.rhrc.d/aaa aaaa (#9)"
-	test_configpathbufsize  23 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d\n./rh: path is too long: tests/home/.rhrc.d/aaaa\n"                                                                                              0 "[23] too big - /etc/rawhide.conf.d (#2) - ~/.rhrc.d/aaaa (#9)"
-	test_configpathbufsize  24 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d\n"                                                                                                                                               0 "[24] too big - /etc/rawhide.conf.d (#2)"
-	test_configpathbufsize  26 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d/*\n"                                                                                                                                             0 "[26] too big - /etc/rawhide.conf.d/* (#3)"
-	test_configpathbufsize  27 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d/aa\n./rh: path is too long: tests/etc/rawhide.conf.d/aaa\n./rh: path is too long: tests/etc/rawhide.conf.d/aaaa\n"                               0 "[27] too big - /etc/rawhide.conf.d/aa aaa aaaa (#4)"
-	test_configpathbufsize  28 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d/aaa\n./rh: path is too long: tests/etc/rawhide.conf.d/aaaa\n"                                                                                    0 "[28] too big - /etc/rawhide.conf.d/aaa aaaa (#4)"
-	test_configpathbufsize  29 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d/aaaa\n"                                                                                                                                          0 "[29] too big - /etc/rawhide.conf.d/aaaa (#4)"
-	test_configpathbufsize  30 "$rh $d" "$d\n" ""                                                                                                                                                                                                 0 "[30] max"
-	test_configpathbufsize  31 "$rh $d" "$d\n" ""                                                                                                                                                                                                 0 "[31] small"
+	test_configpathbufsize  10 "$rh $d" ""     "./rh: path is too long: tests/etc/rawhide.conf.d\n./rh: path is too long: tests/home/.rhrc\n./rh: path is too long: $d\n"    1 "[10] too big - /etc/rawhide.conf (#2 was #1) - ~ (#5)"
+	test_configpathbufsize  11 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d\n./rh: path is too long: tests/home/.rhrc\n"                                0 "[11] too big - /etc/rawhide.conf (#2 was #1) - ~/.rhrc (#6) - but search path buffer grows"
+	test_configpathbufsize  16 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d\n./rh: path is too long: tests/home/.rhrc\n"                                0 "[16] too big - /etc/rawhide.conf (#2 was #1) - ~/.rhrc (#6)"
+	test_configpathbufsize  17 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d\n./rh: path is too long: tests/home/.rhrc.d\n"                              0 "[17] too big - /etc/rawhide.conf (#2 was #1) - ~/.rhrc.d (#7)"
+	test_configpathbufsize  18 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d\n./rh: path is too long: tests/home/.rhrc.d\n"                              0 "[18] too big - /etc/rawhide.conf (#2 was #1) - ~/.rhrc.d (#7)"
+	test_configpathbufsize  19 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d\n./rh: path is too long: tests/home/.rhrc.d/*\n"                            0 "[19] too big - /etc/rawhide.conf (#2 was #1) - ~/.rhrc.d/* (#8)"
+	test_configpathbufsize  20 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d\n./rh: path is too long: tests/home/.rhrc.d/*\n"                            0 "[20] too big - /etc/rawhide.conf (#2 was #1) - ~/.rhrc.d/* (#8)"
+	test_configpathbufsize  21 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d\n"                                                                          0 "[21] too big - /etc/rawhide.conf (#2 was #1) - but ~/.rhrc.d/aa aaa aaaa are real so ok (was #9)"
+	test_configpathbufsize  22 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d\n"                                                                          0 "[22] too big - /etc/rawhide.conf (#2 was #1) - but ~/.rhrc.d/aaa aaaa are real so ok (was #9)"
+	test_configpathbufsize  23 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d\n"                                                                          0 "[23] too big - /etc/rawhide.conf.d (#2) - but ~/.rhrc.d/aaaa are real so ok (was #9)"
+	test_configpathbufsize  24 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d\n"                                                                          0 "[24] too big - /etc/rawhide.conf.d (#2)"
+	test_configpathbufsize  26 "$rh $d" "$d\n" "./rh: path is too long: tests/etc/rawhide.conf.d/*\n"                                                                        0 "[26] too big - /etc/rawhide.conf.d/* (#3)"
+	test_configpathbufsize  27 "$rh $d" "$d\n" ""                                                                                                                            0 "[27] too big - but /etc/rawhide.conf.d/aa aaa aaaa are real so ok (was #4)"
+	test_configpathbufsize  28 "$rh $d" "$d\n" ""                                                                                                                            0 "[28] too big - but /etc/rawhide.conf.d/aaa aaaa are real so ok (was #4)"
+	test_configpathbufsize  29 "$rh $d" "$d\n" ""                                                                                                                            0 "[29] too big - but /etc/rawhide.conf.d/aaaa are real so ok (was #4)"
+	test_configpathbufsize  30 "$rh $d" "$d\n" ""                                                                                                                            0 "[30] max"
+	test_configpathbufsize  31 "$rh $d" "$d\n" ""                                                                                                                            0 "[31] small"
 fi
 
 rm -r tests/etc/rawhide.conf.d

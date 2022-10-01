@@ -35,8 +35,8 @@ definitions.
 User-specific configuration is then read from the C<~/.rhrc> and
 C<~/.rhrc.d/*> files in the same manner.
 
-Any file specified by I<rh(1)>'s C<-f> option is then read, followed by the
-contents of I<rh(1)>'s C<-e> option argument, which can also contain
+Any files specified by I<rh(1)>'s C<-f> option are then read, followed by
+the contents of I<rh(1)>'s C<-e> option argument, which can also contain
 additional function definitions, and a trailing file test expression.
 
 All of these share the same syntax.
