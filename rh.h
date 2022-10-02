@@ -246,6 +246,17 @@ struct runtime_t
 	int si_units;           /* Flag for -I option: SI units for sizes (1=roundup 2=roundhalfup) */
 	int iso_time;           /* Flag for -T option: ISO time format */
 	int numeric_ids;        /* Flag for -# option: numeric uid/gids */
+
+	int test_cmd_max;       /* Cache test-related getenv values (e.g., fault injection) */
+	int test_attr_format;
+	int test_chdir_failure;
+	int test_fchdir_failure;
+	int test_fdopendir_failure;
+	char *test_fstatat_failure;
+	int test_invalid_date;
+	int test_openat_failure;
+	int test_readlinkat_failure;
+	int test_readlinkat_too_long_failure;
 };
 
 /* Structure of a reference file */

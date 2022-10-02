@@ -363,7 +363,6 @@ static int rawhide_traverse(size_t nul_posi, int parent_fd, char *basename)
 	int save_followed = 0;
 	int rc = 0, i;
 	char *name;
-	char *env;
 
 	debug(("rawhide_traverse(fpath=%s, offset=%d, parent_fd=%d, basename=%s, depth=%d)", attr.fpath, (int)nul_posi, parent_fd, (basename) ? basename : "N/A", attr.depth));
 
@@ -385,13 +384,10 @@ static int rawhide_traverse(size_t nul_posi, int parent_fd, char *basename)
 
 	debug(("fstatat(parent_fd=%d, path=%s)", parent_fd, name));
 
-	if ((env = getenv("RAWHIDE_TEST_FSTATAT_FAILURE")))
-	{
-		debug(("RAWHIDE_TEST_FSTATAT_FAILURE=%s", env));
+	if (attr.test_fstatat_failure && !strcmp(attr.test_fstatat_failure, attr.fpath))
 		errno = EPERM;
-	}
 
-	if ((env && !strcmp(env, attr.fpath)) || fstatat(parent_fd, name, attr.statbuf, AT_SYMLINK_NOFOLLOW) == -1)
+	if ((attr.test_fstatat_failure && !strcmp(attr.test_fstatat_failure, attr.fpath)) || fstatat(parent_fd, name, attr.statbuf, AT_SYMLINK_NOFOLLOW) == -1)
 		return errorsys("fstatat %s", ok(attr.fpath));
 
 	debug(("fstatat: basename %s type %o perm %o uid %d gid %d size %d", (basename) ? basename : "N/A", attr.statbuf->st_mode & S_IFMT, attr.statbuf->st_mode & ~S_IFMT, attr.statbuf->st_uid, attr.statbuf->st_gid, attr.statbuf->st_size));
@@ -468,13 +464,10 @@ static int rawhide_traverse(size_t nul_posi, int parent_fd, char *basename)
 
 		debug(("openat(parent_fd=%d, path=%s)", parent_fd, name));
 
-		if ((env = getenv("RAWHIDE_TEST_OPENAT_FAILURE")))
-		{
-			debug(("RAWHIDE_TEST_OPENAT_FAILURE=%s", env));
+		if (attr.test_openat_failure)
 			errno = EPERM;
-		}
 
-		if ((env && *env == '1') || (dir_fd = openat(parent_fd, name, O_RDONLY)) == -1)
+		if (attr.test_openat_failure || (dir_fd = openat(parent_fd, name, O_RDONLY)) == -1)
 			return errorsys("%s", ok(attr.fpath));
 
 		debug(("openat: dir_fd %d", dir_fd));
@@ -487,13 +480,10 @@ static int rawhide_traverse(size_t nul_posi, int parent_fd, char *basename)
 
 		debug(("fdopendir(dir_fd=%d)", dir_fd));
 
-		if ((env = getenv("RAWHIDE_TEST_FDOPENDIR_FAILURE")))
-		{
-			debug(("RAWHIDE_TEST_FDOPENDIR_FAILURE=%s", env));
+		if (attr.test_fdopendir_failure)
 			errno = EPERM;
-		}
 
-		if ((env && *env == '1') || !(dir = fdopendir(dir_fd)))
+		if (attr.test_fdopendir_failure || !(dir = fdopendir(dir_fd)))
 		{
 			close(dir_fd);
 
@@ -787,10 +777,19 @@ void visitf_default(void)
 	{
 		ssize_t nbytes;
 
-		if ((nbytes = readlinkat(attr.parent_fd, (attr.parent_fd == AT_FDCWD) ? attr.fpath : attr.basename, linkbuf, CMDBUFSIZE)) == -1)
+		if (attr.test_readlinkat_failure)
+			errno = EPERM;
+
+		if (attr.test_readlinkat_failure || (nbytes = readlinkat(attr.parent_fd, (attr.parent_fd == AT_FDCWD) ? attr.fpath : attr.basename, linkbuf, CMDBUFSIZE)) == -1)
+		{
+			attr.exit_status = EXIT_FAILURE;
 			errorsys("readlinkat %s", ok(attr.fpath));
-		else if (nbytes == CMDBUFSIZE)
+		}
+		else if (attr.test_readlinkat_too_long_failure || nbytes == CMDBUFSIZE)
+		{
+			attr.exit_status = EXIT_FAILURE;
 			error("readlinkat %s: target is too long", ok(attr.fpath));
+		}
 		else
 		{
 			linkbuf[nbytes] = '\0';
@@ -1431,7 +1430,9 @@ int interpolate_command(const char *srccmd, char *command, int cmdbufsize)
 
 	src = srccmd;
 	dst = command;
-	cmdbufsize = env_int("RAWHIDE_TEST_CMD_MAX", 1, cmdbufsize, cmdbufsize);
+
+	if (attr.test_cmd_max >= 1 && attr.test_cmd_max < cmdbufsize)
+		cmdbufsize = attr.test_cmd_max;
 
 	while (*src)
 	{
@@ -1632,7 +1633,6 @@ int chdir_local(int do_debug)
 {
 	char *slash_posp, *dir_path;
 	int dot_fd = -1;
-	char *env;
 
 	/* If in a sub-directory (has parent_id and basename) */
 
@@ -1641,13 +1641,10 @@ int chdir_local(int do_debug)
 		if (do_debug)
 			debug(("fchdir(cwd=%s parent_fd=%d) [%.*s]", getcwd(cwdbuf, CMDBUFSIZE), attr.parent_fd, attr.basename - attr.fpath - 1, attr.fpath));
 
-		if ((env = getenv("RAWHIDE_TEST_FCHDIR_FAILURE")))
-		{
-			debug(("RAWHIDE_TEST_FCHDIR_FAILURE=%s", env));
+		if (attr.test_fchdir_failure)
 			errno = EPERM;
-		}
 
-		if ((env && *env == '1') || fchdir(attr.parent_fd) == -1)
+		if (attr.test_fchdir_failure || fchdir(attr.parent_fd) == -1)
 			fatalsys("fchdir %.*s", attr.basename - attr.fpath - 1, attr.fpath);
 	}
 	else /* Starting search directory (no parent_id or basename) */
@@ -1675,15 +1672,10 @@ int chdir_local(int do_debug)
 			if (do_debug)
 				debug(("initial chdir(cwd=%s path=%s) fpath=%s", getcwd(cwdbuf, CMDBUFSIZE), dir_path, attr.fpath));
 
-			if ((env = getenv("RAWHIDE_TEST_CHDIR_FAILURE")))
-			{
-				if (do_debug)
-					debug(("RAWHIDE_TEST_CHDIR_FAILURE=%s", env));
-
+			if (attr.test_chdir_failure)
 				errno = EPERM;
-			}
 
-			if ((env && *env == '1') || chdir(dir_path) == -1)
+			if (attr.test_chdir_failure || chdir(dir_path) == -1)
 				fatalsys("chdir %s", ok(dir_path));
 
 			free(dir_path);
@@ -1808,7 +1800,7 @@ int remove_danger_from_path(void)
 		return setenv("PATH", DEFAULT_PATH, 1);
 	}
 
-	if (!(oldpath = getenv("PATH")))
+	if (!(oldpath = getenv("PATH")) || !*oldpath)
 	{
 		debug_extra(("no path, setting default path"));
 
@@ -1994,11 +1986,10 @@ static char *attributes(void)
 	static char buf[ATTR_BUFSIZE];
 	unsigned long flags = get_attr();
 	int pos = 0;
-	char *env;
 
 	buf[pos] = '\0';
 
-	if ((env = getenv("RAWHIDE_TEST_ATTR_FORMAT")) && *env == '1')
+	if (attr.test_attr_format)
 		flags = (unsigned long)-1;
 
 	if (!flags)

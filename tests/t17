@@ -54,6 +54,7 @@ test_rawhide "RAWHIDE_TEST_FSTATAT_FAILURE=$d/d1          $rh $d" "$d\n"        
 test_rawhide "RAWHIDE_TEST_FSTATAT_FAILURE=$d/d1/d2       $rh $d" "$d\n$d/d1\n"                        "./rh: fstatat $d/d1/d2: Operation not permitted\n"       1 "fstatat failure $d/d1/d2"
 test_rawhide "RAWHIDE_TEST_FSTATAT_FAILURE=$d/d1/d2/d3    $rh $d" "$d\n$d/d1\n$d/d1/d2\n"              "./rh: fstatat $d/d1/d2/d3: Operation not permitted\n"    1 "fstatat failure $d/d1/d2/d3"
 test_rawhide "RAWHIDE_TEST_FSTATAT_FAILURE=$d/d1/d2/d3/d4 $rh $d" "$d\n$d/d1\n$d/d1/d2\n$d/d1/d2/d3\n" "./rh: fstatat $d/d1/d2/d3/d4: Operation not permitted\n" 1 "fstatat failure $d/d1/d2/d3/d4"
+test_rawhide "RAWHIDE_TEST_FSTATAT_FAILURE=.              $rh"    ""                                   "./rh: fstatat .: Operation not permitted\n"              1 "fstatat . (default) failure (just for coverage)"
 test_rawhide_post_hook() { true; }
 
 # For "stack overflow", see tests/t12 (parser error messages)

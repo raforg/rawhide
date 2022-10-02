@@ -484,6 +484,17 @@ int main(int argc, char *argv[])
 	attr.fea_solaris_no_statinfo = env_flag("RAWHIDE_SOLARIS_EA_NO_STATINFO");
 	attr.fea_size = env_int("RAWHIDE_EA_SIZE", 1, -1, 0);
 
+	attr.test_cmd_max = env_int("RAWHIDE_TEST_CMD_MAX", 1, -1, -1);
+	attr.test_attr_format = env_flag("RAWHIDE_TEST_ATTR_FORMAT");
+	attr.test_chdir_failure = env_flag("RAWHIDE_TEST_CHDIR_FAILURE");
+	attr.test_fchdir_failure = env_flag("RAWHIDE_TEST_FCHDIR_FAILURE");
+	attr.test_fdopendir_failure = env_flag("RAWHIDE_TEST_FDOPENDIR_FAILURE");
+	attr.test_fstatat_failure = getenv("RAWHIDE_TEST_FSTATAT_FAILURE");
+	attr.test_invalid_date = env_flag("RAWHIDE_TEST_INVALID_DATE");
+	attr.test_openat_failure = env_flag("RAWHIDE_TEST_OPENAT_FAILURE");
+	attr.test_readlinkat_failure = env_flag("RAWHIDE_TEST_READLINKAT_FAILURE");
+	attr.test_readlinkat_too_long_failure = env_flag("RAWHIDE_TEST_READLINKAT_TOO_LONG_FAILURE");
+
 	/* Parse cmdline options */
 
 	rawhide_init();

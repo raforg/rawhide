@@ -1068,7 +1068,6 @@ static llong parse_datetime(void)
 	int year, month, day, hour = 0, minute = 0, second = 0;
 	llong seconds;
 	struct tm tm[1];
-	char *env;
 
 	debug_extra(("datetime()"));
 
@@ -1147,7 +1146,7 @@ static llong parse_datetime(void)
 	tm->tm_yday = 0;
 	tm->tm_isdst = -1;
 
-	if ((seconds = (llong)mktime(tm)) == -1 || (year == 1900 && (env = getenv("RAWHIDE_TEST_INVALID_DATE")) && *env))
+	if ((seconds = (llong)mktime(tm)) == -1 || (year == 1900 && attr.test_invalid_date))
 	{
 		if (hour == 0 && minute == 0 && second == 0)
 			parser_error("invalid date: [%04d/%d/%d]", year, month, day);

@@ -85,6 +85,17 @@ test_rawhide_grep "RAWHIDE_COLUMN_WIDTH_DEVICE=99 RAWHIDE_COLUMN_WIDTH_INODE=99 
 
 test_rawhide_grep "$rh -lr -e 'chr' /dev" "^c$perm$__$nlink$__$user$__$group$__$rdev$__$time$__/dev/.*\$" "" 0 "-l -e chr /dev (rdev column)"
 
+mkdir $d/a
+touch $d/a/b
+for i in 2 3 4 5 6 7 8 9 10; do ln $d/a/b $d/a/b$i; done
+test_rawhide_grep "$rh    -l $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"            "" 0 "-l with nlink width increasing (just for coverage)"
+rm -r $d/a
+
+touch $d/a
+dd if=/dev/zero of=$d/b bs=512 count=10 >/dev/null 2>/dev/null
+test_rawhide_grep "$rh    -s $d" "^$blocks$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"  "" 0 "-s with blocks width increasing (just for coverage)"
+rm $d/a $d/b
+
 test_rawhide_grep "$rh    -Q $d" "^[\"]$name[\"]\$"                                                                                                               "" 0 "-Q"
 test_rawhide_grep "$rh   -lQ $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__[\"]$name[\"]\$"                                                             "" 0 "-lQ"
 test_rawhide_grep "$rh  -vlQ $d" "^$dev$__$ino$__$blksize$__$blocks$__$space$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$time$__[\"]$name[\"]\$" "" 0 "-vl"
@@ -116,6 +127,54 @@ test_rawhide "$rh  -tQ $d" "\"$d\"/\n\"$d/exe\"\n"  "" 0 "-tQ with executable"
 test_rawhide "$rh  -FQ $d" "\"$d\"/\n\"$d/exe\"*\n" "" 0 "-FQ with executable"
 
 rm $d/exe
+
+if [ -x "`which mkfifo 2>/dev/null`" ] && mkfifo $d/fifo >/dev/null 2>/dev/null
+then
+	test_rawhide "$rh  -p $d" "$d/\n$d/fifo\n"           "" 0 "-p with fifo"
+	test_rawhide "$rh  -t $d" "$d/\n$d/fifo|\n"          "" 0 "-t with fifo"
+	test_rawhide "$rh  -F $d" "$d/\n$d/fifo|\n"          "" 0 "-F with fifo"
+	test_rawhide "$rh  -pQ $d" "\"$d\"/\n\"$d/fifo\"\n"  "" 0 "-pQ with fifo"
+	test_rawhide "$rh  -tQ $d" "\"$d\"/\n\"$d/fifo\"|\n" "" 0 "-tQ with fifo"
+	test_rawhide "$rh  -FQ $d" "\"$d\"/\n\"$d/fifo\"|\n" "" 0 "-FQ with fifo"
+	rm $d/fifo
+fi
+
+cat > mksock.c <<END
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+int main(int ac, char **av)
+{
+	int sockfd = socket(AF_UNIX, SOCK_DGRAM, 0);
+	struct sockaddr_un sa;
+	sa.sun_family = AF_UNIX;
+	strncpy(sa.sun_path, av[1], sizeof(sa.sun_path));
+	bind(sockfd, (struct sockaddr *)&sa, sizeof(struct sockaddr_un));
+	close(sockfd);
+	return 0;
+}
+END
+
+if [ -x "`which cc 2>/dev/null`" ] && cc -o mksock mksock.c >/dev/null 2>/dev/null
+then
+	# This sometimes fails to execute on Cygwin (Win10)
+	# ./mksock: cannot execute binary file: Exec format error
+	if ./mksock $d/sock 2>/dev/null
+	then
+		test_rawhide "$rh  -p $d" "$d/\n$d/sock\n"           "" 0 "-p with sock"
+		test_rawhide "$rh  -t $d" "$d/\n$d/sock=\n"          "" 0 "-t with sock"
+		test_rawhide "$rh  -F $d" "$d/\n$d/sock=\n"          "" 0 "-F with sock"
+		test_rawhide "$rh  -pQ $d" "\"$d\"/\n\"$d/sock\"\n"  "" 0 "-pQ with sock"
+		test_rawhide "$rh  -tQ $d" "\"$d\"/\n\"$d/sock\"=\n" "" 0 "-tQ with sock"
+		test_rawhide "$rh  -FQ $d" "\"$d\"/\n\"$d/sock\"=\n" "" 0 "-FQ with sock"
+		rm $d/sock
+	fi
+	rm mksock
+fi
+rm mksock.c
+
 ln -s /etc/passwd $d/sym
 
 test_rawhide "$rh  -p $d" "$d/\n$d/sym\n"           "" 0 "-p with symlink"

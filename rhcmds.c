@@ -334,17 +334,20 @@ static char *c_basename(void)
 
 char *read_symlink(void)
 {
-	ssize_t nbytes;
+	ssize_t nbytes = 0;
 
 	if (!attr.ftarget_done)
 	{
 		if (!attr.ftarget && !(attr.ftarget = malloc(attr.fpath_size)))
 			fatalsys("out of memory");
 
-		if ((nbytes = readlinkat(attr.parent_fd, (attr.parent_fd == AT_FDCWD) ? attr.fpath : attr.basename, attr.ftarget, attr.fpath_size)) == -1)
+		if (attr.test_readlinkat_failure)
+			errno = EPERM;
+
+		if (attr.test_readlinkat_failure || (nbytes = readlinkat(attr.parent_fd, (attr.parent_fd == AT_FDCWD) ? attr.fpath : attr.basename, attr.ftarget, attr.fpath_size)) == -1)
 			fatalsys("readlinkat %s", ok(attr.fpath));
 
-		if (nbytes == attr.fpath_size)
+		if (attr.test_readlinkat_too_long_failure || nbytes == attr.fpath_size)
 			fatal("readlinkat %s: target is too long", ok(attr.fpath));
 
 		attr.ftarget[nbytes] = '\0';

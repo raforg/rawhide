@@ -101,16 +101,22 @@ test_rawhide "$rh                 $d" "$d\n$d/d1\n$d/d1/d2\n$d/d1/d2/d3\n" "" 0 
 test_rawhide "$rh -UUU -v -e dir $d/d1" "$d/d1/d2/d3\n$d/d1/d2\n$d/d1\n"   "" 0 "-UUU with -v (the rest) action"
 test_rawhide "$rh                $d"    "$d\n"                             "" 0 "-UUU with -v (the rest) check"
 
-if [ "`whoami`" != root ]
-then
-	mkdir $d/d1
-	touch $d/d1/f
-	chmod -w $d/d1
-	test_rawhide "$rh -UUU -e file $d/d1/f" ""                     "./rh: unlink $d/d1/f: Permission denied\n" 1 "-UUU file only (fail because parent directory not writable)"
-	test_rawhide "$rh              $d"      "$d\n$d/d1\n$d/d1/f\n" ""                                                  0 "-UUU with -v (the rest) check"
-	chmod +w $d/d1
-	rm -rf $d/d1
-fi
+case "`uname`" in
+	CYGWIN*) # The delete succeeds on Cygwin
+		;;
+	*)
+		if [ "`whoami`" != root ]
+		then
+			mkdir $d/d1
+			touch $d/d1/f
+			chmod -w $d/d1
+			test_rawhide "$rh -UUU -e file $d/d1/f" ""                     "./rh: unlink $d/d1/f: Permission denied\n" 1 "-UUU file only (fail because parent directory not writable)"
+			test_rawhide "$rh              $d"      "$d\n$d/d1\n$d/d1/f\n" ""                                                  0 "-UUU with -v (the rest) check"
+			chmod +w $d/d1
+			rm -rf $d/d1
+		fi
+	;;
+esac
 
 # Test -U with -y/-Y and symlinks
 

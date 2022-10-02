@@ -30,6 +30,8 @@ mkdir $d/d1/d2
 mkdir $d/d1/d2/d3
 touch $d/d1/d2/d3/d4
 
+case "`uname`" in CYGWIN*) cygwin=1;; *) cygwin=0;; esac
+
 # Test removal of non-absolute from $PATH
 
 test_rawhide_post_hook() { test_rh_first_line_post_hook; }
@@ -41,20 +43,23 @@ test_rawhide "PATH=/bin:/usr/bin:.:/sbin:/usr/sbin $rh -X 'echo \$PATH' $d"     
 test_rawhide "PATH=/bin:/usr/bin:/sbin:/usr/sbin:  $rh -X 'echo \$PATH' $d"        "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on /bin:/usr/sbin:/sbin:/usr/sbin:"
 test_rawhide "PATH=/bin:/usr/bin:/sbin:/usr/sbin:. $rh -X 'echo \$PATH' $d"        "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on /bin:/usr/sbin:/sbin:/usr/sbin:."
 test_rawhide "PATH= $rh -X 'echo \$PATH' $d"                                       "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on empty"
-test_rawhide "PATH=: $rh -X 'echo \$PATH' $d"                                      "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on :"
-test_rawhide "PATH=.: $rh -X 'echo \$PATH' $d"                                     "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on .:"
-test_rawhide "PATH=:. $rh -X 'echo \$PATH' $d"                                     "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on :."
-test_rawhide "PATH=:: $rh -X 'echo \$PATH' $d"                                     "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on ::"
-test_rawhide "PATH=.:: $rh -X 'echo \$PATH' $d"                                    "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on .::"
-test_rawhide "PATH=:.: $rh -X 'echo \$PATH' $d"                                    "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on :.:"
-test_rawhide "PATH=::. $rh -X 'echo \$PATH' $d"                                    "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on ::."
-test_rawhide "PATH=::::::::  $rh -X 'echo \$PATH' $d"                              "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on ::::::::"
-test_rawhide "PATH=.:.:.:.:.:.:.:.:. $rh -X 'echo \$PATH' $d"                      "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on .:.:.:.:.:.:.:.:."
-test_rawhide "PATH=:.:.:.:.:.:.:.:. $rh -X 'echo \$PATH' $d"                       "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on :.:.:.:.:.:.:.:."
-test_rawhide "PATH=.:.:.:.:.:.:.:.: $rh -X 'echo \$PATH' $d"                       "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on .:.:.:.:.:.:.:.:"
-test_rawhide "PATH=.::.::.::.::. $rh -X 'echo \$PATH' $d"                          "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on .:.:.:.:.:.:.:.:."
-test_rawhide "PATH=:.::.::.::.: $rh -X 'echo \$PATH' $d"                           "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on .:.:.:.:.:.:.:.:."
-test_rawhide "PATH=.::.::.::.: $rh -X 'echo \$PATH' $d"                            "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on .::.::.::.:"
+if [ $cygwin = 0 ] # Cygwin uses $PATH for DLLs
+then
+	test_rawhide "PATH=: $rh -X 'echo \$PATH' $d"                                      "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on :"
+	test_rawhide "PATH=.: $rh -X 'echo \$PATH' $d"                                     "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on .:"
+	test_rawhide "PATH=:. $rh -X 'echo \$PATH' $d"                                     "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on :."
+	test_rawhide "PATH=:: $rh -X 'echo \$PATH' $d"                                     "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on ::"
+	test_rawhide "PATH=.:: $rh -X 'echo \$PATH' $d"                                    "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on .::"
+	test_rawhide "PATH=:.: $rh -X 'echo \$PATH' $d"                                    "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on :.:"
+	test_rawhide "PATH=::. $rh -X 'echo \$PATH' $d"                                    "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on ::."
+	test_rawhide "PATH=::::::::  $rh -X 'echo \$PATH' $d"                              "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on ::::::::"
+	test_rawhide "PATH=.:.:.:.:.:.:.:.:. $rh -X 'echo \$PATH' $d"                      "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on .:.:.:.:.:.:.:.:."
+	test_rawhide "PATH=:.:.:.:.:.:.:.:. $rh -X 'echo \$PATH' $d"                       "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on :.:.:.:.:.:.:.:."
+	test_rawhide "PATH=.:.:.:.:.:.:.:.: $rh -X 'echo \$PATH' $d"                       "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on .:.:.:.:.:.:.:.:"
+	test_rawhide "PATH=.::.::.::.::. $rh -X 'echo \$PATH' $d"                          "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on .:.:.:.:.:.:.:.:."
+	test_rawhide "PATH=:.::.::.::.: $rh -X 'echo \$PATH' $d"                           "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on .:.:.:.:.:.:.:.:."
+	test_rawhide "PATH=.::.::.::.: $rh -X 'echo \$PATH' $d"                            "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on .::.::.::.:"
+fi
 test_rawhide "PATH=a/b:/bin:/usr/bin:/sbin:/usr/sbin  $rh -X 'echo \$PATH'     $d" "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on a/b:/bin:/usr/sbin:/sbin:/usr/sbin"
 test_rawhide "PATH=./b:/bin:/usr/bin:/sbin:/usr/sbin  $rh -X 'echo \$PATH'     $d" "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on ./b:/bin:/usr/sbin:/sbin:/usr/sbin"
 test_rawhide "PATH=../b:/bin:/usr/bin:/sbin:/usr/sbin  $rh -X 'echo \$PATH'    $d" "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on ../b:/bin:/usr/sbin:/sbin:/usr/sbin"
@@ -67,17 +72,21 @@ test_rawhide "PATH=/bin:/usr/bin:/sbin:/usr/sbin:a/b $rh -X 'echo \$PATH'      $
 test_rawhide "PATH=/bin:/usr/bin:/sbin:/usr/sbin:./b $rh -X 'echo \$PATH'      $d" "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on /bin:/usr/sbin:/sbin:/usr/sbin:./b"
 test_rawhide "PATH=/bin:/usr/bin:/sbin:/usr/sbin:../b $rh -X 'echo \$PATH'     $d" "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on /bin:/usr/sbin:/sbin:/usr/sbin:../b"
 test_rawhide "PATH=/bin:/usr/bin:/sbin:/usr/sbin:a/b:./b $rh -X 'echo \$PATH'  $d" "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on /bin:/usr/sbin:/sbin:/usr/sbin:a/b:./b"
+[ $cygwin = 0 ] &&
 test_rawhide "PATH=./a:a/b:../c $rh -X 'echo \$PATH' $d"                           "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on ./a:a/b:../c"
 test_rawhide "PATH=/bin:./a:a/b:../c $rh -X 'echo \$PATH' $d"                      "/bin\n"                          "" 0 "path strip non-absolute on /bin:./a:a/b:../c"
 test_rawhide "PATH=./a:a/b:/bin:../c $rh -X 'echo \$PATH' $d"                      "/bin\n"                          "" 0 "path strip non-absolute on ./a:a/b:/bin:../c"
 test_rawhide "PATH=./a:a/b:../c:/bin $rh -X 'echo \$PATH' $d"                      "/bin\n"                          "" 0 "path strip non-absolute on ./a:a/b:../c:/bin"
+[ $cygwin = 0 ] &&
 test_rawhide "PATH=.:./a:a/b:.:../c:. $rh -X 'echo \$PATH' $d"                     "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on .:./a:a/b:.:../c:."
 test_rawhide "PATH=/bin:.:./a:a/b:.:../c:. $rh -X 'echo \$PATH' $d"                "/bin\n"                          "" 0 "path strip non-absolute on /bin:.:./a:a/b:.:../c:."
 test_rawhide "PATH=.:./a:a/b:/bin:.:../c:. $rh -X 'echo \$PATH' $d"                "/bin\n"                          "" 0 "path strip non-absolute on .:./a:a/b:/bin:.:../c:."
 test_rawhide "PATH=.:./a:a/b:.:../c:.:/bin $rh -X 'echo \$PATH' $d"                "/bin\n"                          "" 0 "path strip non-absolute on .:./a:a/b:.:../c:.:/bin"
+[ $cygwin = 0 ] &&
 test_rawhide "PATH=..:../a:a/b:..:../c:.. $rh -X 'echo \$PATH' $d"                 "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "path strip non-absolute on ..:../a:a/b:..:../c:.."
 test_rawhide "PATH=/bin:..:../a:a/b:..:../c:.. $rh -X 'echo \$PATH' $d"            "/bin\n"                          "" 0 "path strip non-absolute on /bin:..:../a:a/b:..:../c:.."
 test_rawhide "PATH=..:../a:a/b:/bin:..:../c:.. $rh -X 'echo \$PATH' $d"            "/bin\n"                          "" 0 "path strip non-absolute on ..:../a:a/b:/bin:..:../c:.."
+[ $cygwin = 0 ] &&
 test_rawhide "PATH=..:../a:a/b:..:../c:..:/bin $rh -X 'echo \$PATH' $d"            "/bin\n"                          "" 0 "path strip non-absolute on ..:../a:a/b:..:../c:..:/bin"
 test_rawhide_post_hook() { true; }
 
@@ -102,6 +111,22 @@ test_rawhide "$rh -M0 -X 'echo \`pwd\` .%s.%S.' /etc"      "/ ./etc.etc.\n"     
 test_rawhide "$rh -M0 -X 'echo \`pwd\` .%s.%S.' /etc/"     "/ ./etc.etc.\n"        "" 0 "chdir for -X in /etc/ directory (with trailing /)"
 test_rawhide "$rh -M0 -X 'echo \`pwd\` .%s.%S.' /usr/bin"  "/usr ./usr/bin.bin.\n" "" 0 "chdir for -X in /usr/bin directory (no trailing /)"
 test_rawhide "$rh -M0 -X 'echo \`pwd\` .%s.%S.' /usr/bin/" "/usr ./usr/bin.bin.\n" "" 0 "chdir for -X in /usr/bin/ directory (with trailing /)"
+test_rawhide "$rh -M0 -X 'true' ."                         ""                      "" 0 "chdir for -X in . (no chdir - just for coverage)"
+
+if [ "`uname`" != OpenBSD -a "`whoami`" = root ] && grep -q '^nobody:' /etc/passwd && grep -q '^nogroup:' /etc/group
+then
+	# On OpenBSD, setuid/setgid bits don't change euid/egid
+	chmod 666 *.gcda 2>/dev/null
+	cp ./rh ./rh2
+	chown nobody ./rh2
+	chgrp nogroup ./rh2
+	chmod 4750 ./rh2
+	test_rawhide "./rh2 -Nn -f rawhide.conf -M0 -X 'echo \$PATH' -e exit $d" "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "reset PATH if setuid"
+	chmod 2750 ./rh2
+	test_rawhide "./rh2 -Nn -f rawhide.conf -M0 -X 'echo \$PATH' -e exit $d" "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "reset PATH if setgid"
+	rm ./rh2
+	chmod 644 *.gcda 2>/dev/null
+fi
 
 test_rawhide "$rh -M0 -x 'echo %%' $d" "%%\n" "" 0 "-x with %%"
 test_rawhide "$rh -M0 -X 'echo %%' $d" "%%\n" "" 0 "-X with %%"
