@@ -398,6 +398,8 @@ static pcre2_code *pcre2_compile_checked(const char *pattern, uint32_t options)
 		fatal("invalid regex %s at offset %d: %s", ok(pattern), (int)error_offset, ok2((char *)error_buffer));
 	}
 
+	(void)pcre2_jit_compile(re, PCRE2_JIT_COMPLETE);
+
 	return re;
 }
 
