@@ -1167,7 +1167,7 @@ Pattern modifier names can be supplied in full (e.g.,
 C<">I<pattern>C<".path>), but a unique prefix is sufficient (e.g.,
 C<">I<pattern>C<".pat>, C<">I<pattern>C<".pa>, or C<">I<pattern>C<".p>). For
 each of the pattern modifiers below, both the full name and the shortest
-unique prefix is shown.
+unique prefix are shown.
 
 The following modifiers exist, but not all are available on all systems.
 
