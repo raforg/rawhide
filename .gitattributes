@@ -1,1 +1,7 @@
-tests/* -linguist-detectable
+# Pretend that tests are vendored to exclude them from the language stats.
+# Using linguist-detectable=false would be preferable, but that doesn't
+# work on codeberg. Without this, linguist thinks the main language is
+# shell, because there's twice as much test code as real code.
+
+tests/* linguist-vendored
+
