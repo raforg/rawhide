@@ -253,9 +253,9 @@ that behaviour.
 =item C<-f> I<fname>
 
 After reading any configuration files, this option causes I<rh> to read code
-from the file specified by I<fname>. If there is a directory whose name is
-I<fname> followed by C<".d">, then I<rh> reads (in lexicographic order) any
-files there whose names do not start with dot (C<".">). If I<fname>
+from the file specified by I<fname>. If there is also a directory whose name
+is I<fname> followed by C<".d">, then I<rh> reads (in lexicographic order)
+any files there whose names do not start with dot (C<".">). If I<fname>
 specifies a directory, then I<rh> reads any files there in the same
 manner. If I<fname> is C<"-">, then code is read from standard input (I<stdin>). The
 C<-f> option can be supplied more than once, but it is an error to use

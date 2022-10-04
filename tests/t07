@@ -70,7 +70,7 @@ test_rawhide_post_hook() { true; }
 # Test -f and -f-
 
 rh="$builtin_rh"
-test_rawhide "$rh -f tests/missing $d"                               ""             "./rh: invalid -f option argument: tests/missing (not found)\n" 1 "-f with missing file"
+test_rawhide "$rh -f tests/missing $d"                               ""             "./rh: invalid -f option argument: tests/missing: No such file or directory\n" 1 "-f with missing file"
 
 echo "yes() { 1 }" > $d.conf
 echo "no() { 0 }" > $d.conf2
@@ -104,7 +104,6 @@ echo "f6 { f5 }" > $d.conf2.d/c
 test_rawhide "$rh -f $d.conf   -f $d.conf2   f6 $d" "$d\n$d/abc\n" "" 0 "multiple -f with corresponding directories"
 test_rawhide "$rh -f $d.conf.d -f $d.conf2.d f6 $d" "$d\n$d/abc\n" "" 0 "multiple -f that are directories"
 rm $d.conf $d.conf2
-test_rawhide "$rh -f $d.conf   -f $d.conf2   f6 $d" "$d\n$d/abc\n" "" 0 "multiple -f with only corresponding directories"
 rm -rf $d.conf.d $d.conf2.d
 
 test_rawhide "$rh -e"    "" "./rh: missing -e option argument (see ./rh -h for help)\n" 1 "-e with no argument"

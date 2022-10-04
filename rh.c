@@ -1039,32 +1039,25 @@ int main(int argc, char *argv[])
 		}
 		else
 		{
-			int found1 = 0, found2 = 0;
+			if (stat(opt_f_list[i], statbuf) == -1)
+				fatalsys("invalid -f option argument: %s", ok(opt_f_list[i]));
 
-			if (stat(opt_f_list[i], statbuf) != -1)
+			if (isreg(statbuf))
 			{
-				found1 = 1;
+				if (!(expfile = fopen(opt_f_list[i], "r")))
+					fatalsys("%s", ok(opt_f_list[i]));
 
-				if (isreg(statbuf))
-				{
-					if (!(expfile = fopen(opt_f_list[i], "r")))
-						fatalsys("%s", ok(opt_f_list[i]));
+				expfname = opt_f_list[i];
+				parse_program();
+				fclose(expfile);
+				expfile = NULL;
 
-					expfname = opt_f_list[i];
-					parse_program();
-					fclose(expfile);
-					expfile = NULL;
-				}
-				else if (isdir(statbuf))
-					load_program_dir(opt_f_list[i], initpattern, pathbufsize);
-				else
-					fatal("invalid -f option argument: %s (not a file or directory)", ok(opt_f_list[i]));
+				load_config_dir(opt_f_list[i], initdir, initpattern, pathbufsize);
 			}
-
-			found2 = load_config_dir(opt_f_list[i], initdir, initpattern, pathbufsize);
-
-			if (!found1 && !found2)
-				fatal("invalid -f option argument: %s (not found)", ok(opt_f_list[i]));
+			else if (isdir(statbuf))
+				load_program_dir(opt_f_list[i], initpattern, pathbufsize);
+			else
+				fatal("invalid -f option argument: %s (not a file or directory)", ok(opt_f_list[i]));
 		}
 	}
 
