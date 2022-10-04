@@ -373,7 +373,7 @@ The -l, -0, -L, -x, -X, and -U options are mutually exclusive.
 
 Read /etc/rawhide.conf and /etc/rawhide.conf.d (unless -N).
 Read ~/.rhrc and ~/.rhrc.d (unless -n).
-Read -f file (if present).
+Read -f file/dir/stdin (if present).
 Read -e expr (if present).
 
 If no explicit -e expression is supplied, look among any
@@ -423,7 +423,7 @@ int main(int argc, char *argv[])
 	opt_V = 0;                  /* -V (version) */
 	opt_N = 0;                  /* -N (suppress /etc/rawhide.conf)*/
 	opt_n = 0;                  /* -n (suppress ~/.rhrc) */
-	opt_f = 0;                  /* -f fname (read code from file/stdin) */
+	opt_f = 0;                  /* -f fname (read code from file/dir/stdin) */
 	opt_f_list = NULL;
 	opt_e = NULL;               /* -e expr (read code from arg) */
 
@@ -1020,7 +1020,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	/* Load the -f file ("-" is stdin) */
+	/* Load the -f file-and-or-dir ("-" is stdin) */
 
 	for (i = 0; i < opt_f; ++i)
 	{
