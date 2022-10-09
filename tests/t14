@@ -55,11 +55,15 @@ echo "etc() { 1 }" > $RAWHIDE_CONFIG
 
 test_rawhide "./rh -e 1     $d" "$d\n" ""                                                                                                                                 0 "no config needed"
 [ $root = 0 ] &&
-test_rawhide "./rh -e home  $d" "$d\n" ""                                                                                                                                 0 "func from ~/.rhrc defined"
-test_rawhide "./rh -e homed $d" ""     "./rh: command line: -e 'homed': line 1 byte 6: expected '(' or '{', found eof (possible attempt to call an undefined function)\n" 1 "func from ~/.rhrc.d/ undefined"
+test_rawhide "./rh -e home  $d" "$d\n" ""                                                                                                                                 0 "func from \$RAWHIDE_RC defined"
+[ $root = 1 ] &&
+test_rawhide "./rh -e home  $d" ""     "./rh: command line: -e 'home': line 1 byte 5: expected '(' or '{', found eof (possible attempt to call an undefined function)\n"  1 "func from \$RAWHIDE_RC undefined because root"
+test_rawhide "./rh -e homed $d" ""     "./rh: command line: -e 'homed': line 1 byte 6: expected '(' or '{', found eof (possible attempt to call an undefined function)\n" 1 "func from \$RAWHIDE_RC .d undefined"
 [ $root = 0 ] &&
-test_rawhide "./rh -e etc   $d" "$d\n" ""                                                                                                                                 0 "func from /etc/rawhide.conf defined"
-test_rawhide "./rh -e etcd  $d" ""     "./rh: command line: -e 'etcd': line 1 byte 5: expected '(' or '{', found eof (possible attempt to call an undefined function)\n"  1 "func from /etc/rawhide.conf.d/ undefined"
+test_rawhide "./rh -e etc   $d" "$d\n" ""                                                                                                                                 0 "func from \$RAWHIDE_CONFIG defined"
+[ $root = 1 ] &&
+test_rawhide "./rh -e etc   $d" ""     "./rh: command line: -e 'etc': line 1 byte 4: expected '(' or '{', found eof (possible attempt to call an undefined function)\n"   1 "func from \$RAWHIDE_CONFIG undefined because root"
+test_rawhide "./rh -e etcd  $d" ""     "./rh: command line: -e 'etcd': line 1 byte 5: expected '(' or '{', found eof (possible attempt to call an undefined function)\n"  1 "func from \$RAWHIDE_CONFIG .d undefined"
 
 # Test with config files and empty .d directories
 
