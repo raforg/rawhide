@@ -2,6 +2,7 @@
 * rawhide - find files using pretty C expressions
 * https://raf.org/rawhide
 * https://github.com/raforg/rawhide
+* https://codeberg.org/raforg/rawhide
 *
 * Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
 *
@@ -18,7 +19,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program; if not, see <https://www.gnu.org/licenses/>.
 *
-* 20220330 raf <raf@raf.org>
+* 20221011 raf <raf@raf.org>
 */
 
 #define _GNU_SOURCE /* For FNM_EXTMATCH and FNM_CASEFOLD in <fnmatch.h> */
@@ -84,7 +85,7 @@ static const char *show_token(void);
 
 static void debugf(const char *format, ...);
 
-Print a debug message to stderr.
+Output a parser debug message to stderr, if requested.
 
 */
 
@@ -106,7 +107,7 @@ static void debugf(const char *format, ...)
 
 static void debug_extraf(const char *format, ...);
 
-Print an extra debug message to stderr.
+Ouptut an extra parser debug message to stderr, if requested.
 
 */
 
@@ -188,7 +189,7 @@ static void ungetch(int c)
 
 static void parser_error(const char *format, ...);
 
-Print a syntax message and exit.
+Output a syntax error message and exit.
 The format parameter is a printf-like format.
 Subsequent arguments must satisfy its conversions.
 
@@ -1285,7 +1286,7 @@ static int _get_token(void)
 		c = getch();
 	}
 
-	/* Octal/Hexadecimal */
+	/* Octal / Hexadecimal */
 
 	if (c == '0' && !decimal_mode)
 	{
@@ -1688,7 +1689,7 @@ static int _get_token(void)
 static int get_token_decimal(void);
 
 Like get_token() with decimal_mode set first and cleared afterwards.
-This is for parsing datetimes to allow leading zeroes.
+This is for parsing datetimes to allow leading zeroes for decimals.
 
 */
 

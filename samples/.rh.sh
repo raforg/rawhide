@@ -1,6 +1,7 @@
 # rawhide - find files using pretty C expressions
 # https://raf.org/rawhide
 # https://github.com/raforg/rawhide
+# https://codeberg.org/raforg/rawhide
 #
 # Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
 #
@@ -17,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
-# 20220330 raf <raf@raf.org>
+# 20221011 raf <raf@raf.org>
 
 # rq - rh with automatic "" around the first argument
 # usage: rq pattern [options] [path...]

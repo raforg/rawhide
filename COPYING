@@ -3,6 +3,7 @@ COPYING
 rawhide - find files using pretty C expressions
 https://raf.org/rawhide
 https://github.com/raforg/rawhide
+https://codeberg.org/raforg/rawhide
 
 Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
 
@@ -51,6 +52,7 @@ All rights reserved.
 
     URL: https://raf.org/rawhide
     GIT: https://github.com/raforg/rawhide
-    Date: 20220330
+    GIT: https://codeberg.org/raforg/rawhide
+    Date: 20221011
     Authors: 1990 Ken Stauffer, 2022 raf <raf@raf.org>
 

@@ -2,6 +2,7 @@
 * rawhide - find files using pretty C expressions
 * https://raf.org/rawhide
 * https://github.com/raforg/rawhide
+* https://codeberg.org/raforg/rawhide
 *
 * Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
 *
@@ -18,7 +19,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program; if not, see <https://www.gnu.org/licenses/>.
 *
-* 20220330 raf <raf@raf.org>
+* 20221011 raf <raf@raf.org>
 */
 
 #define _FILE_OFFSET_BITS 64 /* For 64-bit off_t on 32-bit systems (Not AIX) */
@@ -36,7 +37,7 @@
 
 int error(const char *format, ...);
 
-Prints an error message to stderr (prefixed by the program name).
+Outputs an error message to stderr (prefixed by the program name).
 The format parameter is a printf-like format string.
 Subsequent arguments must satisfy its conversions.
 Returns -1.
@@ -60,7 +61,7 @@ int error(const char *format, ...)
 
 int errorsys(const char *format, ...);
 
-Prints an error message to stderr (prefixed by the program name),
+Outputs an error message to stderr (prefixed by the program name),
 including a trailing errno string.
 The format parameter is a printf-like format string.
 Subsequent arguments must satisfy its conversions.
@@ -85,7 +86,7 @@ int errorsys(const char *format, ...)
 
 void fatal(const char *format, ...);
 
-Prints an error message to stderr (prefixed by the program name),
+Outputs an error message to stderr (prefixed by the program name),
 then exits with a non-zero failure exit status.
 The format parameter is a printf-like format string.
 Subsequent arguments must satisfy its conversions.
@@ -109,7 +110,7 @@ void fatal(const char *format, ...)
 
 void fatalsys(const char *format, ...);
 
-Prints an error message to stderr (prefixed by the program name)
+Outputs an error message to stderr (prefixed by the program name)
 including a trailing errno string, then exits with a non-zero
 failure exit status. The format parameter is a printf-like format string.
 Subsequent arguments must satisfy its conversions.

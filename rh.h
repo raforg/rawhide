@@ -2,6 +2,7 @@
 * rawhide - find files using pretty C expressions
 * https://raf.org/rawhide
 * https://github.com/raforg/rawhide
+* https://codeberg.org/raforg/rawhide
 *
 * Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
 *
@@ -18,7 +19,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program; if not, see <https://www.gnu.org/licenses/>.
 *
-* 20220330 raf <raf@raf.org>
+* 20221011 raf <raf@raf.org>
 */
 
 #ifndef RAWHIDE_RH_H
@@ -47,10 +48,10 @@
 #define NOP         264 /* No-operation - unused */
 #define NUMBER      265 /* Literal numbers and symbolic constants */
 #define STRING      266 /* Glob pattern strings */
-#define FIELD       267 /* File fields (size,mode,nlink,...) */
+#define FIELD       267 /* File fields (size, mode, nlink, ...) */
 #define FUNCTION    268 /* User defined function */
 #define RETURN      269 /* Return keyword */
-#define PARAM       270 /* Parameter to functions */
+#define PARAM       270 /* Function parameter */
 #define IDENTIFIER  271 /* New function name */
 #define REFFILE     272 /* Reference file field */
 #define PATMOD      273 /* Pattern modifier */
@@ -64,7 +65,7 @@
 #define MAX_STACK_SIZE 1000000 /* Size of the stack */
 #endif
 #ifndef MAX_DATA_SIZE
-#define MAX_DATA_SIZE 200000 /* Size of the data (patterns, reference file paths, shell commands */
+#define MAX_DATA_SIZE 200000 /* Size of the data (patterns, reference file paths, shell commands) */
 #endif
 #ifndef MAX_REFFILE_SIZE
 #define MAX_REFFILE_SIZE 10000 /* Number of available reference files (e.g., "/path".mtime) */
@@ -95,7 +96,7 @@ typedef long long unsigned int ullong;
 #define islink(statbuf) (((statbuf)->st_mode & S_IFMT) == S_IFLNK)
 #define issock(statbuf) (((statbuf)->st_mode & S_IFMT) == S_IFSOCK)
 #define isfifo(statbuf) (((statbuf)->st_mode & S_IFMT) == S_IFIFO)
-#ifdef S_IFDOOR
+#ifdef S_IFDOOR /* Solaris only */
 #define isdoor(statbuf) (((statbuf)->st_mode & S_IFMT) == S_IFDOOR)
 #else
 #define isdoor(statbuf) (0)
@@ -106,8 +107,8 @@ typedef long long unsigned int ullong;
 typedef struct instr_t instr_t;
 struct instr_t
 {
-	void (*func)(llong);
-	llong value;
+	void (*func)(llong); /* The function that implements the instruction */
+	llong value;         /* The argument to the function */
 };
 
 /* Structure of a symbol */
@@ -115,11 +116,11 @@ struct instr_t
 typedef struct symbol_t symbol_t;
 struct symbol_t
 {
-	char *name;             /* The symbol name: built-ins, functions, parameters */
-	int type;               /* Token type: FIELD, NUMBER, FUNCTION, REFFILE, PATMOD */
-	llong value;            /* Argument to func() */
-	void (*func)(llong);    /* Instruction action */
-	symbol_t *next;         /* Pointer to the next symbol entry */
+	char *name;          /* The symbol name: built-ins, functions, parameters */
+	int type;            /* Token type: NUMBER, STRING, FIELD, FUNCTION, RETURN, PARAM, IDENTIFIER, REFFILE, PATMOD */
+	llong value;         /* Argument to func() */
+	void (*func)(llong); /* Instruction action */
+	symbol_t *next;      /* Pointer to the next symbol entry */
 };
 
 /* Structure defining a point in the traversal (for loop detection) */
@@ -136,37 +137,37 @@ struct point_t
 typedef struct runtime_t runtime_t;
 struct runtime_t
 {
-	struct stat statbuf[1]; /* Stat info of the current file */
+	struct stat statbuf[1]; /* Stat info of the current candidate file */
 	int dirsize_done;       /* Have we counted a directory's contents yet? */
 
 	char *search_path;      /* Starting search directory (For -L) */
-	size_t search_path_len; /* Length of starting search directory */
+	size_t search_path_len; /* Length of the starting search directory */
 
-	char *fpath;            /* Path to the current file */
+	char *fpath;            /* Path to the current candidate file */
 	llong fpath_size;       /* Size of the dynamic fpath buffer */
 
-	int ftarget_done;       /* Have we read the symlink target? */
-	char *ftarget;          /* Target path of the current symlink (long-lived, on-demand) */
+	int ftarget_done;       /* Have we read the current candidate symlink's target path yet? */
+	char *ftarget;          /* Target path of the current candidate symlink (long-lived, on-demand) */
 
-	int facl_done;          /* Have we loaded the access control lists? */
-	char *facl;             /* ACL as lines of text (POSIX) or comma-separated compact form (FreeBSD/Solaris) */
-	char *facl_verbose;     /* ACL as comma-separated non-compact form (FreeBSD/Solaris) */
+	int facl_done;          /* Have we loaded the current candidate's access control lists yet? */
+	char *facl;             /* ACL as lines of text ("POSIX"/FreeBSD) or comma-separated (Solaris) */
+	char *facl_verbose;     /* ACL as non-compact form (FreeBSD/Solaris) */
 	int facl_solaris_no_trivial; /* Suppress trivial ACLs on Solaris? */
 
-	int fea_done;           /* Have we loaded the extended attributes? */
+	int fea_done;           /* Have we loaded the extended attributes yet? */
 	int fea_ok;             /* Have we loaded the extended attributes successfully? */
 	char *fea;              /* Extended attributes as lines of text (long-lived, on-demand) */
-	char *fea_selinux;      /* "security.selinux" extended attribute if any*/
+	char *fea_selinux;      /* "security.selinux" extended attribute, if any */
 	int fea_real;           /* Are there any real EAs (i.e. non-ACL/non-selinux ones on Linux)? */
-	llong fea_size;         /* Non-default size to allocate for extended attributes */
-	int fea_solaris_no_sunwattr; /* Suppress ubiquitous SUNWattr_ro/SUNWattr_rw EAs */
-	int fea_solaris_no_statinfo; /* Suppress artificial stat(2) info EAs */
+	llong fea_size;         /* Non-default size to allocate for extended attributes? */
+	int fea_solaris_no_sunwattr; /* Suppress ubiquitous SUNWattr_ro/SUNWattr_rw EAs on Solaris? */
+	int fea_solaris_no_statinfo; /* Suppress artificial stat(2) info EAs on Solaris? */
 
-	int attr_done;          /* Have we loaded the Linux ext2-style attributes? */
+	int attr_done;          /* Have we loaded the Linux ext2-style attributes yet? */
 	unsigned long attr;     /* Linux ext2-style attributes */
-	int proj_done;          /* Have we loaded the Linux ext2-style project? */
+	int proj_done;          /* Have we loaded the Linux ext2-style project yet? */
 	unsigned long proj;     /* Linux ext2-style project */
-	int gen_done;           /* Have we loaded the Linux ext2-style generation? */
+	int gen_done;           /* Have we loaded the Linux ext2-style generation yet? */
 	unsigned long gen;      /* Linux ext2-style generation */
 
 	char *ttybuf;           /* Temp space for printf_sanitized() (long-lived, on-demand) */
@@ -174,42 +175,42 @@ struct runtime_t
 
 	int parent_fd;          /* File descriptor of parent directory */
 	char *basename;         /* Base name relative to parent_fd */
-	llong depth;            /* Relative depth of the current file */
+	llong depth;            /* Relative depth of the current candidate file */
 	void (*visitf)(void);   /* Visitor/action function for matching entries */
 	point_t *search_stack;  /* Stack of search points (for loop detection) */
 
-	int debug_flags;        /* Bit mask to indicate debugging */
+	int debug_flags;        /* Debug bit mask to indicate debugging */
 	int prune;              /* Flag to indicate pruning */
 	int pruned;             /* Flag to prevent matching of pruned entry */
 	int exit;               /* Flag to indicate exiting */
 	int exit_status;        /* Exit status for rh */
 
-	llong min_depth;        /* Flag for -m option: Minimum depth to report */
-	llong max_depth;        /* Flag for -M option: Maximum depth to search */
+	llong min_depth;        /* Flag for the -m option: Minimum depth to report or act on */
+	llong max_depth;        /* Flag for the -M option: Maximum depth to search */
 	llong depth_limit;      /* System imposed depth limit (max open files - 5) */
-	int depth_first;        /* Flag for -D option: depth-first search */
-	int single_filesystem;  /* Flag for -1 option: single filesystem */
+	int depth_first;        /* Flag for the -D option: depth-first search */
+	int single_filesystem;  /* Flag for the -1 option: single filesystem */
 	dev_t fs_dev;           /* The filesystem's dev (for the -1 option) */
-	int follow_symlinks;    /* Flag for -y and -Y options: 0=No 1=y 2=Y */
+	int follow_symlinks;    /* Flag for the -y and -Y options: 0=No 1=y 2=Y */
 	int followed;           /* Have we followed a symlink for this candidate? */
 	int tty;                /* Is stdout a tty? (to default to -q) */
 	int ttyerr;             /* Is stderr a tty? */
-	int utf;                /* Does the user want default utf8 suppressed in pcre? */
+	int utf;                /* Does the user not want default utf8 suppressed in pcre? */
 	int report_broken_symlinks; /* Does the user want to report broken symlinks? */
-	int report_cycles;      /* Does the user want to report filesystem cycles? */
+	int report_cycles;      /* Does the user want to report filesystem cycles (default)? */
 
-	int linkstat_done;      /* Have we attempted to stat the symlink target? */
-	int linkstat_ok;        /* Did statting the symlink target work? */
+	int linkstat_done;      /* Have we attempted to stat the current candidate symlink target yet? */
+	int linkstat_ok;        /* Did statting the current candidate symlink target work? */
 	int linkstat_errno;     /* If not, what was the error? (For -L) */
-	int linkstat_baselen;   /* Length of the symlink's base name? */
-	struct stat linkstatbuf[1]; /* Stat info of a symlink target */
+	int linkstat_baselen;   /* Length of the current candidate symlink's base name? */
+	struct stat linkstatbuf[1]; /* Stat info of the current candidate symlink target */
 	int linkdirsize_done;   /* Have we counted the target directory's contents yet? */
 
-	char *command;          /* Command to execute for matching entries: -xX */
+	char *command;          /* Command to execute for matching entries: -x or -X */
 	int local;              /* Commands are executed locally: -X */
-	int unlink;             /* Flag for -U option: unlink */
+	int unlink;             /* Flag for the -U option: unlink */
 
-	int dev_column;         /* Flag for the -d option: Include dev column */
+	int dev_column;         /* Flag for the -d option: Include device column */
 	int ino_column;         /* Flag for the -i option: Include inode column */
 	int blksize_column;     /* Flag for the -B option: Include blksize column */
 	int blocks_column;      /* Flag for the -s option: Include blocks column */
@@ -219,7 +220,7 @@ struct runtime_t
 	int atime_column;       /* Flag for the -au option: Show atime rather than mtime */
 	int ctime_column;       /* Flag for the -c option: Show ctime rather than mtime */
 	int verbose;            /* Flag for the -v option: Include all columns */
-	int nul;                /* Flag for the -0 option: nul byte */
+	int nul;                /* Flag for the -0 option: nul byte rather than newline */
 	char *format;           /* Format for the -L option */
 
 	int dev_major_column_width;  /* Maximum width of the dev major column so far */
@@ -235,17 +236,17 @@ struct runtime_t
 	int rdev_major_column_width; /* Maximum width of the rdev major column so far */
 	int rdev_minor_column_width; /* Maximum width of the rdev minor column so far */
 
-	int quote_name;         /* Flag for -Q option */
-	int escape_name;        /* Flag for -Eb option */
-	int mask_name;          /* Flag for -q option */
-	int dir_indicator;      /* Flag for -p option */
-	int most_indicators;    /* Flag for -t option */
-	int all_indicators;     /* Flag for -F option */
+	int quote_name;         /* Flag for the -Q option */
+	int escape_name;        /* Flag for the -E/-b option */
+	int mask_name;          /* Flag for the -q option */
+	int dir_indicator;      /* Flag for the -p option */
+	int most_indicators;    /* Flag for the -t option */
+	int all_indicators;     /* Flag for the -F option */
 
-	int human_units;        /* Flag for -H option: human readable sizes (1=roundup 2=roundhalfup)) */
-	int si_units;           /* Flag for -I option: SI units for sizes (1=roundup 2=roundhalfup) */
-	int iso_time;           /* Flag for -T option: ISO time format */
-	int numeric_ids;        /* Flag for -# option: numeric uid/gids */
+	int human_units;        /* Flag for the -H option: "human readable" sizes (1=roundup 2=roundhalfup)) */
+	int si_units;           /* Flag for the -I option: SI prefixes for sizes (1=roundup 2=roundhalfup) */
+	int iso_time;           /* Flag for the -T option: ISO time format */
+	int numeric_ids;        /* Flag for the -# option: numeric uid/gid */
 
 	int test_cmd_max;       /* Cache test-related getenv values (e.g., fault injection) */
 	int test_attr_format;
@@ -268,43 +269,43 @@ struct reffile_t
 	llong fpathi;           /* Index into Strbuf of the reference file path (e.g., "fpath".mtime) */
 	llong baselen;          /* The length of the base name */
 	struct stat statbuf[1]; /* The stat structure for the referenced file */
-	int dirsize_done;       /* Have we counted a directory's contents yet? */
-	int attr_done;          /* Have we loaded the Linux ext2-style attributes? */
+	int dirsize_done;       /* Have we counted a reference directory's contents yet? */
+	int attr_done;          /* Have we loaded the Linux ext2-style attributes yet? */
 	unsigned long attr;     /* Linux ext2-style attributes */
-	int proj_done;          /* Have we loaded the Linux ext2-style project? */
+	int proj_done;          /* Have we loaded the Linux ext2-style project yet? */
 	unsigned long proj;     /* Linux ext2-style project */
-	int gen_done;           /* Have we loaded the Linux ext2-style generation? */
+	int gen_done;           /* Have we loaded the Linux ext2-style generation yet? */
 	unsigned long gen;      /* Linux ext2-style generation */
 };
 
 /* Global variables */
 
 #ifndef DATA
-extern char *prog_name;     /* The name of this program for messages */
+extern char *prog_name;     /* Name of this program for messages */
 
-extern symbol_t *symbols;   /* The symbol table */
+extern symbol_t *symbols;   /* Symbol table */
+extern symbol_t *tokensym;  /* Current token symbol */
+extern llong tokenval;      /* Current token value */
+extern llong token;         /* Current token code */
 
-extern symbol_t *tokensym;  /* The current token symbol */
-extern llong tokenval;      /* The current token value */
-extern llong token;         /* The current token */
+extern instr_t Program[];   /* Program instructions */
+extern llong PC;            /* Program counter */
+extern llong startPC;       /* Initial program counter */
 
-extern instr_t Program[];   /* The program */
-extern llong PC;            /* The program counter */
-extern llong startPC;       /* The initial program counter */
+extern char Strbuf[];       /* Storage for string literals */
+extern llong strfree;       /* Index into Strbuf for the next string literal */
 
-extern llong Stack[];       /* The stack */
-extern llong SP;            /* The stack pointer */
-extern llong FP;            /* The frame pointer */
-
-extern runtime_t attr;      /* Configuration and state for the execution */
-
-extern llong strfree;       /* Index into Strbuf for the next glob pattern */
-extern llong reffree;       /* Index into RefFile for the next one */
-extern char Strbuf[];       /* Storage for patterns, reference file paths, and shell commands */
 extern reffile_t RefFile[]; /* Storage for reference files (e.g., "fpath".mtime) */
+extern llong reffree;       /* Index into RefFile for the next reference file */
 
-extern char *expstr;        /* Contents of the -e option argument (search criteria expression) */
-extern char *expfname;      /* Contents of the -f option argument (filename) or current config file */
+extern llong Stack[];       /* Stack */
+extern llong SP;            /* Stack pointer */
+extern llong FP;            /* Frame pointer */
+
+extern runtime_t attr;      /* Configuration and runtime state */
+
+extern char *expstr;        /* The -e option argument (search criteria expression) */
+extern char *expfname;      /* The -f option argument (filename) or current config file */
 extern FILE *expfile;       /* FILE handle corresponding to the -f option argument or current config file */
 #endif
 

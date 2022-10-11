@@ -2,6 +2,7 @@
 * rawhide - find files using pretty C expressions
 * https://raf.org/rawhide
 * https://github.com/raforg/rawhide
+* https://codeberg.org/raforg/rawhide
 *
 # Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
 *
@@ -18,7 +19,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program; if not, see <https://www.gnu.org/licenses/>.
 *
-* 20220330 raf <raf@raf.org>
+* 20221011 raf <raf@raf.org>
 */
 
 #define _GNU_SOURCE /* For FNM_EXTMATCH and FNM_CASEFOLD in <fnmatch.h> */
@@ -64,7 +65,7 @@ static void help_message(void)
 
 	printf("usage: %s [options] [path...]\n", RAWHIDE_PROG_NAME);
 	printf("options:\n");
-	printf("  -h --help    - Show this message, then exit\n");
+	printf("  -h --help    - Show this help message, then exit\n");
 	printf("  -V --version - Show the version message, then exit\n");
 	printf("  -N           - Don't read system-wide config (" RAWHIDE_CONF ")\n");
 	printf("  -n           - Don't read user-specific config (~" RAWHIDE_RC ")\n");
@@ -78,7 +79,7 @@ static void help_message(void)
 	printf("  -D           - Depth-first searching (contents before directory)\n");
 	printf("  -1           - Single filesystem (don't cross filesystem boundaries)\n");
 	printf("  -y           - Follow symlinks on the cmdline and in reference files\n");
-	printf("  -Y           - Follow symlinks while searching as well\n");
+	printf("  -Y           - Follow symlinks encountered while searching as well\n");
 	printf("\n");
 	printf("alternative action options:\n");
 	printf("  -x 'cmd %%s'  - Execute a shell command for each match (racy)\n");
@@ -189,6 +190,7 @@ static void help_message(void)
 	printf("Authors: Ken Stauffer, raf <raf@raf.org>\n");
 	printf("URL: https://raf.org/rawhide\n");
 	printf("GIT: https://github.org/raforg/rawhide\n");
+	printf("GIT: https://codeberg.org/raforg/rawhide\n");
 	printf("\n");
 	printf("Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>\n");
 	printf("\n");
@@ -200,6 +202,7 @@ static void help_message(void)
 	printf("for a particular purpose.\n");
 	printf("\n");
 	printf("Report bugs to raf <raf@raf.org>\n");
+
 	exit(EXIT_SUCCESS);
 }
 
@@ -214,6 +217,7 @@ Output the version message, then exit.
 static void version_message(void)
 {
 	printf("%s-%s\n", RAWHIDE_PROG_NAME, RAWHIDE_VERSION);
+
 	exit(EXIT_SUCCESS);
 }
 
@@ -222,7 +226,7 @@ static void version_message(void)
 
 static void debugf(const char *format, ...);
 
-Output a debug message to stderr.
+Output a cmdline debug message to stderr, if requested.
 
 */
 
@@ -245,7 +249,7 @@ static void debugf(const char *format, ...)
 
 static void load_program_file(char *fname);
 
-Compile the given file.
+Compile the given file. I/O errors are non-fatal.
 
 */
 
@@ -270,7 +274,7 @@ static void load_program_file(char *fname)
 
 static void load_program_str(char *str);
 
-Compile str.
+Compile the given string.
 
 */
 
@@ -368,7 +372,7 @@ int main(int argc, char *argv[]);
 Parse the command line:
 
 The --help and --version options are supported (if first).
-The -f, -e, -x, -X, and -L options can only appear once.
+The -e, -x, -X, and -L options can only appear once.
 The -l, -0, -L, -x, -X, and -U options are mutually exclusive.
 
 Read /etc/rawhide.conf and /etc/rawhide.conf.d (unless -N).
@@ -394,14 +398,14 @@ By default, matching entry names are output.
 The -l option and other options include more details.
 There are many options to affect the formatting.
 The -0 option outputs nul characters rather than newlines.
-The -L option outputs info in a user-defined format.
+The -L option outputs information in a user-defined format.
 The -x option executes a shell command for each
 matching file instead.
-The -X option is the same but executes each command
-from the matching entry's parent directory to minimize
-race conditions.
-The -U option unlinks matching entries instead, and must
-be supplied three times.
+The -X option is the same, but executes each command
+from the matching entry's parent directory so as to
+minimize race conditions.
+The -U option unlinks/removes/deletes matching entries instead,
+and must be supplied three times in order to take effect.
 
 */
 
@@ -421,10 +425,10 @@ int main(int argc, char *argv[])
 
 	opt_h = 0;                  /* -h (help) */
 	opt_V = 0;                  /* -V (version) */
-	opt_N = 0;                  /* -N (suppress /etc/rawhide.conf)*/
-	opt_n = 0;                  /* -n (suppress ~/.rhrc) */
-	opt_f = 0;                  /* -f fname (read code from file/dir/stdin) */
-	opt_f_list = NULL;
+	opt_N = 0;                  /* -N (suppress /etc/rawhide.conf and .d) */
+	opt_n = 0;                  /* -n (suppress ~/.rhrc and .d) */
+	opt_f = 0;                  /* Number of -f option arguments */
+	opt_f_list = NULL;          /* List of -f option arguments (file/dir/stdin) */
 	opt_e = NULL;               /* -e expr (read code from arg) */
 
 	opt_r = 0;                  /* -r (only search 1 level down) */
@@ -432,12 +436,12 @@ int main(int argc, char *argv[])
 	opt_M = -1;                 /* -M (max depth) */
 	attr.depth_first = 0;       /* -D (depth-first) */
 	attr.single_filesystem = 0; /* -1 (single filesystem) */
-	attr.follow_symlinks = 0;   /* -y -Y (follow symlinks) */
+	attr.follow_symlinks = 0;   /* -y -Y (follow symlinks: 1=supplied 2=encountered) */
 
 	attr.command = NULL;        /* -x/-X cmd (execute cmd) */
 	attr.local = 0;             /* cmd executed locally (-X) */
-	opt_U = 0;                  /* -U (delete - but tell me three times) */
-	attr.unlink = 0;            /* -UUU (unlink) */
+	opt_U = 0;                  /* -U (unlink - but tell me three times) */
+	attr.unlink = 0;            /* -UUU (unlink - I've been told three times) */
 
 	opt_l = 0;                  /* -l */
 	attr.dev_column = 0;        /* -d */
@@ -844,7 +848,7 @@ int main(int argc, char *argv[])
 			{
 				/* Invalid options are reported with '?' and optopt set */
 
-				if (optopt && optopt != '?') /* macOS puts ? in optopt even when it's in optstring */
+				if (optopt && optopt != '?') /* macOS puts ? in optopt even though it's in optstring */
 					fatal("invalid option: -%c (see %s -h for help)", optopt, prog_name);
 
 				/* Otherwise, the ? option was supplied */
@@ -958,7 +962,7 @@ int main(int argc, char *argv[])
 	if (opt_V)
 		version_message();
 
-	/* For -X and "cmd".sh, remove cwd from $PATH (after debug config) */
+	/* For -X and "cmd".sh, remove cwd from $PATH (after debug config), affects -x as well */
 
 	if (remove_danger_from_path() == -1)
 		fatalsys("failed to remove cwd from path");
@@ -1032,6 +1036,7 @@ int main(int argc, char *argv[])
 				fatal("invalid -f option argument: - (stdin can only be read once)");
 
 			stdin_read = 1;
+
 			expfname = "stdin";
 			expfile = stdin;
 			parse_program();
@@ -1061,6 +1066,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	/* Clean up */
+
 	if (opt_f_list)
 	{
 		free(opt_f_list);
@@ -1087,7 +1094,7 @@ int main(int argc, char *argv[])
 		opt_e_expr = (startPC != opt_e_expr);
 	}
 
-	/* If no explicit expr, search arguments */
+	/* If no explicit -e expr, search remaining arguments for an implicit expr */
 
 	if (!opt_e_expr)
 	{
@@ -1219,7 +1226,7 @@ int main(int argc, char *argv[])
 	if (!(attr.search_stack = (point_t *)calloc(attr.max_depth + 1, sizeof(point_t))))
 		fatal("out of memory");
 
-	/* Find matches in the given directories or the current directory */
+	/* Find matches in the given directories (or the current working directory) */
 
 	for (; optind < argc; optind++)
 	{
@@ -1239,6 +1246,7 @@ int main(int argc, char *argv[])
 	}
 
 	free(attr.search_stack);
+
 	exit(attr.exit_status);
 }
 

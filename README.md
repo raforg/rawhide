@@ -66,7 +66,7 @@ a high-level interface to the built-in symbols mentioned above, and makes
 
      usage: rh [options] [path...]
      options:
-       -h --help    - Show this message, then exit
+       -h --help    - Show this help message, then exit
        -V --version - Show the version message, then exit
        -N           - Don't read system-wide config (/etc/rawhide.conf)
        -n           - Don't read user-specific config (~/.rhrc)
@@ -80,7 +80,7 @@ a high-level interface to the built-in symbols mentioned above, and makes
        -D           - Depth-first searching (contents before directory)
        -1           - Single filesystem (don't cross filesystem boundaries)
        -y           - Follow symlinks on the cmdline and in reference files
-       -Y           - Follow symlinks while searching as well
+       -Y           - Follow symlinks encountered while searching as well
 
      alternative action options:
        -x 'cmd %s'  - Execute a shell command for each match (racy)
@@ -450,8 +450,8 @@ Find files on *Solaris* with setuid executable extended attributes (silly):
 
 *Rawhide*'s source distribution can be downloaded from these locations:
 
-- <https://raf.org/rawhide/download/rawhide-3.0.tar.gz>
-- <https://github.com/raforg/rawhide/releases/download/v3.0/rawhide-3.0.tar.gz>
+- <https://raf.org/rawhide/download/rawhide-3.1.tar.gz> (or [archive.org](https://web.archive.org/web/20220000000000*/https://raf.org/rawhide/download/rawhide-3.1.tar.gz))
+- <https://github.com/raforg/rawhide/releases/download/v3.1/rawhide-3.1.tar.gz>
 
 This is free software released under the terms of the GNU General Public
 Licence version 3 or later (*GPLv3+*).
@@ -460,8 +460,8 @@ Licence version 3 or later (*GPLv3+*).
 
 To install *rawhide*:
 
-        tar xzf rawhide-3.0.tar.gz
-        cd rawhide-3.0
+        tar xzf rawhide-3.1.tar.gz
+        cd rawhide-3.1
         ./configure
         make
         make test # optional (lots of output, or set quiet=1)
@@ -501,8 +501,9 @@ with a *C* compiler and *make*. It has been thoroughly tested on
 
 The *configure* script only knows about these systems as far as installation
 locations are concerned, and whether or not manual entries should be
-gzipped. For other systems, you can accept the defaults, or adjust the
-*configure* script or the *Makefile* for your needs.
+gzipped. For other systems, you can accept the defaults, or override them
+with the *configure* script's options, or manually adjust the *Makefile* to
+suit your needs.
 
 The (non-*POSIX*) *major()* and *minor()* macros are expected to be in
 `<sys/types.h>`, `<sys/sysmacros.h>`, or `<sys/mkdev.h>`. If they are
@@ -530,6 +531,7 @@ character encodings are not supported.
 
     URL: https://raf.org/rawhide
     GIT: https://github.com/raforg/rawhide
-    Date: 20220330
+    GIT: https://codeberg.org/raforg/rawhide
+    Date: 20221011
     Authors: 1990 Ken Stauffer, 2022 raf <raf@raf.org>
 

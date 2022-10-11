@@ -1,3 +1,21 @@
+3.1 (20221011)
+
+    - Add built-in symbols for Linux ext2-style file attributes: attr proj gen
+    - Add real /etc/rawhide.conf.d/attributes (for Linux with libe2p installed)
+    - Add reference file fields: attr proj gen attribute project generation
+    - Add -L %e %J %I conversions (Linux ext2-style file attributes project generation)
+    - Add to -L %j (JSON) output, Linux ext2-style file attributes project generation
+    - Add replacing "/".i "/".re "/".rei with implicit "/".ipath "/".repath "/".reipath
+    - Add identifying pattern modifiers by unique prefixes (e.g., "/".p for "/".path)
+    - Add "make default" target (extracted from make dist, to undo ./configure)
+    - Fix -l column width buglet when user/group names contain multi-byte characters
+    - Fix max path length buglet when crossing filesystem boundaries during traversal
+    - Allow multiple -f options (but not multiple -f- because stdin can't be read twice)
+    - Allow -f option argument to be a directory or to have a corresponding .d directory
+    - Cache test-related getenv values that were being checked many times in normal use
+    - Add a few more tests to maximize coverage within reason (97.04% on my Debian dev VM)
+    - Add explicit PCRE2 JIT compilation (not noticeably faster - maybe default behaviour)
+
 3.0 (20220330)
 
     - Update (after 32 years!) to compile and work again (ISO/IEC C, POSIX)

@@ -2,6 +2,7 @@
 * rawhide - find files using pretty C expressions
 * https://raf.org/rawhide
 * https://github.com/raforg/rawhide
+* https://codeberg.org/raforg/rawhide
 *
 * Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
 *
@@ -18,7 +19,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program; if not, see <https://www.gnu.org/licenses/>.
 *
-* 20220330 raf <raf@raf.org>
+* 20221011 raf <raf@raf.org>
 */
 
 #define _GNU_SOURCE /* For FNM_EXTMATCH and FNM_CASEFOLD in <fnmatch.h> and wcswidth() in <wchar.h> */
@@ -83,7 +84,7 @@ static char cwdbuf[CMDBUFSIZE];
 
 static void debugf(const char *format, ...);
 
-Print a debug message to stderr.
+Output a traversal debug message to stderr, if requested.
 
 */
 
@@ -105,7 +106,7 @@ static void debugf(const char *format, ...)
 
 static void debug_extraf(const char *format, ...);
 
-Print an extra debug message to stderr.
+Output an extra traversal debug message to stderr, if requested.
 
 */
 
@@ -323,7 +324,7 @@ static ssize_t wcoffset(const char *str)
 
 	/* Convert str to wide chars, then determine its display width */
 
-	(void)mbstowcs(wcs, str, num_wchars);
+	mbstowcs(wcs, str, num_wchars);
 
 	width = wcswidth(wcs, num_wchars);
 
@@ -553,7 +554,7 @@ static int rawhide_traverse(size_t nul_posi, int parent_fd, char *basename)
 				attr.fpath = new_fpath;
 				attr.fpath_size = new_fpath_size;
 				remaining = attr.fpath_size - post_slash_nul_posi;
-				(void)strlcpy(attr.fpath + post_slash_nul_posi, entry->d_name, remaining);
+				strlcpy(attr.fpath + post_slash_nul_posi, entry->d_name, remaining);
 			}
 
 			debug(("dir entry %s", attr.fpath));
@@ -715,7 +716,7 @@ int rawhide_search(char *fpath)
 		attr.ttybuf = NULL;
 	}
 
-	(void)wcoffset(NULL);
+	wcoffset(NULL);
 
 	return rc;
 }
@@ -725,7 +726,7 @@ int rawhide_search(char *fpath)
 void visitf_default(void);
 
 The default action for matching files (without -l).
-It prints the name.
+It outputs the name.
 
 */
 
@@ -1102,7 +1103,7 @@ static const char *aclea(void)
 
 void visitf_long(void);
 
-The -l action for matching files. It prints the name and other details. The
+The -l action for matching files. It outputs the name and other details. The
 potential columns included are:
 
   dev, ino, blksize, blocks, space, mode (type+perm+aclea), nlink,

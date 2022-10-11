@@ -2,6 +2,7 @@
 * rawhide - find files using pretty C expressions
 * https://raf.org/rawhide
 * https://github.com/raforg/rawhide
+* https://codeberg.org/raforg/rawhide
 *
 * Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
 *
@@ -18,7 +19,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program; if not, see <https://www.gnu.org/licenses/>.
 *
-* 20220330 raf <raf@raf.org>
+* 20221011 raf <raf@raf.org>
 */
 
 #define _GNU_SOURCE /* For FNM_EXTMATCH and FNM_CASEFOLD in <fnmatch.h> */
@@ -227,13 +228,11 @@ void c_exit(llong i)    { Stack[SP++] = 1; attr.exit = 1; }
 unsigned long get_attr(void)
 {
 	#ifdef HAVE_ATTR
-
 	if (!attr.attr_done)
 	{
 		attr.attr_done = 1;
-		(void)fgetflags(attr.fpath, &attr.attr);
+		fgetflags(attr.fpath, &attr.attr);
 	}
-
 	#endif
 
 	return attr.attr;
@@ -242,13 +241,11 @@ unsigned long get_attr(void)
 unsigned long get_proj(void)
 {
 	#ifdef HAVE_ATTR
-
 	if (!attr.proj_done)
 	{
 		attr.proj_done = 1;
-		(void)fgetproject(attr.fpath, &attr.proj);
+		fgetproject(attr.fpath, &attr.proj);
 	}
-
 	#endif
 
 	return attr.proj;
@@ -257,13 +254,11 @@ unsigned long get_proj(void)
 unsigned long get_gen(void)
 {
 	#ifdef HAVE_ATTR
-
 	if (!attr.gen_done)
 	{
 		attr.gen_done = 1;
-		(void)fgetversion(attr.fpath, &attr.gen);
+		fgetversion(attr.fpath, &attr.gen);
 	}
-
 	#endif
 
 	return attr.gen;
@@ -330,7 +325,7 @@ static char *c_basename(void)
 	return tail;
 }
 
-/* Read the symlink target path */
+/* Read the current candidate symlink target path */
 
 char *read_symlink(void)
 {
@@ -364,7 +359,7 @@ char *read_symlink(void)
 
 Glob pattern matching.
 
-The i parameter is an index into Strbuf[].
+The i parameter is an index into Strbuf.
 The string contained there is the nul-terminated
 string that is the pattern (e.g., "*.bak" without
 the double quotes).
@@ -398,7 +393,7 @@ static pcre2_code *pcre2_compile_checked(const char *pattern, uint32_t options)
 		fatal("invalid regex %s at offset %d: %s", ok(pattern), (int)error_offset, ok2((char *)error_buffer));
 	}
 
-	(void)pcre2_jit_compile(re, PCRE2_JIT_COMPLETE);
+	pcre2_jit_compile(re, PCRE2_JIT_COMPLETE);
 
 	return re;
 }
@@ -479,7 +474,7 @@ static int rematch(const char *pattern, const char *subject, uint32_t options)
 	options |= PCRE2_EXTENDED;          /* Ignore whitespace and # comments (except in character classes) (like /x) */
 	options |= PCRE2_EXTENDED_MORE;     /* Ignore space and tab inside character classes as well (like /xx) */
 	options |= PCRE2_NO_AUTO_CAPTURE;   /* Prevent automatic numbered capturing parentheses (like /n) */
-	options |= PCRE2_NEVER_BACKSLASH_C; /* Prevents the use of the \C escape in patterns */
+	options |= PCRE2_NEVER_BACKSLASH_C; /* Prevent the use of the \C escape in patterns */
 
 	if (attr.utf)
 		options |= PCRE2_UTF | PCRE2_MATCH_INVALID_UTF; /* Assume UTF-8 patterns and subject text */
@@ -1011,7 +1006,7 @@ char *get_ea(int want)
 
 		attr.fea_done = 1;
 
-		/* Symlinks can't have EAs on Solaris so handle symlink following here */
+		/* Symlinks can't have EAs on Solaris so handle symlink-following here */
 
 		if (islink(attr.statbuf) && !following_symlinks())
 			return NULL;
@@ -1191,7 +1186,7 @@ int has_real_acl(void)
 	if (strstr(acl, "user::"))
 		return strstr(acl, "mask::") || (get_ea(0) && attr.fea_ok && strstr(attr.fea, "system.posix_acl_access: "));
 
-	/* NFSv4 ACLs (approximation) */
+	/* NFSv4 ACLs */
 
 	if (strstr(acl, "owner@:"))
 		return strstr(acl, "user:") || strstr(acl, "group:");
@@ -1300,7 +1295,7 @@ void r_attr(llong i)
 	if (!RefFile[i].attr_done)
 	{
 		RefFile[i].attr_done = 1;
-		(void)fgetflags(Strbuf + RefFile[i].fpathi, &RefFile[i].attr);
+		fgetflags(Strbuf + RefFile[i].fpathi, &RefFile[i].attr);
 	}
 
 	Stack[SP++] = RefFile[i].attr;
@@ -1313,7 +1308,7 @@ void r_proj(llong i)
 	if (!RefFile[i].proj_done)
 	{
 		RefFile[i].proj_done = 1;
-		(void)fgetproject(Strbuf + RefFile[i].fpathi, &RefFile[i].proj);
+		fgetproject(Strbuf + RefFile[i].fpathi, &RefFile[i].proj);
 	}
 
 	Stack[SP++] = RefFile[i].proj;
@@ -1326,7 +1321,7 @@ void r_gen(llong i)
 	if (!RefFile[i].gen_done)
 	{
 		RefFile[i].gen_done = 1;
-		(void)fgetversion(Strbuf + RefFile[i].fpathi, &RefFile[i].gen);
+		fgetversion(Strbuf + RefFile[i].fpathi, &RefFile[i].gen);
 	}
 
 	Stack[SP++] = RefFile[i].gen;

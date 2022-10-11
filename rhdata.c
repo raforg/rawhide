@@ -2,6 +2,7 @@
 * rawhide - find files using pretty C expressions
 * https://raf.org/rawhide
 * https://github.com/raforg/rawhide
+* https://codeberg.org/raforg/rawhide
 *
 * Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
 *
@@ -18,7 +19,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program; if not, see <https://www.gnu.org/licenses/>.
 *
-* 20220330 raf <raf@raf.org>
+* 20221011 raf <raf@raf.org>
 */
 
 #define _GNU_SOURCE /* For FNM_EXTMATCH and FNM_CASEFOLD in <fnmatch.h> */
@@ -37,8 +38,7 @@
 #include "rhcmds.h"
 #include "rherr.h"
 
-char *prog_name;                     /* Name of the program for messages */
-runtime_t attr;                      /* Configuration and runtime state */
+char *prog_name;                     /* Name of this program for messages */
 
 symbol_t *symbols;                   /* Symbol table */
 symbol_t *tokensym;                  /* Current token symbol */
@@ -49,19 +49,21 @@ instr_t Program[MAX_PROGRAM_SIZE];   /* Program instructions */
 llong PC;                            /* Program counter */
 llong startPC;                       /* Initial program counter */
 
-llong Stack[MAX_STACK_SIZE + 3];     /* Stack */
-llong SP;                            /* Stack pointer */
-llong FP;                            /* Frame pointer */
-
 char Strbuf[MAX_DATA_SIZE];          /* Storage for string literals */
 llong strfree = 0;                   /* Index into Strbuf for the next string literal */
 
 reffile_t RefFile[MAX_REFFILE_SIZE]; /* Storage for reference files */
-llong reffree = 0;                   /* Index into RefFile for the next one */
+llong reffree = 0;                   /* Index into RefFile for the next reference file */
 
-char *expstr;   /* The -e option argument */
-char *expfname; /* The -f option filename or current config file */
-FILE *expfile;  /* FILE handle for expfname */
+llong Stack[MAX_STACK_SIZE + 3];     /* Stack */
+llong SP;                            /* Stack pointer */
+llong FP;                            /* Frame pointer */
+
+runtime_t attr;                      /* Configuration and runtime state */
+
+char *expstr;   /* The -e option argument (search criteria expression) */
+char *expfname; /* The -f option argument (filename) or current config file */
+FILE *expfile;  /* FILE handle corresponding to the -f option argument or current config file */
 
 #ifndef S_IFDOOR
 #define S_IFDOOR 0150000
@@ -442,7 +444,7 @@ llong rawhide_execute(void);
 
 Execute the program stored in Program.
 Each element of Program contains a pointer to a function.
-The program is NULL terminated.
+The program is NULL-terminated.
 Returns the value of the expression.
 
 */
