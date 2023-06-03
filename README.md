@@ -429,10 +429,10 @@ Find files on *Linux* by their *selinux(8)* context (any):
         $ rh '"*security.selinux: *_u:*_r:*_t:s[0-3]*".ea'
         $ rh '"^security\.selinux:\ .*_u:.*_r:.*_t:s[0-3]".reea'
 
-Find files on *Linux* that are immutable or append-only:
+Find files on *Linux*, *FreeBSD*, *OpenBSD*, *NetBSD*, or *macOS*, that are
+immutable or append-only:
 
         $ rh / 'immutable || append'
-        $ rh / 'attr_i || attr_a'
 
 Find files on *Solaris* with setuid executable extended attributes (silly):
 

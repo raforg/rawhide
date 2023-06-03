@@ -612,7 +612,7 @@ test_rawhide      "$rh -L '%--------------------------010i\n'  $d/f" ""         
 
 if [ "`whoami`" = root ]
 then
-	if $rh -h | grep -wq attr
+	if $rh -h | grep -wq proj # Linux
 	then
 		if [ -n "`which chattr`" ]
 		then
@@ -664,6 +664,36 @@ then
 
 			chattr -a $d/d
 			chattr -a $d/f
+			rm $d/ld $d/lf $d/f
+			rmdir $d/d
+			test_rawhide_post_hook() { true; }
+		fi
+	elif $rh -h | grep -wq attr # BSD
+	then
+		if [ -n "`which chflags`" ]
+		then
+			test_rawhide_post_hook() { test_rh_sort_post_hook; }
+			mkdir $d/d
+			touch $d/f
+			ln -s d $d/ld
+			ln -s f $d/lf
+			chflags uappnd $d/d
+			chflags uappnd $d/f
+
+			test_rawhide_grep "$rh -e 'd && attr & 0x00000004' -L '%p %e\n' $d" "$d/d .*append.*" "" 0 "-L %e (attribute) d"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000004' -L '%p %e\n' $d" "$d/f .*append.*" "" 0 "-L %e (attribute) f"
+
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000004' -L '%e\n'      $d/f" "^[^ ].*[^ ]$" "" 0 "-L '%e\\\\n' $d/f"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000004' -L '%15e\n'    $d/f" "^ +.+$"       "" 0 "-L '%15e\\\\n' $d/f"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000004' -L '%-15e\n'   $d/f" "^.+ +$"       "" 0 "-L '%-15e\\\\n' $d/f"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000004' -L '%15.5e\n'  $d/f" "^ +.....$"    "" 0 "-L '%15.5e\\\\n' $d/f"
+			test_rawhide_grep "$rh -e 'f && attr & 0x00000004' -L '%-15.5e\n' $d/f" "^..... +$"    "" 0 "-L '%-15.5e\\\\n' $d/f"
+
+			# For test coverage
+			test_rawhide_grep "RAWHIDE_TEST_ATTR_FORMAT=1 $rh -e 'd && attr & 0x00000004' -L '%p %e\n' $d" "$d/d .*append.*" "" 0 "-L %e (attribute) d all attributes"
+
+			chflags nouappnd $d/d
+			chflags nouappnd $d/f
 			rm $d/ld $d/lf $d/f
 			rmdir $d/d
 			test_rawhide_post_hook() { true; }

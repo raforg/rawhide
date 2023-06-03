@@ -1,8 +1,8 @@
-# /etc/rawhide.conf.d/attributes
+# /etc/rawhide.conf.d/attributes (Linux without libe2p)
 # See rh(1) and rawhide.conf(5) for more information.
 
 /*
-This file defines some dummy functions just to reserve identifiers for
+This file defines some empty functions just to reserve identifiers for
 the potential built-in symbols for Linux ext2-style file attributes
 on Linux systems that don't have libe2p installed (but might later).
 Don't modify this file. It might be replaced.
@@ -10,6 +10,8 @@ Don't modify this file. It might be replaced.
 
 // Place-holders for the Linux ext2-style attribute built-ins
 
+flag       { 0 }
+flags      { 0 }
 attr       { 0 }
 proj       { 0 }
 gen        { 0 }

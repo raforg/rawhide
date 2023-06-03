@@ -95,8 +95,10 @@ static symbol_t init_syms[] =
 
 	/* Linux ext2-style file attributes */
 
-#ifdef HAVE_ATTR
+#if HAVE_ATTR || HAVE_FLAGS
 	{ "attr",    FIELD, 0, c_attr,   NULL },
+#endif
+#if HAVE_ATTR
 	{ "proj",    FIELD, 0, c_proj,   NULL },
 	{ "gen",     FIELD, 0, c_gen,    NULL },
 #endif
@@ -197,8 +199,10 @@ static symbol_t init_syms[] =
 	{ ".atime",    REFFILE, 0, r_atime,   NULL },
 	{ ".mtime",    REFFILE, 0, r_mtime,   NULL },
 	{ ".ctime",    REFFILE, 0, r_ctime,   NULL },
-#ifdef HAVE_ATTR
+#if HAVE_ATTR || HAVE_FLAGS
 	{ ".attr",     REFFILE, 0, r_attr,    NULL },
+#endif
+#if HAVE_ATTR
 	{ ".proj",     REFFILE, 0, r_proj,    NULL },
 	{ ".gen",      REFFILE, 0, r_gen,     NULL },
 #endif
@@ -212,8 +216,10 @@ static symbol_t init_syms[] =
 	{ ".accessed", REFFILE, 0, r_atime,   NULL },
 	{ ".modified", REFFILE, 0, r_mtime,   NULL },
 	{ ".changed",  REFFILE, 0, r_ctime,   NULL },
-#ifdef HAVE_ATTR
+#if HAVE_ATTR || HAVE_FLAGS
 	{ ".attribute",  REFFILE, 0, r_attr,  NULL },
+#endif
+#if HAVE_ATTR
 	{ ".project",    REFFILE, 0, r_proj,  NULL },
 	{ ".generation", REFFILE, 0, r_gen,   NULL },
 #endif

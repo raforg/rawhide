@@ -44,8 +44,10 @@ do
 			echo "  --disable-acl      - Disable ACL support"
 			echo "  --enable-ea        - Enable EA support (default when possible)"
 			echo "  --disable-ea       - Disable EA support"
-			echo "  --enable-attr      - Enable ext2 attr support (default when possible)"
-			echo "  --disable-attr     - Disable ext2 attr support"
+			echo "  --enable-attr      - Enable attr/flag support (default when possible)"
+			echo "  --disable-attr     - Disable attr/flag support"
+			echo "  --enable-flag      - Alias for --enable-attr (BSD terminology)"
+			echo "  --disable-flag     - Alias for --disable-attr (BSD terminology)"
 			echo "  --enable-ndebug    - Enable NDEBUG (remove debugging code)"
 			echo "  --disable-ndebug   - Disable NDEBUG (keep debugging code - default)"
 			echo "  --enable-mangz     - Enable gzipped manpages (default on some systems)"
@@ -60,7 +62,7 @@ do
 			echo "want software, configuration, and manpages to be in different locations."
 			echo "This configure script knows where to put things for several platforms:"
 			echo
-			echo "  Linux, macOS/macports, FreeBSD, OpenBSD, NetBSD, Solaris, Cygwin"
+			echo "  Linux, FreeBSD, OpenBSD, NetBSD, macOS/macports, Solaris, Cygwin"
 			echo ""
 			echo "To override the makefile \$(DESTDIR), use --destdir."
 			echo "This is for building packages and doesn't affect paths in the final binary."
@@ -227,7 +229,7 @@ esac
 # Change from cc to gcc if cc is not in path (for Solaris)
 
 [ -z "`which cc 2>/dev/null`" -a -n "`which gcc 2>/dev/null`" ] &&
-editconf Makefile -e 's,^CC =,#CC =,' -e 's,^#\(CC = gcc\),\1,' \
+editconf Makefile -e 's,^CC =,#CC =,' -e 's,^#\(CC = gcc\),\1,'
 
 # Set CC from $CC (for macports)
 
@@ -725,12 +727,47 @@ test_attr_linux_libe2p()
 	return 0
 }
 
+# Look for FreeBSD/OpenBSD/NetBSD/macOS flags
+
+create_attr_bsd_code()
+{
+	cat > configchk.c << END
+#include <stdio.h>
+#include <sys/stat.h>
+int main(int ac, char **av)
+{
+	struct stat buf[1];
+	if (stat(av[1], buf) == -1)
+		return 1;
+	if (buf->st_flags & SF_IMMUTABLE)
+		printf("immutable\n");
+	return 0;
+}
+
+END
+}
+
+test_attr_bsd()
+{
+	create_attr_bsd_code
+	compile_test || return 1
+	echo "Configuring --enable-attr$attr_reason"
+	editconf Makefile \
+		-e 's:^#\(FLAG_DEFINES =\).*$:\1 -DHAVE_FLAGS=1:' \
+		-e 's:^#\(FLAG_CFLAGS =\)$:\1 '"$TEST_CFLAGS"':' \
+		-e 's:^#\(FLAG_LDFLAGS =\)$:\1 '"$TEST_LDFLAGS"':'
+	HAVE_ATTR=1
+	TEST_CFLAGS=""
+	TEST_LDFLAGS=""
+	return 0
+}
+
 case "$*" in
-	*--disable-attr*)
+	*--disable-attr*|*--disable-flag*)
 		;;
 	*)
-		case "$*" in *--enable-attr*) attr_reason="";; *) attr_reason=" (default)";; esac
-		test_attr_linux_libe2p
+		case "$*" in *--enable-attr*|*--enable-flag*) attr_reason="";; *) attr_reason=" (default)";; esac
+		test_attr_linux_libe2p || test_attr_bsd
 		;;
 esac
 
@@ -921,7 +958,7 @@ do
 			editconf Makefile \
 				-e 's,^\(PCRE2_DEFINES =\).*$,#\1,' \
 				-e 's,^\(PCRE2_CFLAGS =\).*$,#\1,' \
-				-e 's,^\(PCRE2_LDFLAGS =\).*$,#\1,' \
+				-e 's,^\(PCRE2_LDFLAGS =\).*$,#\1,'
 			;;
 
 		--enable-acl)
@@ -933,7 +970,7 @@ do
 			editconf Makefile \
 				-e 's,^\(ACL_DEFINES =\).*$,#\1,' \
 				-e 's,^\(ACL_CFLAGS =\).*$,#\1,' \
-				-e 's,^\(ACL_LDFLAGS =\).*$,#\1,' \
+				-e 's,^\(ACL_LDFLAGS =\).*$,#\1,'
 			;;
 
 		--enable-ea)
@@ -945,19 +982,22 @@ do
 			editconf Makefile \
 				-e 's,^\(EA_DEFINES =\).*$,#\1,' \
 				-e 's,^\(EA_CFLAGS =\).*$,#\1,' \
-				-e 's,^\(EA_LDFLAGS =\).*$,#\1,' \
+				-e 's,^\(EA_LDFLAGS =\).*$,#\1,'
 			;;
 
-		--enable-attr)
-			[ "x$HAVE_ATTR" != x1 ] && echo "Failed to identify attribute support"
+		--enable-attr|--enable-flag)
+			[ "x$HAVE_ATTR" != x1 ] && echo "Failed to identify attribute/flag support"
 			;;
 
-		--disable-attr)
+		--disable-attr|--disable-flag)
 			echo "Configuring $opt"
 			editconf Makefile \
 				-e 's,^\(ATTR_DEFINES =\).*$,#\1,' \
 				-e 's,^\(ATTR_CFLAGS =\).*$,#\1,' \
 				-e 's,^\(ATTR_LDFLAGS =\).*$,#\1,' \
+				-e 's,^\(FLAG_DEFINES =\).*$,#\1,' \
+				-e 's,^\(FLAG_CFLAGS =\).*$,#\1,' \
+				-e 's,^\(FLAG_LDFLAGS =\).*$,#\1,'
 			;;
 
 		--disable-major)
@@ -998,7 +1038,7 @@ do
 				-e 's,^.*-DMAX_STACK_SIZE.*$,#	-DMAX_STACK_SIZE=1000000 \\,' \
 				-e 's,^.*-DMAX_DATA_SIZE.*$,#	-DMAX_DATA_SIZE=200000 \\,' \
 				-e 's,^.*-DMAX_FILEREF_SIZE.*$,#	-DMAX_FILEREF_SIZE=10000 \\,' \
-				-e 's,^.*-DMAX_IDENT_LENGTH.*$,#	-DMAX_IDENT_LENGTH=200,' \
+				-e 's,^.*-DMAX_IDENT_LENGTH.*$,#	-DMAX_IDENT_LENGTH=200,'
 			;;
 
 		--static=small)
@@ -1008,7 +1048,7 @@ do
 				-e 's,^.*-DMAX_STACK_SIZE.*$,	-DMAX_STACK_SIZE=100000 \\,' \
 				-e 's,^.*-DMAX_DATA_SIZE.*$,	-DMAX_DATA_SIZE=20000 \\,' \
 				-e 's,^.*-DMAX_FILEREF_SIZE.*$,	-DMAX_FILEREF_SIZE=1000 \\,' \
-				-e 's,^.*-DMAX_IDENT_LENGTH.*$,	-DMAX_IDENT_LENGTH=200,' \
+				-e 's,^.*-DMAX_IDENT_LENGTH.*$,	-DMAX_IDENT_LENGTH=200,'
 			;;
 
 		--static=tiny)
@@ -1018,7 +1058,7 @@ do
 				-e 's,^.*-DMAX_STACK_SIZE.*$,	-DMAX_STACK_SIZE=10000 \\,' \
 				-e 's,^.*-DMAX_DATA_SIZE.*$,	-DMAX_DATA_SIZE=2000 \\,' \
 				-e 's,^.*-DMAX_FILEREF_SIZE.*$,	-DMAX_FILEREF_SIZE=100 \\,' \
-				-e 's,^.*-DMAX_IDENT_LENGTH.*$,	-DMAX_IDENT_LENGTH=200,' \
+				-e 's,^.*-DMAX_IDENT_LENGTH.*$,	-DMAX_IDENT_LENGTH=200,'
 			;;
 
 		--enable-gcov)

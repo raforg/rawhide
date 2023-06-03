@@ -1002,12 +1002,13 @@ function. See I<strftime(3)> for details.
 
 =item C<%e>
 
-The I<ext2>-style file attributes as a space-separated list of attribute
-names. This is available on I<Linux> systems with I<libe2p>. See
-I<chattr(1)> and I<lsattr(1)> for details. On other systems, this is the
-empty string.
+The I<Linux> I<ext2>-style file attributes, or I<BSD>-style file flags, as a
+space-separated list of attribute/flag names. This is available on I<Linux>
+systems with I<libe2p>. See I<chattr(1)> and I<lsattr(1)> for details. This
+is also available on I<FreeBSD>, I<OpenBSD>, I<NetBSD>, and I<macOS>. See
+I<chflags(1)> for details. On other systems, this is the empty string.
 
-The possible I<ext2>-style file attribute names are:
+The possible I<Linux> I<ext2>-style file attribute names are:
 C<secrm>,
 C<unrm>,
 C<compr>,
@@ -1038,6 +1039,60 @@ C<snapfile_shrunk>,
 C<inline_data>,
 C<projinherit>,
 and C<casefold>.
+
+The possible I<FreeBSD> file flag names are:
+C<nodump>,
+C<uimmutable>,
+C<uappend>,
+C<opaque>,
+C<unounlink>,
+C<system>,
+C<sparse>,
+C<offline>,
+C<reparse>,
+C<archive>,
+C<readonly>,
+C<hidden>,
+C<archived>,
+C<simmutable>,
+C<sappend>,
+C<snounlink>,
+and C<snapshot>.
+
+The possible I<OpenBSD> file flag names are:
+C<nodump>,
+C<uimmutable>,
+C<uappend>,
+C<opaque>,
+C<archived>,
+C<simmutable>,
+and C<sappend>.
+
+The possible I<NetBSD> file flag names are:
+C<nodump>,
+C<uimmutable>,
+C<uappend>,
+C<opaque>,
+C<snapshot>,
+C<log>,
+and C<snapinval>.
+
+The possible I<macOS> file flag names are:
+C<nodump>,
+C<uimmutable>,
+C<uappend>,
+C<opaque>,
+C<compressed>,
+C<tracked>,
+C<datavault>,
+C<hidden>,
+C<archived>,
+C<simmutable>,
+C<sappend>,
+C<restricted>,
+C<snounlink>,
+C<firmlink>,
+and C<dataless>.
 
 =item C<%J>
 
@@ -1517,7 +1572,7 @@ by a file test expression, which is optionally terminated by a semicolon
 
 There are built-in symbols that represent the inode metadata (i.e.,
 I<stat(2)> structure fields) of candidate files (e.g., C<mode>, C<uid>,
-C<size>, C<mtime>, ...), I<Linux> I<ext2>-style file attributes (i.e.,
+C<size>, C<mtime>, ...), I<Linux>/I<BSD> file attributes/flags (i.e.,
 C<attr>, C<proj>, C<gen>), other useful file information (e.g., C<nouser>,
 C<nogroup>, C<readable>, C<writable>, ...), control flow (i.e., C<prune>,
 C<trim>, C<exit>), useful values and constants (e.g., C<now>, C<today>,
@@ -1544,6 +1599,11 @@ On I<Linux> systems, there is an additional library of functions in
 C</etc/rawhide.conf.d/attributes>. It contains constants and predicates for
 I<ext2>-style file attributes (e.g., C<immutable>, C<append>, C<nodump>,
 C<nocow>, C<dax>, ...).
+
+On I<FreeBSD>, I<OpenBSD>, I<NetBSD>, and I<macOS> systems, there is an
+additional library of functions in C</etc/rawhide.conf.d/attributes>. It
+contains constants and predicates for I<BSD> file flags (e.g.,
+C<uimmutable>, C<uappend>, C<nodump>, C<opaque>, ...).
 
 By default, string literals (C<">I<pattern>C<">) represent a file glob
 pattern match against the file name. Pattern modifiers
@@ -1804,10 +1864,10 @@ Find files on I<Linux> by their I<selinux(8)> context (any):
     $ rh '"*security.selinux: *_u:*_r:*_t:s[0-3]*".ea'
     $ rh '"^security\.selinux:\ .*_u:.*_r:.*_t:s[0-3]".reea'
 
-Find files on I<Linux> that are immutable or append-only:
+Find files on I<Linux>, I<FreeBSD>, I<OpenBSD>, I<NetBSD>, or I<macOS>, that
+are immutable or append-only:
 
     $ rh / 'immutable || append'
-    $ rh / 'attr_i || attr_a'
 
 Find files on I<Solaris> with setuid executable extended attributes (silly):
 
@@ -2535,7 +2595,7 @@ I<pcre2syntax(3)>, I<system(3)>, I<sh(1)>, I<printf(3)>, I<strftime(3)>,
 I<ctime(3)>, I<acl(2)> or I<acl(3)> or I<acl(5)>, I<xattr(1)> or I<xattr(7)>
 or I<extattr(2)> or I<fsattr(7)>, I<chmod(1)>, I<setfacl(1)>, I<getfacl(1)>,
 I<setfattr(1)>, I<getfattr(1)>, I<selinux(8)>, I<runat(1)>, I<mount(8)>,
-I<chattr(1)>, I<lsattr(1)>, I<The C programming language>.
+I<chattr(1)>, I<lsattr(1)>, I<chflags(1)>, I<S<The C programming language>>.
 
 =head1 AUTHORS
 

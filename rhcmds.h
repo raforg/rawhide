@@ -70,8 +70,10 @@ void c_ctime(llong i);
 unsigned long get_attr(void);
 unsigned long get_proj(void);
 unsigned long get_gen(void);
-#ifdef HAVE_ATTR
+#if HAVE_ATTR || HAVE_FLAGS
 void c_attr(llong i);
+#endif
+#if HAVE_ATTR
 void c_proj(llong i);
 void c_gen(llong i);
 #endif
@@ -142,8 +144,10 @@ void r_blocks(llong i);
 void r_atime(llong i);
 void r_mtime(llong i);
 void r_ctime(llong i);
-#ifdef HAVE_ATTR
+#if HAVE_ATTR || HAVE_FLAGS
 void r_attr(llong i);
+#endif
+#if HAVE_ATTR
 void r_proj(llong i);
 void r_gen(llong i);
 #endif

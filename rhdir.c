@@ -1976,8 +1976,8 @@ static int add_field(char *buf, ssize_t sz, const char *name, const char *value)
 
 static char *attributes(void);
 
-Return the ext2-style file attributes as a space-separated
-list of attribute names.
+Return the ext2-style file attributes or BSD-style file flags
+as a space-separated list of attribute/flag names.
 
 */
 
@@ -1995,6 +1995,8 @@ static char *attributes(void)
 
 	if (!flags)
 		return buf;
+
+	#if HAVE_ATTR /* Linux */
 
 	#ifdef EXT2_SECRM_FL
 	if (flags & EXT2_SECRM_FL)
@@ -2146,6 +2148,135 @@ static char *attributes(void)
 		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "casefold");
 	#endif
 
+	#elif HAVE_FLAGS /* FreeBSD, OpenBSD, NetBSD, macOS */
+
+	#ifdef UF_NODUMP /* FreeBSD, OpenBSD, NetBSD, macOS */
+	if (flags & UF_NODUMP)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "nodump");
+	#endif
+
+	#ifdef UF_UF_IMMUTABLE /* FreeBSD, OpenBSD, NetBSD, macOS */
+	if (flags & UF_IMMUTABLE)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "uimmutable");
+	#endif
+
+	#ifdef UF_APPEND /* FreeBSD, OpenBSD, NetBSD, macOS */
+	if (flags & UF_APPEND)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "uappend");
+	#endif
+
+	#ifdef UF_OPAQUE /* FreeBSD, OpenBSD, NetBSD, macOS */
+	if (flags & UF_OPAQUE)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "opaque");
+	#endif
+
+	#ifdef UF_NOUNLINK /* FreeBSD = 0x10 */
+	if (flags & UF_NOUNLINK)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "unounlink");
+	#endif
+
+	#ifdef UF_COMPRESSED /* macOS = 0x20 */
+	if (flags & UF_COMPRESSED)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "compressed");
+	#endif
+
+	#ifdef UF_TRACKED /* macOS = 0x40 */
+	if (flags & UF_TRACKED)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "tracked");
+	#endif
+
+	#ifdef UF_SYSTEM /* FreeBSD = 0x80 */
+	if (flags & UF_SYSTEM)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "system");
+	#endif
+
+	#ifdef UF_DATAVAULT /* macOS = 0x80 */
+	if (flags & UF_DATAVAULT)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "datavault");
+	#endif
+
+	#ifdef UF_SPARSE /* FreeBSD = 0x100 */
+	if (flags & UF_SPARSE)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "sparse");
+	#endif
+
+	#ifdef UF_OFFLINE /* FreeBSD = 0x200 */
+	if (flags & UF_OFFLINE)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "offline");
+	#endif
+
+	#ifdef UF_REPARSE /* FreeBSD = 0x400 */
+	if (flags & UF_REPARSE)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "reparse");
+	#endif
+
+	#ifdef UF_ARCHIVE /* FreeBSD = 0x800 */
+	if (flags & UF_ARCHIVE)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "archive");
+	#endif
+
+	#ifdef UF_READONLY /* FreeBSD = 0x1000 */
+	if (flags & UF_READONLY)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "readonly");
+	#endif
+
+	#ifdef UF_HIDDEN /* FreeBSD, macOS = 0x8000 */
+	if (flags & UF_HIDDEN)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "hidden");
+	#endif
+
+	#ifdef SF_ARCHIVED /* FreeBSD, OpenBSD, macOS = 0x10000 */
+	if (flags & SF_ARCHIVED)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "archived");
+	#endif
+
+	#ifdef SF_IMMUTABLE /* FreeBSD, OpenBSD, macOS = 0x20000 */
+	if (flags & SF_IMMUTABLE)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "simmutable");
+	#endif
+
+	#ifdef SF_APPEND /* FreeBSD, OpenBSD, macOS = 0x40000 */
+	if (flags & SF_APPEND)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "sappend");
+	#endif
+
+	#ifdef SF_RESTRICTED /* macOS = 0x80000 */
+	if (flags & SF_RESTRICTED)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "restricted");
+	#endif
+
+	#ifdef SF_NOUNLINK /* FreeBSD, macOS = 0x100000 */
+	if (flags & SF_NOUNLINK)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "snounlink");
+	#endif
+
+	#ifdef SF_SNAPSHOT /* FreeBSD, NetBSD = 0x200000 */
+	if (flags & SF_SNAPSHOT)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "snapshot");
+	#endif
+
+	#ifdef SF_LOG /* NetBSD = 0x400000 */
+	if (flags & SF_LOG)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "log");
+	#endif
+
+	#ifdef SF_SNAPINVAL /* NetBSD = 0x800000 */
+	if (flags & SF_SNAPINVAL)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "snapinval");
+	#endif
+
+	#ifdef SF_FIRMLINK /* macOS = 0x800000 */
+	if (flags & SF_FIRMLINK)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "firmlink");
+	#endif
+
+	#ifdef SF_DATALESS /* macOS = 0x40000000 */
+	if (flags & SF_DATALESS)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "dataless");
+	#endif
+
+	#endif
+
 	return buf;
 }
 
@@ -2218,9 +2349,11 @@ static char *json(void)
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"mtime_unix\":%lld, ", (llong)attr.statbuf->st_mtime);
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"ctime_unix\":%lld, ", (llong)attr.statbuf->st_ctime);
 
-	#ifdef HAVE_ATTR
+	#if HAVE_ATTR || HAVE_FLAGS
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"attributes\":\"%s\", ", attributes());
+	#endif
 
+	#if HAVE_ATTR
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"project\":%lu, ", get_proj());
 
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"generation\":%lu, ", get_gen());
@@ -2897,7 +3030,7 @@ void visitf_format(void)
 						break;
 					}
 
-					case 'e': /* Ext2-style file attributes */
+					case 'e': /* Ext2-style file attributes and BSD-style file flags */
 					{
 						char *a = attributes();
 

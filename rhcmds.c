@@ -227,13 +227,15 @@ void c_exit(llong i)    { Stack[SP++] = 1; attr.exit = 1; }
 
 unsigned long get_attr(void)
 {
-	#ifdef HAVE_ATTR
 	if (!attr.attr_done)
 	{
 		attr.attr_done = 1;
+		#if HAVE_ATTR
 		fgetflags(attr.fpath, &attr.attr);
+		#elif HAVE_FLAGS
+		attr.attr = (unsigned long)attr.statbuf->st_flags;
+		#endif
 	}
-	#endif
 
 	return attr.attr;
 }
@@ -264,8 +266,10 @@ unsigned long get_gen(void)
 	return attr.gen;
 }
 
-#ifdef HAVE_ATTR
+#if HAVE_ATTR || HAVE_FLAGS
 void c_attr(llong i) { Stack[SP++] = get_attr(); }
+#endif
+#if HAVE_ATTR
 void c_proj(llong i) { Stack[SP++] = get_proj(); }
 void c_gen(llong i)  { Stack[SP++] = get_gen(); }
 #endif
@@ -1286,7 +1290,7 @@ void r_ctime(llong i)   { check_reference(i, "ctime");   Stack[SP++] = RefFile[i
 void r_type(llong i)    { check_reference(i, "type");    Stack[SP++] = RefFile[i].statbuf->st_mode & S_IFMT; }
 void r_perm(llong i)    { check_reference(i, "perm");    Stack[SP++] = RefFile[i].statbuf->st_mode & ~S_IFMT; }
 
-#ifdef HAVE_ATTR
+#if HAVE_ATTR
 
 void r_attr(llong i)
 {
@@ -1325,6 +1329,21 @@ void r_gen(llong i)
 	}
 
 	Stack[SP++] = RefFile[i].gen;
+}
+
+#elif HAVE_FLAGS
+
+void r_attr(llong i)
+{
+	check_reference(i, "attr");
+
+	if (!RefFile[i].attr_done)
+	{
+		RefFile[i].attr_done = 1;
+		RefFile[i].attr = RefFile[i].statbuf->st_flags;
+	}
+
+	Stack[SP++] = RefFile[i].attr;
 }
 
 #endif
@@ -1428,8 +1447,10 @@ char *instruction_name(void (*func)(llong))
 		(func == c_atime) ? "atime" :
 		(func == c_mtime) ? "mtime" :
 		(func == c_ctime) ? "ctime" :
-		#ifdef HAVE_ATTR
+		#if HAVE_ATTR || HAVE_FLAGS
 		(func == c_attr) ? "cattr" :
+		#endif
+		#if HAVE_ATTR
 		(func == c_proj) ? "cproj" :
 		(func == c_gen) ? "cgen" :
 		#endif
@@ -1498,8 +1519,10 @@ char *instruction_name(void (*func)(llong))
 		(func == r_atime) ? "ratime" :
 		(func == r_mtime) ? "rmtime" :
 		(func == r_ctime) ? "rctime" :
-		#ifdef HAVE_ATTR
+		#if HAVE_ATTR || HAVE_FLAGS
 		(func == r_attr) ? "rattr" :
+		#endif
+		#if HAVE_ATTR
 		(func == r_proj) ? "rproj" :
 		(func == r_gen) ? "rgen" :
 		#endif

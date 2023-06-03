@@ -335,7 +335,7 @@ rm $d/lroot[ab] $d/l1[ab] $d/ldot3[ab]
 
 if [ "`whoami`" = root ]
 then
-	if $rh -h | grep -wq attr
+	if $rh -h | grep -wq proj # Linux
 	then
 		if [ -n "`which chattr`" ]
 		then
@@ -352,6 +352,24 @@ then
 
 			chattr -a $d/d
 			chattr -a $d/f
+			rm $d/ld $d/lf $d/f
+			rmdir $d/d
+		fi
+	elif $rh -h | grep -wq attr # BSDs
+	then
+		if [ -n "`which chflags`" ]
+		then
+			mkdir $d/d
+			touch $d/f
+			ln -s d $d/ld
+			ln -s f $d/lf
+			chflags uappnd $d/d
+			chflags uappnd $d/f
+
+			test_rawhide "$rh -e 'attr & 0x00000004' $d" "$d/d\n$d/f\n"                   "" 0 "attr & UF_APPEND"
+
+			chflags nouappnd $d/d
+			chflags nouappnd $d/f
 			rm $d/ld $d/lf $d/f
 			rmdir $d/d
 		fi

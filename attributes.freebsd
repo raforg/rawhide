@@ -1,0 +1,88 @@
+# /etc/rawhide.conf.d/attributes (FreeBSD)
+# See rh(1) and rawhide.conf(5) for more information.
+
+/*
+This file defines aliases for the built-in symbols for FreeBSD file flags,
+and the related constants and predicates. See <sys/stat.h>.
+*/
+
+// Aliases for the FreeBSD file flags built-ins
+
+flag       { attr }
+flags      { attr }
+attrs      { attr }
+attribute  { attr }
+attributes { attr }
+project    { 0 }
+generation { 0 }
+
+// Flag constants from <sys/stat.h>
+
+# Super-user and owner changeable flags
+
+UF_SETTABLE  { 0x0000ffff }  # mask of owner changeable flags
+UF_NODUMP    { 0x00000001 }  # do not dump file
+UF_IMMUTABLE { 0x00000002 }  # file may not be changed
+UF_APPEND    { 0x00000004 }  # writes to file may only append
+UF_OPAQUE    { 0x00000008 }  # directory is opaque wrt. union
+
+UF_NOUNLINK  { 0x00000010 }  # file may not be removed or renamed
+UF_SYSTEM    { 0x00000080 }  # Windows system file bit
+UF_SPARSE    { 0x00000100 }  # sparse file
+UF_OFFLINE   { 0x00000200 }  # file is offline
+UF_REPARSE   { 0x00000400 }  # Windows reparse point file bit
+UF_ARCHIVE   { 0x00000800 }  # file needs to be archived
+UF_READONLY  { 0x00001000 }  # Windows readonly file bit
+UF_HIDDEN    { 0x00008000 }  # file is hidden [same as macOS]
+
+# Super-user changeable flags
+
+SF_SETTABLE  { 0xffff0000 }  # mask of superuser changeable flags
+SF_ARCHIVED  { 0x00010000 }  # file is archived
+SF_IMMUTABLE { 0x00020000 }  # file may not be changed
+SF_APPEND    { 0x00040000 }  # writes to file may only append
+SF_NOUNLINK  { 0x00100000 }  # file may not be removed or renamed
+SF_SNAPSHOT  { 0x00200000 }  # snapshot inode
+
+// Flag predicates (canonical, aliases)
+
+arch       { attr & SF_ARCHIVED }
+archived   { attr & SF_ARCHIVED }
+nodump     { attr & UF_NODUMP }
+opaque     { attr & UF_OPAQUE }
+sappnd     { attr & SF_APPEND }
+sappend    { attr & SF_APPEND }
+schg       { attr & UF_IMMUTABLE }
+schange    { attr & UF_IMMUTABLE }
+simmutable { attr & UF_IMMUTABLE }
+snapshot   { attr & SF_SNAPSHOT }
+sunlnk     { attr & SF_NOUNLINK }
+sunlink    { attr & SF_NOUNLINK }
+uappnd     { attr & UF_APPEND }
+uappend    { attr & UF_APPEND }
+uarch      { attr & UF_ARCHIVE }
+uarchive   { attr & UF_ARCHIVE }
+uchg       { attr & SF_IMMUTABLE }
+uchange    { attr & SF_IMMUTABLE }
+uimmutable { attr & SF_IMMUTABLE }
+uhidden    { attr & UF_HIDDEN }
+hidden     { attr & UF_HIDDEN }
+uoffline   { attr & UF_OFFLINE }
+offline    { attr & UF_OFFLINE }
+urdonly    { attr & UF_READONLY }
+rdonly     { attr & UF_READONLY }
+readonly   { attr & UF_READONLY }
+usparse    { attr & UF_SPARSE }
+sparse     { attr & UF_SPARSE }
+usystem    { attr & UF_SYSTEM }
+system     { attr & UF_SYSTEM }
+ureparse   { attr & UF_REPARSE }
+reparse    { attr & UF_REPARSE }
+uunlnk     { attr & UF_NOUNLINK }
+uunlink    { attr & UF_NOUNLINK }
+
+append    { uappend    | sappend }
+immutable { uimmutable | simmutable }
+nounlink  { uunlink    | sunlink }
+unlink    { uunlink    | sunlink }
+

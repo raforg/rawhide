@@ -577,10 +577,17 @@ the purpose of obtaining the file attributes. This is a decision made by
 I<libe2p>. This is not affected by the C<-y> or C<-Y> options. Also note
 that symlinks do not have their own file attributes (i.e., C<attr> is zero).
 
-Note: This is only available on I<Linux> systems with I<libe2p>. On I<Linux>
+On I<Linux>, this is only available on systems with I<libe2p>. On I<Linux>
 systems without I<libe2p>, this is not a built-in symbol. Instead, this is a
-place-holder function that returns zero. On other systems, this doesn't
-exist at all.
+place-holder function that returns zero.
+
+This is also available on I<FreeBSD>, I<OpenBSD>, I<NetBSD>, and I<macOS>.
+The attributes/flags that are available vary from system to system. See
+I<chflags(1)> for details. See C</etc/rawhide.conf.d/attributes> for all the
+related predicate functions (e.g., C<uimmutable>, C<uappend>, C<nodump>,
+C<opaque>, ...).
+
+On other systems, this doesn't exist at all.
 
 =item C<proj>
 
@@ -1788,8 +1795,17 @@ purpose of obtaining the file attributes. This is a decision made by
 I<libe2p>. This is not affected by the C<-y> or C<-Y> options. Also note
 that symlinks do not have their own file attributes (i.e., C<attr> is zero).
 
-Note: This is only available on I<Linux> systems with I<libe2p>. On other
-systems, this doesn't exist at all.
+On I<Linux>, this is only available on systems with I<libe2p>. On I<Linux>
+systems without I<libe2p>, this is not a built-in symbol. Instead, this is a
+place-holder function that returns zero.
+
+This is also available on I<FreeBSD>, I<OpenBSD>, I<NetBSD>, and I<macOS>.
+The attributes/flags that are available vary from system to system. See
+I<chflags(1)> for details. See C</etc/rawhide.conf.d/attributes> for all the
+related predicate functions (e.g., C<uimmutable>, C<uappend>, C<nodump>,
+C<opaque>, ...).
+
+On other systems, this doesn't exist at all.
 
 =item C<proj>
 
@@ -2350,6 +2366,8 @@ C</etc/rawhide.conf.d/attributes> library:
   
   // Aliases for the Linux ext2-style attribute built-ins
   
+  flag       { attr }
+  flags      { attr }
   attrs      { attr }
   attribute  { attr }
   attributes { attr }
@@ -2458,6 +2476,97 @@ C</etc/rawhide.conf.d/attributes> library:
   attr_P { projinherit }
   attr_F { casefold }
 
+On I<FreeBSD> systems, this is the C</etc/rawhide.conf.d/attributes> library.
+There is a similar file on I<OpenBSD>, I<NetBSD>, and I<macOS> systems:
+
+  # /etc/rawhide.conf.d/attributes (FreeBSD)
+  # See rh(1) and rawhide.conf(5) for more information.
+
+  /*
+  This file defines aliases for the built-in symbols for FreeBSD file flags,
+  and the related constants and predicates. See <sys/stat.h>.
+  */
+
+  // Aliases for the FreeBSD file flags built-ins
+
+  flag       { attr }
+  flags      { attr }
+  attrs      { attr }
+  attribute  { attr }
+  attributes { attr }
+  project    { 0 }
+  generation { 0 }
+
+  // Flag constants from <sys/stat.h>
+
+  # Super-user and owner changeable flags
+
+  UF_SETTABLE  { 0x0000ffff }  # mask of owner changeable flags
+  UF_NODUMP    { 0x00000001 }  # do not dump file
+  UF_IMMUTABLE { 0x00000002 }  # file may not be changed
+  UF_APPEND    { 0x00000004 }  # writes to file may only append
+  UF_OPAQUE    { 0x00000008 }  # directory is opaque wrt. union
+
+  UF_NOUNLINK  { 0x00000010 }  # file may not be removed or renamed
+  UF_SYSTEM    { 0x00000080 }  # Windows system file bit
+  UF_SPARSE    { 0x00000100 }  # sparse file
+  UF_OFFLINE   { 0x00000200 }  # file is offline
+  UF_REPARSE   { 0x00000400 }  # Windows reparse point file bit
+  UF_ARCHIVE   { 0x00000800 }  # file needs to be archived
+  UF_READONLY  { 0x00001000 }  # Windows readonly file bit
+  UF_HIDDEN    { 0x00008000 }  # file is hidden [same as macOS]
+
+  # Super-user changeable flags
+
+  SF_SETTABLE  { 0xffff0000 }  # mask of superuser changeable flags
+  SF_ARCHIVED  { 0x00010000 }  # file is archived
+  SF_IMMUTABLE { 0x00020000 }  # file may not be changed
+  SF_APPEND    { 0x00040000 }  # writes to file may only append
+  SF_NOUNLINK  { 0x00100000 }  # file may not be removed or renamed
+  SF_SNAPSHOT  { 0x00200000 }  # snapshot inode
+
+  // Flag predicates (canonical, aliases)
+
+  arch       { attr & SF_ARCHIVED }
+  archived   { attr & SF_ARCHIVED }
+  nodump     { attr & UF_NODUMP }
+  opaque     { attr & UF_OPAQUE }
+  sappnd     { attr & SF_APPEND }
+  sappend    { attr & SF_APPEND }
+  schg       { attr & UF_IMMUTABLE }
+  schange    { attr & UF_IMMUTABLE }
+  simmutable { attr & UF_IMMUTABLE }
+  snapshot   { attr & SF_SNAPSHOT }
+  sunlnk     { attr & SF_NOUNLINK }
+  sunlink    { attr & SF_NOUNLINK }
+  uappnd     { attr & UF_APPEND }
+  uappend    { attr & UF_APPEND }
+  uarch      { attr & UF_ARCHIVE }
+  uarchive   { attr & UF_ARCHIVE }
+  uchg       { attr & SF_IMMUTABLE }
+  uchange    { attr & SF_IMMUTABLE }
+  uimmutable { attr & SF_IMMUTABLE }
+  uhidden    { attr & UF_HIDDEN }
+  hidden     { attr & UF_HIDDEN }
+  uoffline   { attr & UF_OFFLINE }
+  offline    { attr & UF_OFFLINE }
+  urdonly    { attr & UF_READONLY }
+  rdonly     { attr & UF_READONLY }
+  readonly   { attr & UF_READONLY }
+  usparse    { attr & UF_SPARSE }
+  sparse     { attr & UF_SPARSE }
+  usystem    { attr & UF_SYSTEM }
+  system     { attr & UF_SYSTEM }
+  ureparse   { attr & UF_REPARSE }
+  reparse    { attr & UF_REPARSE }
+  uunlnk     { attr & UF_NOUNLINK }
+  uunlink    { attr & UF_NOUNLINK }
+
+  append    { uappend    | sappend }
+  immutable { uimmutable | simmutable }
+  nounlink  { uunlink    | sunlink }
+  unlink    { uunlink    | sunlink }
+
 See I<rh(1)> for more examples.
 
 =head1 FILES
@@ -2493,7 +2602,8 @@ derived from it by appending C<".d">.
 I<rh(1)>, I<stat(2)>, I<mktime(3)>, I<fnmatch(3)>, I<glob(7)>, I<perlre(1)>,
 I<pcre2pattern(3)>, I<pcre2syntax(3)>, I<access(2)>, I<acl(2)> or I<acl(3)>
 or I<acl(5)>, I<xattr(1)> or I<xattr(7)> or I<extattr(2)> or I<fsattr(7)>,
-I<chattr(1)>, I<lsattr(1)>, I<jq(1)>, I<The C programming language>.
+I<chattr(1)>, I<lsattr(1)>, I<chflags(1)>, I<jq(1)>,
+I<S<The C programming language>>.
 
 =head1 AUTHORS
 
