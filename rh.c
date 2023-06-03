@@ -148,9 +148,10 @@ static void help_message(void)
 
 	printf("\nPattern modifiers:\n");
 
-	for (i = 0, s = symbols; s; s = s->next)
+	printf("  %-12s", "");
+	for (i = 1, s = symbols; s; s = s->next)
 		if (s->type == PATMOD)
-			printf("  %-12s%s", s->name, (i++ % 5 == 4 || !s->next) ? "\n" : "");
+			printf("  %-12s%s", s->name, (i++ % 4 == 3 || !s->next) ? "\n" : "");
 
 	#ifdef FNM_CASEFOLD
 	printf("  Case-insensitive glob matching is available here (i)\n");

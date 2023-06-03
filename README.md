@@ -146,10 +146,12 @@ a high-level interface to the built-in symbols mentioned above, and makes
        Ksh extended glob patterns are available here (see fnmatch(3))
 
      Pattern modifiers:
-       .i            .path         .ipath        .link         .ilink
-       .acl          .iacl         .ea           .iea          .re
-       .rei          .repath       .reipath      .relink       .reilink
-       .reacl        .reiacl       .reea         .reiea        .sh
+                     .i            .re           .rei
+       .path         .ipath        .repath       .reipath
+       .link         .ilink        .relink       .reilink
+       .acl          .iacl         .reacl        .reiacl
+       .ea           .iea          .reea         .reiea
+       .sh
        Case-insensitive glob matching is available here (i)
        Perl-compatible regular expressions are available here (re)
        Access control lists are available here (acl)

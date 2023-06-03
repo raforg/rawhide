@@ -230,38 +230,46 @@ static symbol_t init_syms[] =
 #ifdef FNM_CASEFOLD
 	{ ".i",        PATMOD, 0, c_i,       NULL },
 #endif
+#ifdef HAVE_PCRE2
+	{ ".re",       PATMOD, 0, c_re,      NULL },
+	{ ".rei",      PATMOD, 0, c_rei,     NULL },
+#endif
+
 	{ ".path",     PATMOD, 0, c_path,    NULL },
 #ifdef FNM_CASEFOLD
 	{ ".ipath",    PATMOD, 0, c_ipath,   NULL },
 #endif
+#ifdef HAVE_PCRE2
+	{ ".repath",   PATMOD, 0, c_repath,  NULL },
+	{ ".reipath",  PATMOD, 0, c_reipath, NULL },
+#endif
+
 	{ ".link",     PATMOD, 0, c_link,    NULL },
 #ifdef FNM_CASEFOLD
 	{ ".ilink",    PATMOD, 0, c_ilink,   NULL },
 #endif
+#ifdef HAVE_PCRE2
+	{ ".relink",   PATMOD, 0, c_relink,  NULL },
+	{ ".reilink",  PATMOD, 0, c_reilink, NULL },
+#endif
+
 #ifdef HAVE_ACL
 	{ ".acl",      PATMOD, 0, c_acl,     NULL },
 #ifdef FNM_CASEFOLD
 	{ ".iacl",     PATMOD, 0, c_iacl,    NULL },
 #endif
+#ifdef HAVE_PCRE2
+	{ ".reacl",    PATMOD, 0, c_reacl,   NULL },
+	{ ".reiacl",   PATMOD, 0, c_reiacl,  NULL },
 #endif
+#endif
+
 #ifdef HAVE_EA
 	{ ".ea",       PATMOD, 0, c_ea,      NULL },
 #ifdef FNM_CASEFOLD
 	{ ".iea",      PATMOD, 0, c_iea,     NULL },
 #endif
-#endif
 #ifdef HAVE_PCRE2
-	{ ".re",       PATMOD, 0, c_re,      NULL },
-	{ ".rei",      PATMOD, 0, c_rei,     NULL },
-	{ ".repath",   PATMOD, 0, c_repath,  NULL },
-	{ ".reipath",  PATMOD, 0, c_reipath, NULL },
-	{ ".relink",   PATMOD, 0, c_relink,  NULL },
-	{ ".reilink",  PATMOD, 0, c_reilink, NULL },
-#ifdef HAVE_ACL
-	{ ".reacl",    PATMOD, 0, c_reacl,   NULL },
-	{ ".reiacl",   PATMOD, 0, c_reiacl,  NULL },
-#endif
-#ifdef HAVE_EA
 	{ ".reea",     PATMOD, 0, c_reea,    NULL },
 	{ ".reiea",    PATMOD, 0, c_reiea,   NULL },
 #endif
