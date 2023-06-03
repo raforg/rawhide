@@ -282,7 +282,7 @@ check: test
 tests: test
 
 default:
-	./configure --disable-pcre2 --disable-acl --disable-ea --disable-attr --disable-ndebug --disable-gcov --disable-cc-other --disable-mangz --disable-major --static=large
+	./configure --default
 
 dist: clobber man default
 	@set -e; \

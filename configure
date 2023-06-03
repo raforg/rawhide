@@ -57,6 +57,7 @@ do
 			echo "  --enable-gcov      - Enable gcov test coverage measurement (do not install)"
 			echo "  --disable-gcov     - Disable gcov test coverage measurement (default)"
 			echo "  --disable-cc-other - Forget non-default compiler (for distribution)"
+			echo "  --default          - Restore Makefile to its defaults (for distribution)"
 			echo
 			echo "Rawhide should compile on any POSIX system as is, but different systems"
 			echo "want software, configuration, and manpages to be in different locations."
@@ -130,6 +131,18 @@ do
 			;;
 	esac
 done
+
+# Handle --default (for distribution)
+
+case "$1" in
+	--default|default)
+		set -- \
+			--disable-pcre2 --disable-acl --disable-ea --disable-attr --disable-magic \
+			--disable-ndebug --disable-gcov --disable-cc-other --disable-mangz \
+			--disable-major --static=large
+		break
+		;;
+esac
 
 # Fatal error message (for editconf)
 
