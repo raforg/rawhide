@@ -148,16 +148,27 @@ static void help_message(void)
 
 	printf("\nPattern modifiers:\n");
 
-	printf("  %-12s", "");
+	/* One column for each method of pattern matching */
+	int columns = 1;
+	#ifdef FNM_CASEFOLD
+	columns += 1; /* .i */
+	#endif
+	#ifdef HAVE_PCRE2
+	columns += 2; /* .re .rei */
+	#endif
+
+	if (columns > 1)
+		printf("  %-12s", "");
+
 	for (i = 1, s = symbols; s; s = s->next)
 		if (s->type == PATMOD)
-			printf("  %-12s%s", s->name, (i++ % 4 == 3 || !s->next) ? "\n" : "");
+			printf("  %-12s%s", s->name, (i++ % columns == columns - 1 || !s->next) ? "\n" : "");
 
 	#ifdef FNM_CASEFOLD
 	printf("  Case-insensitive glob matching is available here (i)\n");
 	#endif
 	#ifdef HAVE_PCRE2
-	printf("  Perl-compatible regular expressions are available here (re)\n");
+	printf("  Perl-compatible regular expressions are available here (re, rei)\n");
 	#else
 	printf("  Perl-compatible regular expressions are not available here\n");
 	#endif
