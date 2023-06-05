@@ -168,9 +168,12 @@ static void help_message(void)
 	printf("  Case-insensitive glob matching is available here (i)\n");
 	#endif
 	#ifdef HAVE_PCRE2
-	printf("  Perl-compatible regular expressions are available here (re, rei)\n");
+	printf("  Perl-compatible regular expressions are available here (re)\n");
 	#else
 	printf("  Perl-compatible regular expressions are not available here\n");
+	#endif
+	#ifdef HAVE_MAGIC
+	printf("  File types and MIME types are available here (what, mime)\n");
 	#endif
 	#ifdef HAVE_ACL
 	printf("  Access control lists are available here (acl)\n");
@@ -376,6 +379,44 @@ static int load_config_dir(const char *initfile, char *initdir, char *initpatter
 
 	return 0;
 }
+
+/*
+
+static void magic_cleanup(void);
+
+Release any libmagic resources that have been allocated.
+To be run at exit.
+
+*/
+
+#ifdef HAVE_MAGIC
+static void magic_cleanup(void)
+{
+	if (attr.what_cookie)
+	{
+		magic_close(attr.what_cookie);
+		attr.what_cookie = NULL;
+	}
+
+	if (attr.mime_cookie)
+	{
+		magic_close(attr.mime_cookie);
+		attr.mime_cookie = NULL;
+	}
+
+	if (attr.what_follow_cookie)
+	{
+		magic_close(attr.what_follow_cookie);
+		attr.what_follow_cookie = NULL;
+	}
+
+	if (attr.mime_follow_cookie)
+	{
+		magic_close(attr.mime_follow_cookie);
+		attr.mime_follow_cookie = NULL;
+	}
+}
+#endif
 
 /*
 
@@ -1237,6 +1278,12 @@ int main(int argc, char *argv[])
 
 	if (!(attr.search_stack = (point_t *)calloc(attr.max_depth + 1, sizeof(point_t))))
 		fatal("out of memory");
+
+	/* Prepare to deallocate libmagic resources */
+
+	#ifdef HAVE_MAGIC
+	atexit(magic_cleanup);
+	#endif
 
 	/* Find matches in the given directories (or the current working directory) */
 

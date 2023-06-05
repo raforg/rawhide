@@ -502,9 +502,125 @@ void c_reilink(llong i) { Stack[SP++] = (islink(attr.statbuf)) ? rematch(&Strbuf
 
 #endif /* HAVE_PCRE2 */
 
-#define failure(args) if (want) { errorsys args; attr.exit_status = EXIT_FAILURE; }
+/* Load the file type description into attr.what (libmagic-managed data - deallocated at exit) */
+
+const char *get_what(void)
+{
+	if (!attr.what_done)
+	{
+		#ifdef HAVE_MAGIC
+		if (following_symlinks())
+		{
+			if (!attr.what_follow_cookie)
+				if ((attr.what_follow_cookie = magic_open(MAGIC_RAW | MAGIC_COMPRESS | MAGIC_SYMLINK)))
+					(void)magic_load(attr.what_follow_cookie, NULL);
+
+			if (attr.what_follow_cookie)
+				attr.what = magic_file(attr.what_follow_cookie, attr.fpath);
+		}
+		else
+		{
+			if (!attr.what_cookie)
+				if ((attr.what_cookie = magic_open(MAGIC_RAW | MAGIC_COMPRESS)))
+					(void)magic_load(attr.what_cookie, NULL);
+
+			if (attr.what_cookie)
+				attr.what = magic_file(attr.what_cookie, attr.fpath);
+		}
+		#endif
+
+		attr.what_done = 1;
+	}
+
+	return attr.what;
+}
+
+#ifdef HAVE_MAGIC
+
+static void what_glob(llong i, int options)
+{
+	Stack[SP++] = get_what() ? fnmatch(&Strbuf[i], get_what(), FNM_EXTMATCH | options) == 0 : 0;
+}
+
+void c_what(llong i)  { what_glob(i, 0); }
+#ifdef FNM_CASEFOLD
+void c_iwhat(llong i) { what_glob(i, FNM_CASEFOLD); }
+#endif
+
+#ifdef HAVE_PCRE2
+
+static void what_re(llong i, int options)
+{
+	Stack[SP++] = get_what() ? rematch(&Strbuf[i], get_what(), options) : 0;
+}
+
+void c_rewhat(llong i)  { what_re(i, 0); }
+void c_reiwhat(llong i) { what_re(i, PCRE2_CASELESS); }
+
+#endif
+#endif
+
+/* Load the MIME type into attr.what (libmagic-managed data - deallocated at exit) */
+
+const char *get_mime(void)
+{
+	if (!attr.mime_done)
+	{
+		#ifdef HAVE_MAGIC
+		if (following_symlinks())
+		{
+			if (!attr.mime_follow_cookie)
+				if ((attr.mime_follow_cookie = magic_open(MAGIC_MIME | MAGIC_SYMLINK)))
+					(void)magic_load(attr.mime_follow_cookie, NULL);
+
+			if (attr.mime_follow_cookie)
+				attr.mime = magic_file(attr.mime_follow_cookie, attr.fpath);
+		}
+		else
+		{
+			if (!attr.mime_cookie)
+				if ((attr.mime_cookie = magic_open(MAGIC_MIME)))
+					(void)magic_load(attr.mime_cookie, NULL);
+
+			if (attr.mime_cookie)
+				attr.mime = magic_file(attr.mime_cookie, attr.fpath);
+		}
+		#endif
+
+		attr.mime_done = 1;
+	}
+
+	return attr.mime;
+}
+
+#ifdef HAVE_MAGIC
+
+static void mime_glob(llong i, int options)
+{
+	Stack[SP++] = get_mime() ? fnmatch(&Strbuf[i], get_mime(), FNM_EXTMATCH | options) == 0 : 0;
+}
+
+void c_mime(llong i)  { mime_glob(i, 0); }
+#ifdef FNM_CASEFOLD
+void c_imime(llong i) { mime_glob(i, FNM_CASEFOLD); }
+#endif
+
+#ifdef HAVE_PCRE2
+
+static void mime_re(llong i, int options)
+{
+	Stack[SP++] = get_mime() ? rematch(&Strbuf[i], get_mime(), options) : 0;
+}
+
+void c_remime(llong i)  { mime_re(i, 0); }
+void c_reimime(llong i) { mime_re(i, PCRE2_CASELESS); }
+
+#endif
+#endif
 
 /* Load ACLs into attr.facl (and attr.facl_verbose on FreeBSD/Solaris) which must be deallocated */
+
+#define failure(args) if (want) { errorsys args; attr.exit_status = EXIT_FAILURE; }
 
 char *get_acl(int want)
 {
@@ -1477,6 +1593,26 @@ char *instruction_name(void (*func)(llong))
 		(func == c_rei) ? "rei" :
 		(func == c_reipath) ? "reipath" :
 		(func == c_reilink) ? "reilink" :
+		#endif
+		#ifdef HAVE_MAGIC
+		(func == c_what) ? "what" :
+		#ifdef FNM_CASEFOLD
+		(func == c_iwhat) ? "iwhat" :
+		#endif
+		#ifdef HAVE_PCRE2
+		(func == c_rewhat) ? "rewhat" :
+		(func == c_reiwhat) ? "reiwhat" :
+		#endif
+		#endif
+		#ifdef HAVE_MAGIC
+		(func == c_mime) ? "mime" :
+		#ifdef FNM_CASEFOLD
+		(func == c_imime) ? "imime" :
+		#endif
+		#ifdef HAVE_PCRE2
+		(func == c_remime) ? "remime" :
+		(func == c_reimime) ? "reimime" :
+		#endif
 		#endif
 		#ifdef HAVE_ACL
 		(func == c_acl) ? "acl" :

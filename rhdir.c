@@ -171,6 +171,8 @@ static void caches_init(void)
 	attr.ftarget_done = 0;
 	attr.linkstat_done = 0;
 	attr.linkdirsize_done = 0;
+	attr.what_done = 0;
+	attr.mime_done = 0;
 	attr.facl_done = 0;
 	attr.facl = NULL;
 	attr.facl_verbose = NULL;
@@ -1510,7 +1512,7 @@ int interpolate_command(const char *srccmd, char *command, int cmdbufsize)
 				f = strrchr(attr.fpath, '/');
 				f = (f == attr.fpath && !f[1]) ? attr.fpath : (f) ? f + 1 : attr.fpath;
 
-				/* While there's room for a null or a byte followed by a nul... */
+				/* While there's room for a nul or a byte followed by a nul... */
 
 				while (dst + ((*f) ? 1 : 0) - command < cmdbufsize)
 				{
@@ -2349,6 +2351,12 @@ static char *json(void)
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"mtime_unix\":%lld, ", (llong)attr.statbuf->st_mtime);
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"ctime_unix\":%lld, ", (llong)attr.statbuf->st_ctime);
 
+	if (get_what())
+		pos += add_field(buf + pos, JSON_BUFSIZE - pos, "filetype", get_what());
+
+	if (get_mime())
+		pos += add_field(buf + pos, JSON_BUFSIZE - pos, "mimetype", get_mime());
+
 	#if HAVE_ATTR || HAVE_FLAGS
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"attributes\":\"%s\", ", attributes());
 	#endif
@@ -2902,6 +2910,24 @@ void visitf_format(void)
 						break;
 					}
 
+					case 'w': /* File type description */
+					{
+						ofmt_add('s');
+						debug_extra(("fmt %%w \"%s\", \"%s\"", ofmt, get_what() ? attr.what : ""));
+						printf_sanitized(ofmt, get_what() ? attr.what : "");
+
+						break;
+					}
+
+					case 'W': /* MIME type */
+					{
+						ofmt_add('s');
+						debug_extra(("fmt %%W \"%s\", \"%s\"", ofmt, get_mime() ? attr.mime : ""));
+						printf_sanitized(ofmt, get_mime() ? attr.mime : "");
+
+						break;
+					}
+
 					case 'x': /* Extended attributes */ 
 					{
 						char *ea, *s;
@@ -2909,7 +2935,7 @@ void visitf_format(void)
 						if ((ea = get_ea(1)) && attr.fea_ok)
 						{
 							/* We have finished searching and can modify the buffer. */
-							/* Replace newlines with commas and remove the last one */
+							/* Replace newlines with commas and remove the last one. */
 
 							for (s = ea; *s; ++s)
 								if (*s == '\n')

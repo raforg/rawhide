@@ -1201,6 +1201,50 @@ Apply the glob pattern to each candidate symlink's target path, rather than
 its base name. Slash characters (C<"/">) are not treated as special
 characters. For example, C<"./sr*sc".path> would match C<./src/misc>.
 
+=item C<what> (or C<w>)
+
+Apply the glob pattern to each candidate file's file type description (as
+would be output by the I<file(1)> utility), rather than its base name. Slash
+characters (C<"/">) are not treated as special characters. This is available
+on systems with I<libmagic(3)> installed.
+
+Note that this is an expensive pattern modifier because each candidate file
+is at least partially read to determine its file type. It can be worthwhile
+preceding this with other predicates to reduce the number of candidate files
+that this is applied to.
+
+Also note that this only works with files that are readable to the current
+user.
+
+Also note that any errors encountered result in an error message taking the
+place of the file type description being matched. To see these error
+messages, you can use the C<-L> option with its C<%w> format conversion.
+
+Note: If the current candidate file is a symlink, its file type description
+is affected by the C<-y> or C<-Y> options.
+
+=item C<mime> (or C<m>)
+
+Apply the glob pattern to each candidate file's MIME type (including the
+character set), rather than its base name. Slash characters (C<"/">) are not
+treated as special characters. This is available on systems with
+I<libmagic(3)> installed.
+
+Note that this is an expensive pattern modifier because each candidate file
+is at least partially read to determine its MIME type. It can be worthwhile
+preceding this with other predicates to reduce the number of candidate files
+that this is applied to.
+
+Also note that this only works with files that are readable to the current
+user.
+
+Also note that any errors encountered result in an error message taking the
+place of the MIME type being matched. To see these error messages, you can
+use the C<-L> option with its C<%W> format conversion.
+
+Note: If the current candidate file is a symlink, its MIME type is affected
+by the C<-y> or C<-Y> options.
+
 =item C<i>
 
 Apply the glob pattern without case-sensitivity. This is available on most
@@ -1225,6 +1269,18 @@ full path starting from the search directory instead.
 
 Like the C<link> modifier, but apply the glob pattern without
 case-sensitivity. This is available on most systems, but maybe not all.
+
+=item C<iwhat> (or C<iw>)
+
+Like the C<what> modifier, but apply the glob pattern without
+case-sensitivity. This is available on most systems with I<libmagic(3)>
+installed, but maybe not all.
+
+=item C<imime> (or C<im>)
+
+Like the C<mime> modifier, but apply the glob pattern without
+case-sensitivity. This is available on most systems with I<libmagic(3)>
+installed, but maybe not all.
 
 =item C<re>
 
@@ -1314,6 +1370,19 @@ the file's full path starting from the search directory instead.
 Like the C<re> modifier, but apply the regex to each candidate symlink's
 target path, rather than its base name.
 
+=item C<rewhat> (or C<rew>)
+
+Like the C<re> modifier, but apply the regex to each candidate file's file
+type description, rather than its base name. This is available on systems
+that have I<libpcre2-8> and I<libmagic> installed. See C<what> above for
+more details.
+
+=item C<remime> (or C<rem>)
+
+Like the C<re> modifier, but apply the regex to each candidate file's MIME
+type, rather than its base name. This is available on systems that have
+I<libpcre2-8> and I<libmagic> installed. See C<mime> above for more details.
+
 =item C<rei>
 
 Like the C<re> modifier, but apply the regex without case-sensitivity.
@@ -1332,6 +1401,14 @@ the file's full path starting from the search directory instead.
 =item C<reilink> (or C<reil>)
 
 Like the C<relink> modifier, but apply the regex without case-sensitivity.
+
+=item C<reiwhat> (or C<reiw>)
+
+Like the C<rewhat> modifier, but apply the regex without case-sensitivity.
+
+=item C<reimime> (or C<reim>)
+
+Like the C<remime> modifier, but apply the regex without case-sensitivity.
 
 =item C<acl> (or C<a>)
 
@@ -2355,7 +2432,7 @@ uses for these identifiers.
 On I<Linux> systems with I<libe2p>, this is the
 C</etc/rawhide.conf.d/attributes> library:
 
-  # /etc/rawhide.conf.d/attributes
+  # /etc/rawhide.conf.d/attributes (Linux)
   # See rh(1) and rawhide.conf(5) for more information.
   
   /*
@@ -2602,8 +2679,8 @@ derived from it by appending C<".d">.
 I<rh(1)>, I<stat(2)>, I<mktime(3)>, I<fnmatch(3)>, I<glob(7)>, I<perlre(1)>,
 I<pcre2pattern(3)>, I<pcre2syntax(3)>, I<access(2)>, I<acl(2)> or I<acl(3)>
 or I<acl(5)>, I<xattr(1)> or I<xattr(7)> or I<extattr(2)> or I<fsattr(7)>,
-I<chattr(1)>, I<lsattr(1)>, I<chflags(1)>, I<jq(1)>,
-I<S<The C programming language>>.
+I<chattr(1)>, I<lsattr(1)>, I<chflags(1)>, I<file(1)>, I<jq(1)>,
+S<I<The C programming language>>.
 
 =head1 AUTHORS
 

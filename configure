@@ -48,6 +48,8 @@ do
 			echo "  --disable-attr     - Disable attr/flag support"
 			echo "  --enable-flag      - Alias for --enable-attr (BSD terminology)"
 			echo "  --disable-flag     - Alias for --disable-attr (BSD terminology)"
+			echo "  --enable-magic     - Enable libmagic support (default when possible)"
+			echo "  --disable-magic    - Disable libmagic support"
 			echo "  --enable-ndebug    - Enable NDEBUG (remove debugging code)"
 			echo "  --disable-ndebug   - Disable NDEBUG (keep debugging code - default)"
 			echo "  --enable-mangz     - Enable gzipped manpages (default on some systems)"
@@ -822,6 +824,58 @@ case "$*" in
 		;;
 esac
 
+# Look for libmagic
+
+create_libmagic_code()
+{
+	cat > configchk.c <<END
+#include <stdio.h>
+#include <magic.h>
+int main(int ac, char **av)
+{
+	int flags = MAGIC_SYMLINK | MAGIC_COMPRESS | MAGIC_MIME | MAGIC_RAW;
+	magic_t m = magic_open(flags);
+	int loaded = magic_load(m, NULL);
+	printf("loaded = %d\n", loaded);
+	const char *output = magic_file(m, av[1]);
+	const char *error = magic_error(m);
+	printf("error: %s\n", error ? error : "(nil)");
+	printf("output: %s\n", output ? output : "(nil)");
+	magic_close(m);
+	return 0;
+}
+END
+}
+
+test_libmagic()
+{
+	create_libmagic_code
+	TEST_CFLAGS="`pkg-config --cflags libmagic 2>/dev/null`"
+	[ $? = 0 ] || return 1
+	TEST_LDFLAGS="`pkg-config --libs libmagic 2>/dev/null`"
+	# The next line corrects a macports libmagic pkg-config file bug
+	[ x"$TEST_LDFLAGS" = x"-L/opt/local/lib -lmagic" ] && [ x"$TEST_CFLAGS" = x ] && TEST_CFLAGS="-I/opt/local/include"
+	compile_test || return 1
+	echo "Configuring --enable-magic$magic_reason"
+	editconf Makefile \
+		-e 's,^#\(MAGIC_DEFINES =\).*$,\1 -DHAVE_MAGIC=1,' \
+		-e 's,^#\(MAGIC_CFLAGS =\).*$,\1,' \
+		-e 's,^#\(MAGIC_LDFLAGS =\).*$,\1 -lmagic,'
+	HAVE_MAGIC=1
+	TEST_CFLAGS=""
+	TEST_LDFLAGS=""
+	return 0
+}
+
+case "$*" in
+	*--disable-magic*)
+		;;
+	*)
+		case "$*" in *--enable-magic*) magic_reason="";; *) magic_reason=" (default)";; esac
+		test_libmagic
+		;;
+esac
+
 # Look for major() and minor() in <sys/types.h> and <sys/mkdev.h> and <sys/sysmacros.h>.
 
 create_major_minor_sys_types_code()
@@ -1011,6 +1065,18 @@ do
 				-e 's,^\(FLAG_DEFINES =\).*$,#\1,' \
 				-e 's,^\(FLAG_CFLAGS =\).*$,#\1,' \
 				-e 's,^\(FLAG_LDFLAGS =\).*$,#\1,'
+			;;
+
+		--enable-magic)
+			[ "x$HAVE_MAGIC" != x1 ] && echo "Failed to find libmagic"
+			;;
+
+		--disable-magic)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^\(MAGIC_DEFINES =\).*$,#\1,' \
+				-e 's,^\(MAGIC_CFLAGS =\).*$,#\1,' \
+				-e 's,^\(MAGIC_LDFLAGS =\).*$,#\1,'
 			;;
 
 		--disable-major)

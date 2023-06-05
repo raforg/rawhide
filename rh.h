@@ -134,6 +134,10 @@ struct point_t
 
 /* Structure defining the runtime environment */
 
+#ifdef HAVE_MAGIC
+#include <magic.h>
+#endif
+
 typedef struct runtime_t runtime_t;
 struct runtime_t
 {
@@ -163,8 +167,19 @@ struct runtime_t
 	int fea_solaris_no_sunwattr; /* Suppress ubiquitous SUNWattr_ro/SUNWattr_rw EAs on Solaris? */
 	int fea_solaris_no_statinfo; /* Suppress artificial stat(2) info EAs on Solaris? */
 
-	int attr_done;          /* Have we loaded the Linux ext2-style attributes yet? */
-	unsigned long attr;     /* Linux ext2-style attributes */
+	#ifdef HAVE_MAGIC
+	magic_t what_cookie;        /* Libmagic data for file type searches */
+	magic_t mime_cookie;        /* Libmagic data for mime type searches */
+	magic_t what_follow_cookie; /* Libmagic data for file type searches when following symlinks */
+	magic_t mime_follow_cookie; /* Libmagic data for mime type searches when following symlinks */
+	#endif
+	int what_done;          /* Have we loaded the file type yet? */
+	int mime_done;          /* Have we loaded the mime type yet? */
+	const char *what;       /* The file type (libmagic-managed data) */
+	const char *mime;       /* The mime type (libmagic-managed data) */
+
+	int attr_done;          /* Have we loaded the Linux ext2-style attributes/BSD flags yet? */
+	unsigned long attr;     /* Linux ext2-style attributes/BSD flags */
 	int proj_done;          /* Have we loaded the Linux ext2-style project yet? */
 	unsigned long proj;     /* Linux ext2-style project */
 	int gen_done;           /* Have we loaded the Linux ext2-style generation yet? */
@@ -270,7 +285,7 @@ struct reffile_t
 	llong baselen;          /* The length of the base name */
 	struct stat statbuf[1]; /* The stat structure for the referenced file */
 	int dirsize_done;       /* Have we counted a reference directory's contents yet? */
-	int attr_done;          /* Have we loaded the Linux ext2-style attributes yet? */
+	int attr_done;          /* Have we loaded the Linux ext2-style attributes/BSD flags yet? */
 	unsigned long attr;     /* Linux ext2-style attributes */
 	int proj_done;          /* Have we loaded the Linux ext2-style project yet? */
 	unsigned long proj;     /* Linux ext2-style project */

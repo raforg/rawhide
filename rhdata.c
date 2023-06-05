@@ -93,7 +93,7 @@ static symbol_t init_syms[] =
 	{ "mtime",   FIELD, 0, c_mtime,   NULL },
 	{ "ctime",   FIELD, 0, c_ctime,   NULL },
 
-	/* Linux ext2-style file attributes */
+	/* Linux ext2-style file attributes and BSD file flags */
 
 #if HAVE_ATTR || HAVE_FLAGS
 	{ "attr",    FIELD, 0, c_attr,   NULL },
@@ -251,6 +251,28 @@ static symbol_t init_syms[] =
 #ifdef HAVE_PCRE2
 	{ ".relink",   PATMOD, 0, c_relink,  NULL },
 	{ ".reilink",  PATMOD, 0, c_reilink, NULL },
+#endif
+
+#ifdef HAVE_MAGIC
+	{ ".what",     PATMOD, 0, c_what,     NULL },
+#ifdef FNM_CASEFOLD
+	{ ".iwhat",    PATMOD, 0, c_iwhat,    NULL },
+#endif
+#ifdef HAVE_PCRE2
+	{ ".rewhat",   PATMOD, 0, c_rewhat,   NULL },
+	{ ".reiwhat",  PATMOD, 0, c_reiwhat,  NULL },
+#endif
+#endif
+
+#ifdef HAVE_MAGIC
+	{ ".mime",     PATMOD, 0, c_mime,     NULL },
+#ifdef FNM_CASEFOLD
+	{ ".imime",    PATMOD, 0, c_imime,    NULL },
+#endif
+#ifdef HAVE_PCRE2
+	{ ".remime",   PATMOD, 0, c_remime,   NULL },
+	{ ".reimime",  PATMOD, 0, c_reimime,  NULL },
+#endif
 #endif
 
 #ifdef HAVE_ACL

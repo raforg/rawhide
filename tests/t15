@@ -424,10 +424,10 @@ then
 			chflags uappnd $d/d
 			chflags uappnd $d/f
 
-			test_rawhide "$rh -e 'f && attr == \"$d/f\".attr      $d" "$d/f\n" "" 0 "reference file field f attr"
-			test_rawhide "$rh -e 'd && attr == \"$d/d\".attr      $d" "$d/d\n" "" 0 "reference file field d attr"
-			test_rawhide "$rh -e 'f && attr == \"$d/f\".attribute $d" "$d/f\n" "" 0 "reference file field f attribute"
-			test_rawhide "$rh -e 'd && attr == \"$d/d\".attribute $d" "$d/d\n" "" 0 "reference file field d attribute"
+			test_rawhide "$rh -e 'f && attr == \"$d/f\".attr'      $d" "$d/f\n" "" 0 "reference file field f attr"
+			test_rawhide "$rh -e 'd && attr == \"$d/d\".attr'      $d" "$d/d\n" "" 0 "reference file field d attr"
+			test_rawhide "$rh -e 'f && attr == \"$d/f\".attribute' $d" "$d/f\n" "" 0 "reference file field f attribute"
+			test_rawhide "$rh -e 'd && attr == \"$d/d\".attribute' $d" "$d/d\n" "" 0 "reference file field d attribute"
 
 			chflags nouappnd $d/d
 			chflags nouappnd $d/f

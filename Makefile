@@ -112,6 +112,11 @@ RAWHIDE_DEFINES = \
 #FLAG_CFLAGS =
 #FLAG_LDFLAGS =
 
+# File type and mimetype identification by libmagic
+#MAGIC_DEFINES =
+#MAGIC_CFLAGS =
+#MAGIC_LDFLAGS =
+
 # For major() and minor() on Linux
 #HAVE_SYS_SYSMACROS = -DHAVE_SYS_SYSMACROS=1
 
@@ -123,15 +128,19 @@ RAWHIDE_DEFINES = \
 #DEBUG_DEFINES = -DNDEBUG
 
 # Test coverage (gcov): Uncomment this, run tests (as non-root and as root),
-# then run gcov *.c then examine *.c.gcov or run gcov_summary (97.04% on Linux)
+# then run gcov *.c then examine *.c.gcov or run gcov_summary (97.12% on Linux)
 #GCOV_CFLAGS = -fprofile-arcs -ftest-coverage
+
+# Undefined behaviour checks: Uncomment this, run tests (as non-root and as root)
+#UBSAN_CFLAGS = -fsanitize=undefined
+#UBSAN_LDFLAGS = -fsanitize=undefined
 
 CC = cc
 #CC = gcc
 #CC = other
-CPPFLAGS = $(RAWHIDE_DEFINES) $(PCRE2_DEFINES) $(ACL_DEFINES) $(EA_DEFINES) $(ATTR_DEFINES) $(FLAG_DEFINES) $(DEBUG_DEFINES) $(HAVE_SYS_SYSMACROS) $(HAVE_SYS_MKDEV)
-CFLAGS = -O3 -g -Wall -pedantic $(CPPFLAGS) $(PCRE2_CFLAGS) $(ACL_CFLAGS) $(EA_CFLAGS) $(ATTR_CFLAGS) $(FLAG_CFLAGS) $(GCOV_CFLAGS)
-LDFLAGS = $(PCRE2_LDFLAGS) $(ACL_LDFLAGS) $(EA_LDLAGS) $(ATTR_LDFLAGS) $(FLAG_LDFLAGS)
+CPPFLAGS = $(RAWHIDE_DEFINES) $(PCRE2_DEFINES) $(ACL_DEFINES) $(EA_DEFINES) $(ATTR_DEFINES) $(FLAG_DEFINES) $(MAGIC_DEFINES) $(DEBUG_DEFINES) $(HAVE_SYS_SYSMACROS) $(HAVE_SYS_MKDEV)
+CFLAGS = -O3 -g -Wall -pedantic $(CPPFLAGS) $(PCRE2_CFLAGS) $(ACL_CFLAGS) $(EA_CFLAGS) $(ATTR_CFLAGS) $(FLAG_CFLAGS) $(MAGIC_CFLAGS) $(GCOV_CFLAGS) $(UBSAN_CFLAGS)
+LDFLAGS = $(PCRE2_LDFLAGS) $(ACL_LDFLAGS) $(EA_LDLAGS) $(ATTR_LDFLAGS) $(FLAG_LDFLAGS) $(MAGIC_LDFLAGS) $(UBSAN_LDFLAGS)
 
 OBJS = rhcmds.o rh.o rhparse.o rhdir.o rhdata.o rhstr.o rherr.o
 
@@ -311,7 +320,7 @@ help:
 	@echo "  make vg=1 test    - Run tests and produce valgrind.out analysis (~40m)"
 	@echo "  vim valgrind.out  - Examine the results (delete the noise, check the rest)"
 	@echo 
-	@echo "To run tests for test coverage analysis (97.04% on Linux):"
+	@echo "To run tests for test coverage analysis (97.12% on Linux):"
 	@echo
 	@echo "  ./configure --enable-gcov"
 	@echo "  make"

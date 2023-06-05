@@ -47,8 +47,8 @@ control flow, more file information, and candidate symlink target inode
 metadata.
 
 File glob patterns and *Perl*-compatible regular expressions (regexes) can
-be used to match files by their name, path, symlink target path, access
-control list, and extended attributes.
+be used to match files by their name, path, symlink target path, file type
+description, MIME type, access control list, and extended attributes.
 
 Search criteria can also include comparisons with the inode metadata of
 arbitrary reference files, and the exit success status of arbitrary shell
@@ -149,6 +149,8 @@ a high-level interface to the built-in symbols mentioned above, and makes
                      .i            .re           .rei
        .path         .ipath        .repath       .reipath
        .link         .ilink        .relink       .reilink
+       .what         .iwhat        .rewhat       .reiwhat
+       .mime         .imime        .remime       .reimime
        .acl          .iacl         .reacl        .reiacl
        .ea           .iea          .reea         .reiea
        .sh
@@ -342,6 +344,15 @@ very slow):
 
         # rh -1 -e 'f && nlink > 1' -X 'rh -1 / "ino == \"%S\".ino"; echo' /
 
+Find 32-bit ELF executables:
+
+        $ rh 'f && anyx && sz > 10k && "ELF 32-bit*executable*".what'
+
+Find text files with ISO-8859 encoding:
+
+        $ rh 'f && "*ISO-8859 text".what'
+        $ rh 'f && "text/*; charset=iso-8859*".mime'
+
 Find files using a *Perl*-compatible regular expression (regex):
 
         $ rh '"^[a-zA-Z0-9_]+[0-9][0-9][0-9]?\..*[a-cz]$".re'
@@ -514,6 +525,10 @@ anywhere else, changes will be needed.
 While optional, it is very highly recommended that *libpcre2-8* be
 installed. It adds so much more fun. On *macOS*, *libpcre2-8* can be
 installed via *macports* or *homebrew*.
+
+It is recommended that *libmagic* be installed. It lets search criteria
+include matching file type descriptions and MIME types. And *pkg-config* is
+needed (to find and use it).
 
 On *Linux*, *libacl* (for access control lists) and *libe2p* (for
 *ext2*-style file attributes) are also recommended. And *pkg-config* is

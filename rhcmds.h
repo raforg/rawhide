@@ -104,6 +104,26 @@ void c_rei(llong i);
 void c_reipath(llong i);
 void c_reilink(llong i);
 #endif
+#ifdef HAVE_MAGIC
+void c_what(llong i);
+#ifdef FNM_CASEFOLD
+void c_iwhat(llong i);
+#endif
+#ifdef HAVE_PCRE2
+void c_rewhat(llong i);
+void c_reiwhat(llong i);
+#endif
+#endif
+#ifdef HAVE_MAGIC
+void c_mime(llong i);
+#ifdef FNM_CASEFOLD
+void c_imime(llong i);
+#endif
+#ifdef HAVE_PCRE2
+void c_remime(llong i);
+void c_reimime(llong i);
+#endif
+#endif
 #ifdef HAVE_ACL
 void c_acl(llong i);
 #ifdef FNM_CASEFOLD
@@ -177,6 +197,8 @@ void t_strlen(llong i);
 
 char *read_symlink(void);
 void prepare_target(void);
+const char *get_what(void);
+const char *get_mime(void);
 char *get_acl(int);
 char *get_ea(int);
 void set_dirsize(void);

@@ -111,10 +111,11 @@ I<rh> - (I<rawhide>) find files using pretty I<C> expressions
                  .i            .re           .rei
    .path         .ipath        .repath       .reipath
    .link         .ilink        .relink       .reilink
+   .what         .iwhat        .rewhat       .reiwhat
+   .mime         .imime        .remime       .reimime
    .acl          .iacl         .reacl        .reiacl
    .ea           .iea          .reea         .reiea
    .sh
-
    Case-insensitive glob matching is available here (i)
    Perl-compatible regular expressions are available here (re)
    Access control lists are available here (acl)
@@ -198,8 +199,8 @@ control flow, more file information, and candidate symlink target inode
 metadata.
 
 File glob patterns and I<Perl>-compatible regular expressions (regexes) can
-be used to match files by their name, path, symlink target path, access
-control list, and extended attributes.
+be used to match files by their name, path, symlink target path, file type
+description, MIME type, access control list, and extended attributes.
 
 Search criteria can also include comparisons with the inode metadata of
 arbitrary reference files, and the exit success status of arbitrary shell
@@ -1003,6 +1004,23 @@ either the at sign (C<"@">), for the number of seconds since the I<UNIX>
 epoch, or a conversion specifier character for the I<C> I<strftime(3)>
 function. See I<strftime(3)> for details.
 
+=item C<%w>
+
+The file type description (as would be output by the I<file(1)> utility).
+This is available on systems with I<libmagic(3)> installed. On other
+systems, this is the empty string.
+
+When standard output (I<stdout>) is a terminal, C<"?"> is output in place of
+any control characters to prevent terminal escape injection.
+
+=item C<%W>
+
+The MIME type (including the character set). This is available on systems
+with I<libmagic(3)> installed. On other systems, this is the empty string.
+
+When standard output (I<stdout>) is a terminal, C<"?"> is output in place of
+any control characters to prevent terminal escape injection.
+
 =item C<%e>
 
 The I<Linux> I<ext2>-style file attributes, or I<BSD>-style file flags, as a
@@ -1256,6 +1274,10 @@ the following possible attributes:
 
 =item C<ctime_unix> (integer) (same as C<%C@>)
 
+=item C<filetype> (string) (same as C<%w>) (only if available)
+
+=item C<mimetype> (string) (same as C<%W>) (only if available)
+
 =item C<attributes> (string) (same as C<%e>) (only if available)
 
 =item C<project> (integer) (same as C<%J>) (only if available)
@@ -1319,6 +1341,8 @@ and I<find(1)> doesn't do I<rh>'s
 C<%z> (access control list),
 C<%x> (extended attributes),
 C<%X> (ACL/EA indicator),
+C<%w> (file type description),
+C<%W> (MIME type),
 C<%e> (attributes),
 C<%J> (project),
 C<%I> (generation),
@@ -1776,6 +1800,15 @@ The same, but for a single filesystem only (shorter, less slow, but still
 very slow):
 
     # rh -1 -e 'f && nlink > 1' -X 'rh -1 / "ino == \"%S\".ino"; echo' /
+
+Find 32-bit ELF executables:
+
+    $ rh 'f && anyx && sz > 10k && "ELF 32-bit*executable*".what'
+
+Find text files with ISO-8859 encoding:
+
+    $ rh 'f && "*ISO-8859 text".what'
+    $ rh 'f && "text/*; charset=iso-8859*".mime'
 
 Find files using a I<Perl>-compatible regular expression (regex):
 
@@ -2598,7 +2631,8 @@ I<pcre2syntax(3)>, I<system(3)>, I<sh(1)>, I<printf(3)>, I<strftime(3)>,
 I<ctime(3)>, I<acl(2)> or I<acl(3)> or I<acl(5)>, I<xattr(1)> or I<xattr(7)>
 or I<extattr(2)> or I<fsattr(7)>, I<chmod(1)>, I<setfacl(1)>, I<getfacl(1)>,
 I<setfattr(1)>, I<getfattr(1)>, I<selinux(8)>, I<runat(1)>, I<mount(8)>,
-I<chattr(1)>, I<lsattr(1)>, I<chflags(1)>, I<S<The C programming language>>.
+I<chattr(1)>, I<lsattr(1)>, I<chflags(1)>, I<file(1)>,
+S<I<The C programming language>>.
 
 =head1 AUTHORS
 

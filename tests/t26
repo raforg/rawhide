@@ -701,6 +701,20 @@ then
 	fi
 fi
 
+if $rh -h | grep -wq what
+then
+	test_rawhide_post_hook() { test_rh_sort_post_hook; }
+	mkdir $d/d
+	touch $d/f
+	test_rawhide_grep "$rh -L '%w\n' $d/f" "^empty$"          "" 0 "-L %w f (filetype)"
+	test_rawhide_grep "$rh -L '%w\n' $d/d" "^directory$"      "" 0 "-L %w d (filetype)"
+	test_rawhide_grep "$rh -L '%W\n' $d/f" "^inode/x-empty"   "" 0 "-L %W f (mimetype)"
+	test_rawhide_grep "$rh -L '%W\n' $d/d" "^inode/directory" "" 0 "-L %W d (mimetype)"
+	rm $d/f
+	rmdir $d/d
+	test_rawhide_post_hook() { true; }
+fi
+
 finish
 
 exit $errors
