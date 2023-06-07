@@ -139,34 +139,34 @@ CC = cc
 #CC = gcc
 #CC = other
 CPPFLAGS = $(RAWHIDE_DEFINES) $(PCRE2_DEFINES) $(ACL_DEFINES) $(EA_DEFINES) $(ATTR_DEFINES) $(FLAG_DEFINES) $(MAGIC_DEFINES) $(DEBUG_DEFINES) $(HAVE_SYS_SYSMACROS) $(HAVE_SYS_MKDEV)
-CFLAGS = -O3 -g -Wall -pedantic $(CPPFLAGS) $(PCRE2_CFLAGS) $(ACL_CFLAGS) $(EA_CFLAGS) $(ATTR_CFLAGS) $(FLAG_CFLAGS) $(MAGIC_CFLAGS) $(GCOV_CFLAGS) $(UBSAN_CFLAGS)
-LDFLAGS = $(PCRE2_LDFLAGS) $(ACL_LDFLAGS) $(EA_LDLAGS) $(ATTR_LDFLAGS) $(FLAG_LDFLAGS) $(MAGIC_LDFLAGS) $(UBSAN_LDFLAGS)
+ALL_CFLAGS = $(CFLAGS) -O3 -g -Wall -pedantic $(CPPFLAGS) $(PCRE2_CFLAGS) $(ACL_CFLAGS) $(EA_CFLAGS) $(ATTR_CFLAGS) $(FLAG_CFLAGS) $(MAGIC_CFLAGS) $(GCOV_CFLAGS) $(UBSAN_CFLAGS)
+ALL_LDFLAGS = $(LDFLAGS) $(PCRE2_LDFLAGS) $(ACL_LDFLAGS) $(EA_LDLAGS) $(ATTR_LDFLAGS) $(FLAG_LDFLAGS) $(MAGIC_LDFLAGS) $(UBSAN_LDFLAGS)
 
 OBJS = rhcmds.o rh.o rhparse.o rhdir.o rhdata.o rhstr.o rherr.o
 
 $(RAWHIDE_PROG_NAME): Makefile $(OBJS)
-	$(CC) $(CFLAGS) -o $(RAWHIDE_PROG_NAME) $(OBJS) $(LDFLAGS)
+	$(CC) $(ALL_CFLAGS) -o $(RAWHIDE_PROG_NAME) $(OBJS) $(ALL_LDFLAGS)
 
 rh.o: Makefile rh.c rh.h rhparse.h rhdata.h rhdir.h rhstr.h rherr.h
-	$(CC) $(CFLAGS) -c rh.c
+	$(CC) $(ALL_CFLAGS) -c rh.c
 
 rhcmds.o: Makefile rhcmds.c rh.h rhdir.h rherr.h rhstr.h
-	$(CC) $(CFLAGS) -c rhcmds.c
+	$(CC) $(ALL_CFLAGS) -c rhcmds.c
 
 rhdata.o: Makefile rhdata.c rh.h rhdata.h rhcmds.h rherr.h
-	$(CC) $(CFLAGS) -c rhdata.c
+	$(CC) $(ALL_CFLAGS) -c rhdata.c
 
 rhdir.o: Makefile rhdir.c rh.h rhdata.h rhcmds.h rhdir.h rhstr.h rherr.h
-	$(CC) $(CFLAGS) -c rhdir.c
+	$(CC) $(ALL_CFLAGS) -c rhdir.c
 
 rherr.o: Makefile rherr.c rh.h
-	$(CC) $(CFLAGS) -c rherr.c
+	$(CC) $(ALL_CFLAGS) -c rherr.c
 
 rhparse.o: Makefile rhparse.c rh.h rhdata.h rhcmds.h rhstr.h
-	$(CC) $(CFLAGS) -c rhparse.c
+	$(CC) $(ALL_CFLAGS) -c rhparse.c
 
 rhstr.o: Makefile rhstr.c rh.h rhstr.h
-	$(CC) $(CFLAGS) -c rhstr.c
+	$(CC) $(ALL_CFLAGS) -c rhstr.c
 
 clean:
 	rm -f $(RAWHIDE_PROG_NAME) $(OBJS) tags $(RAWHIDE_APP_MANFILE).html $(RAWHIDE_FMT_MANFILE).html README.html
