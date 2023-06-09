@@ -4,7 +4,7 @@
 * https://github.com/raforg/rawhide
 * https://codeberg.org/raforg/rawhide
 *
-# Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+# Copyright (C) 1990 Ken Stauffer, 2022-2023 raf <raf@raf.org>
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program; if not, see <https://www.gnu.org/licenses/>.
 *
-* 20221011 raf <raf@raf.org>
+* 20230609 raf <raf@raf.org>
 */
 
 #define _GNU_SOURCE /* For FNM_EXTMATCH and FNM_CASEFOLD in <fnmatch.h> */
@@ -207,7 +207,7 @@ static void help_message(void)
 	printf("GIT: https://github.org/raforg/rawhide\n");
 	printf("GIT: https://codeberg.org/raforg/rawhide\n");
 	printf("\n");
-	printf("Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>\n");
+	printf("Copyright (C) 1990 Ken Stauffer, 2022-2023 raf <raf@raf.org>\n");
 	printf("\n");
 	printf("This is free software released under the terms of the GPLv3+:\n");
 	printf("\n");

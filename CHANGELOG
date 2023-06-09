@@ -1,3 +1,14 @@
+3.2 (20230609)
+
+    - Add support for attr (flags) on FreeBSD, OpenBSD, NetBSD, and macOS
+    - Add ./configure --default (to avoid needing the details in Makefile)
+    - Change --help pattern modifiers layout to improve readability
+    - Remove explicit PCRE2 JIT compilation (had introduced uninitialized reads)
+    - Add file type pattern modifiers: .what .iwhat .rewhat .reiwhat
+    - Add MIME type pattern modifiers: .mime .imime .remime .reimime
+    - Add -L %w (file type description) %W (MIME type)
+    - Add to -L %j (JSON) output fields: filetype mimetype
+
 3.1 (20221011)
 
     - Add built-in symbols for Linux ext2-style file attributes: attr proj gen

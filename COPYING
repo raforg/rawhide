@@ -5,7 +5,7 @@ https://raf.org/rawhide
 https://github.com/raforg/rawhide
 https://codeberg.org/raforg/rawhide
 
-Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+Copyright (C) 1990 Ken Stauffer, 2022-2023 raf <raf@raf.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -53,6 +53,6 @@ All rights reserved.
     URL: https://raf.org/rawhide
     GIT: https://github.com/raforg/rawhide
     GIT: https://codeberg.org/raforg/rawhide
-    Date: 20221011
-    Authors: 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+    Date: 20230609
+    Authors: 1990 Ken Stauffer, 2022-2023 raf <raf@raf.org>
 

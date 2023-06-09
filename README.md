@@ -156,6 +156,7 @@ a high-level interface to the built-in symbols mentioned above, and makes
        .sh
        Case-insensitive glob matching is available here (i)
        Perl-compatible regular expressions are available here (re)
+       File types and MIME types are available here (what, mime)
        Access control lists are available here (acl)
        Extended attributes are available here (ea)
 
@@ -463,8 +464,8 @@ Find files on *Solaris* with setuid executable extended attributes (silly):
 
 *Rawhide*'s source distribution can be downloaded from these locations:
 
-- <https://raf.org/rawhide/download/rawhide-3.1.tar.gz> (or [archive.org](https://web.archive.org/web/20220000000000*/https://raf.org/rawhide/download/rawhide-3.1.tar.gz))
-- <https://github.com/raforg/rawhide/releases/download/v3.1/rawhide-3.1.tar.gz>
+- <https://raf.org/rawhide/download/rawhide-3.2.tar.gz> (or [archive.org](https://web.archive.org/web/20230000000000*/https://raf.org/rawhide/download/rawhide-3.2.tar.gz))
+- <https://github.com/raforg/rawhide/releases/download/v3.2/rawhide-3.2.tar.gz>
 
 This is free software released under the terms of the GNU General Public
 Licence version 3 or later (*GPLv3+*).
@@ -473,8 +474,8 @@ Licence version 3 or later (*GPLv3+*).
 
 To install *rawhide*:
 
-        tar xzf rawhide-3.1.tar.gz
-        cd rawhide-3.1
+        tar xzf rawhide-3.2.tar.gz
+        cd rawhide-3.2
         ./configure
         make
         make test # optional (lots of output, or set quiet=1)
@@ -549,6 +550,6 @@ character encodings are not supported.
     URL: https://raf.org/rawhide
     GIT: https://github.com/raforg/rawhide
     GIT: https://codeberg.org/raforg/rawhide
-    Date: 20221011
-    Authors: 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+    Date: 20230609
+    Authors: 1990 Ken Stauffer, 2022-2023 raf <raf@raf.org>
 

@@ -4,7 +4,7 @@
 * https://github.com/raforg/rawhide
 * https://codeberg.org/raforg/rawhide
 *
-* Copyright (C) 1990 Ken Stauffer, 2022 raf <raf@raf.org>
+* Copyright (C) 1990 Ken Stauffer, 2022-2023 raf <raf@raf.org>
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 * You should have received a copy of the GNU General Public License
 * along with this program; if not, see <https://www.gnu.org/licenses/>.
 *
-* 20221011 raf <raf@raf.org>
+* 20230609 raf <raf@raf.org>
 */
 
 #define _FILE_OFFSET_BITS 64 /* For 64-bit off_t on 32-bit systems (Not AIX) */
