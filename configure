@@ -142,7 +142,6 @@ case "$1" in
 			--disable-pcre2 --disable-acl --disable-ea --disable-attr --disable-magic \
 			--disable-ndebug --disable-gcov --disable-cc-other --disable-mangz \
 			--disable-major --static=large
-		break
 		;;
 esac
 
@@ -996,7 +995,7 @@ do
 
 		--prefix=*)
 			echo "Configuring $opt"
-			prefix="${1#--prefix=}"
+			prefix="${opt#--prefix=}"
 			[ "$prefix" = "default" ] && prefix=/usr/local
 			editconf Makefile 's,^\(PREFIX = \).*$,\1'"$prefix"','
 			;;
