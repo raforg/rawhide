@@ -38,6 +38,7 @@ do
 			echo "  --etcdir=/path     - Override platform-specific config directory"
 			echo "  --mandir=/path     - Override platform-specific manpage directory"
 			echo "  --macports         - Override default macOS config for macports"
+			echo "  --macports-prefix=/path - Same as --macports with a non-default prefix"
 			echo "  --enable-pcre2     - Enable PCRE2 library (default when present)"
 			echo "  --disable-pcre2    - Disable PCRE2 library"
 			echo "  --enable-acl       - Enable ACL support (default when possible)"
@@ -78,6 +79,7 @@ do
 			echo "To override a platform-specific manpage directory, use --mandir (e.g. /opt/man)."
 			echo ""
 			echo "To compile for macports, use --macports (uses /opt/local for everything)."
+			echo "If you have a non-default macports prefix, use --macports-prefix instead"
 			echo ""
 			echo "It is highly recommended to have libpcre2-8 installed before running configure."
 			echo "It is optional, and rh is still much fun without it, but pcre greatly enhances"
@@ -1006,10 +1008,16 @@ do
 			editconf Makefile 's,^\(MAN_INSDIR = \).*$,\1'"$mandir"''
 			;;
 
-		--macports) # prefix=/opt/local etcdir=/opt/local/etc mandir=$prefix/share/man manzip=1
+		--macports|--macports-prefix=*) # default prefix=/opt/local etcdir=$prefix/etc mandir=$prefix/share/man manzip=1
 			echo "Configuring $opt"
+			if [ "x$opt" = x--macports ]
+			then
+				prefix="/opt/local"
+			else
+				prefix="${opt#--macports-prefix=}"
+			fi
 			editconf Makefile \
-				-e 's,^\(PREFIX = \).*$,\1/opt/local,' \
+				-e 's,^\(PREFIX = \).*$,\1'"$prefix"',' \
 				-e 's,^ETCDIR,#ETCDIR,' -e 's,^#\(ETCDIR = $(PREFIX)/etc\),\1,' \
 				-e 's,^\(MAN_INSDIR = \).*$,\1$(PREFIX)/share/man,' \
 				-e 's,^\(MAN_GZIP =\) 0,\1 1,'
