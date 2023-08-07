@@ -39,8 +39,8 @@ do
 			echo "  --mandir=/path     - Override platform-specific manpage directory"
 			echo "  --macports         - Override default macOS config for macports"
 			echo "  --macports-prefix=/path - Same as --macports with a non-default prefix"
-			echo "  --enable-pcre2     - Enable PCRE2 library (default when present)"
-			echo "  --disable-pcre2    - Disable PCRE2 library"
+			echo "  --enable-pcre2     - Enable PCRE2 support (default when present)"
+			echo "  --disable-pcre2    - Disable PCRE2 support"
 			echo "  --enable-acl       - Enable ACL support (default when possible)"
 			echo "  --disable-acl      - Disable ACL support"
 			echo "  --enable-ea        - Enable EA support (default when possible)"
@@ -55,11 +55,11 @@ do
 			echo "  --disable-ndebug   - Disable NDEBUG (keep debugging code - default)"
 			echo "  --enable-mangz     - Enable gzipped manpages (default on some systems)"
 			echo "  --disable-mangz    - Disable gzipped manpages (default)"
-			echo "  --static=SIZE      - Adjust static memory: large (default), small, tiny"
 			echo "  --disable-major    - Forget location of major/minor (for distribution)"
 			echo "  --enable-gcov      - Enable gcov test coverage measurement (do not install)"
 			echo "  --disable-gcov     - Disable gcov test coverage measurement (default)"
 			echo "  --disable-cc-other - Forget non-default compiler (for distribution)"
+			echo "  --static=SIZE      - Adjust static memory: large (default), small, tiny"
 			echo "  --default          - Restore Makefile to its defaults (for distribution)"
 			echo
 			echo "Rawhide should compile on any POSIX system as is, but different systems"
@@ -79,7 +79,7 @@ do
 			echo "To override a platform-specific manpage directory, use --mandir (e.g. /opt/man)."
 			echo ""
 			echo "To compile for macports, use --macports (uses /opt/local for everything)."
-			echo "If you have a non-default macports prefix, use --macports-prefix instead"
+			echo "If you have a non-default macports prefix, use --macports-prefix instead."
 			echo ""
 			echo "It is highly recommended to have libpcre2-8 installed before running configure."
 			echo "It is optional, and rh is still much fun without it, but pcre greatly enhances"
@@ -141,9 +141,10 @@ done
 case "$1" in
 	--default|default)
 		set -- \
+			--destdir= --prefix=/usr/local --etcdir=/etc --mandir='$(PREFIX)/share/man' \
 			--disable-pcre2 --disable-acl --disable-ea --disable-attr --disable-magic \
-			--disable-ndebug --disable-gcov --disable-cc-other --disable-mangz \
-			--disable-major --static=large
+			--disable-ndebug --disable-mangz --disable-major --disable-gcov \
+			--disable-cc-other --static=large
 		;;
 esac
 
@@ -992,7 +993,7 @@ do
 			echo "Configuring $opt"
 			destdir="${opt#--destdir=}"
 			[ -n "$destdir" ] && destdir=" $destdir"
-			editconf Makefile 's,^\(DESTDIR =\).*$,\1'"$destdir"''
+			editconf Makefile 's,^\(DESTDIR =\).*$,\1'"$destdir"','
 			;;
 
 		--prefix=*)
@@ -1002,10 +1003,22 @@ do
 			editconf Makefile 's,^\(PREFIX = \).*$,\1'"$prefix"','
 			;;
 
+		--etcdir=*)
+			echo "Configuring $opt"
+			etcdir="${opt#--etcdir=}"
+			editconf Makefile -e 's,^ETCDIR,#ETCDIR,'
+			if [ "x$etcdir" = 'x$(PREFIX)/etc' ]
+			then
+				editconf Makefile 's,^#\(ETCDIR = \)\$.*$,\1'"$etcdir"','
+			else
+				editconf Makefile 's,^#\(ETCDIR = \)/.*$,\1'"$etcdir"','
+			fi
+			;;
+
 		--mandir=*)
 			echo "Configuring $opt"
 			mandir="${opt#--mandir=}"
-			editconf Makefile 's,^\(MAN_INSDIR = \).*$,\1'"$mandir"''
+			editconf Makefile 's,^\(MAN_INSDIR = \).*$,\1'"$mandir"','
 			;;
 
 		--macports|--macports-prefix=*) # default prefix=/opt/local etcdir=$prefix/etc mandir=$prefix/share/man manzip=1
@@ -1086,13 +1099,6 @@ do
 				-e 's,^\(MAGIC_LDFLAGS =\).*$,#\1,'
 			;;
 
-		--disable-major)
-			echo "Configuring $opt"
-			editconf Makefile \
-				-e 's,^\(HAVE_SYS_MKDEV =.*\)$,#\1,' \
-				-e 's,^\(HAVE_SYS_SYSMACROS =.*\)$,#\1,'
-			;;
-
 		--enable-ndebug)
 			echo "Configuring $opt"
 			editconf Makefile \
@@ -1115,6 +1121,33 @@ do
 			echo "Configuring $opt"
 			editconf Makefile \
 				-e 's,^\(MAN_GZIP =\).*$,\1 0,'
+			;;
+
+		--disable-major)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^\(HAVE_SYS_MKDEV =.*\)$,#\1,' \
+				-e 's,^\(HAVE_SYS_SYSMACROS =.*\)$,#\1,'
+			;;
+
+		--enable-gcov)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^#\(GCOV_CFLAGS =.*\)$,\1,'
+			;;
+
+		--disable-gcov)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^\(GCOV_CFLAGS =.*\)$,#\1,'
+			;;
+
+		--disable-cc-other)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^\(CC =.*\)$,#\1,' \
+				-e 's,^#\(CC =\) .* # other$,#\1 other,' \
+				-e 's,^#\(CC = cc\)$,\1,'
 			;;
 
 		--static=large)
@@ -1147,28 +1180,8 @@ do
 				-e 's,^.*-DMAX_IDENT_LENGTH.*$,	-DMAX_IDENT_LENGTH=200,'
 			;;
 
-		--enable-gcov)
-			echo "Configuring $opt"
-			editconf Makefile \
-				-e 's,^#\(GCOV_CFLAGS =.*\)$,\1,'
-			;;
-
-		--disable-gcov)
-			echo "Configuring $opt"
-			editconf Makefile \
-				-e 's,^\(GCOV_CFLAGS =.*\)$,#\1,'
-			;;
-
-		--disable-cc-other)
-			echo "Configuring $opt"
-			editconf Makefile \
-				-e 's,^\(CC =.*\)$,#\1,' \
-				-e 's,^#\(CC =\) .* # other$,#\1 other,' \
-				-e 's,^#\(CC = cc\)$,\1,'
-			;;
-
 		*)
-			echo "$0: Unknown argument: $@" >&2
+			echo "$0: Unknown argument: $opt" >&2
 			exit 1
 			;;
 
