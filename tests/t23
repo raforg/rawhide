@@ -626,7 +626,7 @@ case "$LANG" in
 	*.UTF-8)
 		if [ "`uname`" = Linux -a "`whoami`" = root -a -x "`which adduser 2>/dev/null`" -a -x "`which addgroup 2>/dev/null`" -a -x "`which deluser 2>/dev/null`" -a -x "`which delgroup 2>/dev/null`" -a -x "`which perl 2>/dev/null`" ]
 		then
-			if adduser -h 2>/dev/null | grep -q force-badname && addgroup -h 2>/dev/null | grep -q force-badname
+			if adduser -h 2>/dev/null | grep -q 'bad.*name' && addgroup -h 2>/dev/null | grep -q 'bad.*name'
 			then
 				if [ "x$RAWHIDE_TEST_MULTIBYTE_USER_GROUP" = x ]
 				then
