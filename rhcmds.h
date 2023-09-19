@@ -124,6 +124,14 @@ void c_remime(llong i);
 void c_reimime(llong i);
 #endif
 #endif
+void c_body(llong i);
+#ifdef FNM_CASEFOLD
+void c_ibody(llong i);
+#endif
+#ifdef HAVE_PCRE2
+void c_rebody(llong i);
+void c_reibody(llong i);
+#endif
 #ifdef HAVE_ACL
 void c_acl(llong i);
 #ifdef FNM_CASEFOLD
@@ -199,6 +207,7 @@ char *read_symlink(void);
 void prepare_target(void);
 const char *get_what(void);
 const char *get_mime(void);
+char *get_body(void);
 char *get_acl(int);
 char *get_ea(int);
 void set_dirsize(void);

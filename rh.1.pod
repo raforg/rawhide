@@ -113,6 +113,7 @@ I<rh> - (I<rawhide>) find files using pretty I<C> expressions
    .link         .ilink        .relink       .reilink
    .what         .iwhat        .rewhat       .reiwhat
    .mime         .imime        .remime       .reimime
+   .body         .ibody        .rebody       .reibody
    .acl          .iacl         .reacl        .reiacl
    .ea           .iea          .reea         .reiea
    .sh
@@ -1809,6 +1810,11 @@ Find text files with ISO-8859 encoding:
 
     $ rh 'f && "*ISO-8859 text".what'
     $ rh 'f && "text/*; charset=iso-8859*".mime'
+
+Find files that contain C<TODO>:
+
+    $ rh 'f && "*TODO*".body'
+    $ rh 'f && "TODO".rebody'
 
 Find files using a I<Perl>-compatible regular expression (regex):
 

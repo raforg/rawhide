@@ -465,7 +465,7 @@ void pcre2_cache_free(void)
 
 /* Perl-compatible regex matching (pcre2) */
 
-static int rematch(const char *pattern, const char *subject, uint32_t options)
+static int rematch(const char *pattern, const char *subject, size_t subject_length, uint32_t options)
 {
 	pcre2_code *re;
 	pcre2_match_data *match_data;
@@ -486,19 +486,22 @@ static int rematch(const char *pattern, const char *subject, uint32_t options)
 	if (!(match_data = pcre2_match_data_create_from_pattern(re, NULL)))
 		fatalsys("out of memory");
 
-	rc = pcre2_match(re, (PCRE2_SPTR)subject, (PCRE2_SIZE)strlen(subject), 0, 0, match_data, NULL);
+	if (subject_length == -1)
+		subject_length = strlen(subject);
+
+	rc = pcre2_match(re, (PCRE2_SPTR)subject, (PCRE2_SIZE)subject_length, 0, 0, match_data, NULL);
 
 	pcre2_match_data_free(match_data);
 
 	return rc >= 0;
 }
 
-void c_re(llong i)      { Stack[SP++] = rematch(&Strbuf[i], c_basename(), 0); }
-void c_repath(llong i)  { Stack[SP++] = rematch(&Strbuf[i], attr.fpath, 0); }
-void c_relink(llong i)  { Stack[SP++] = (islink(attr.statbuf)) ? rematch(&Strbuf[i], read_symlink(), 0) : 0; }
-void c_rei(llong i)     { Stack[SP++] = rematch(&Strbuf[i], c_basename(), PCRE2_CASELESS); }
-void c_reipath(llong i) { Stack[SP++] = rematch(&Strbuf[i], attr.fpath, PCRE2_CASELESS); }
-void c_reilink(llong i) { Stack[SP++] = (islink(attr.statbuf)) ? rematch(&Strbuf[i], read_symlink(), PCRE2_CASELESS) : 0; }
+void c_re(llong i)      { Stack[SP++] = rematch(&Strbuf[i], c_basename(), -1, 0); }
+void c_repath(llong i)  { Stack[SP++] = rematch(&Strbuf[i], attr.fpath, -1, 0); }
+void c_relink(llong i)  { Stack[SP++] = (islink(attr.statbuf)) ? rematch(&Strbuf[i], read_symlink(), -1, 0) : 0; }
+void c_rei(llong i)     { Stack[SP++] = rematch(&Strbuf[i], c_basename(), -1, PCRE2_CASELESS); }
+void c_reipath(llong i) { Stack[SP++] = rematch(&Strbuf[i], attr.fpath, -1, PCRE2_CASELESS); }
+void c_reilink(llong i) { Stack[SP++] = (islink(attr.statbuf)) ? rematch(&Strbuf[i], read_symlink(), -1, PCRE2_CASELESS) : 0; }
 
 #endif /* HAVE_PCRE2 */
 
@@ -551,7 +554,7 @@ void c_iwhat(llong i) { what_glob(i, FNM_CASEFOLD); }
 
 static void what_re(llong i, int options)
 {
-	Stack[SP++] = get_what() ? rematch(&Strbuf[i], get_what(), options) : 0;
+	Stack[SP++] = get_what() ? rematch(&Strbuf[i], get_what(), -1, options) : 0;
 }
 
 void c_rewhat(llong i)  { what_re(i, 0); }
@@ -609,13 +612,88 @@ void c_imime(llong i) { mime_glob(i, FNM_CASEFOLD); }
 
 static void mime_re(llong i, int options)
 {
-	Stack[SP++] = get_mime() ? rematch(&Strbuf[i], get_mime(), options) : 0;
+	Stack[SP++] = get_mime() ? rematch(&Strbuf[i], get_mime(), -1, options) : 0;
 }
 
 void c_remime(llong i)  { mime_re(i, 0); }
 void c_reimime(llong i) { mime_re(i, PCRE2_CASELESS); }
 
 #endif
+#endif
+
+/* Load the file's content into attr.body (deallocated at exit) */
+
+char *get_body(void)
+{
+	if (!isreg(attr.statbuf))
+		return NULL;
+
+	if (!attr.body_done)
+	{
+		attr.body_length = 0;
+
+		int fd;
+
+		if ((fd = open(attr.fpath, O_RDONLY)) == -1)
+		{
+			errorsys("%s", ok(attr.fpath));
+			attr.exit_status = EXIT_FAILURE;
+		}
+		else
+		{
+			/* Increase the buffer size when necessary (include space for a nul byte) */
+
+			if (attr.body_size < attr.statbuf->st_size + 1)
+			{
+				if (!(attr.body = realloc(attr.body, attr.statbuf->st_size + 1)))
+					fatalsys("out of memory");
+
+				attr.body_size = attr.statbuf->st_size + 1;
+			}
+
+			/* Read the file */
+
+			ssize_t bytes = 0;
+
+			while (attr.body_length < attr.statbuf->st_size && (bytes = read(fd, attr.body + attr.body_length, attr.statbuf->st_size - attr.body_length)) > 0)
+				attr.body_length += bytes;
+
+			if (bytes == -1)
+				errorsys("read %s", ok(attr.fpath));
+
+			close(fd);
+
+			/* Nul-terminate the buffer for fnmatch() */
+
+			attr.body[attr.body_length] = '\0';
+		}
+
+		attr.body_done = 1;
+	}
+
+	return attr.body;
+}
+
+static void body_glob(llong i, int options)
+{
+	Stack[SP++] = get_body() ? fnmatch(&Strbuf[i], get_body(), FNM_EXTMATCH | options) == 0 : 0;
+}
+
+void c_body(llong i)  { body_glob(i, 0); }
+#ifdef FNM_CASEFOLD
+void c_ibody(llong i) { body_glob(i, FNM_CASEFOLD); }
+#endif
+
+#ifdef HAVE_PCRE2
+
+static void body_re(llong i, int options)
+{
+	Stack[SP++] = get_body() ? rematch(&Strbuf[i], get_body(), attr.body_length, options) : 0;
+}
+
+void c_rebody(llong i)  { body_re(i, 0); }
+void c_reibody(llong i) { body_re(i, PCRE2_CASELESS); }
+
 #endif
 
 /* Load ACLs into attr.facl (and attr.facl_verbose on FreeBSD/Solaris) which must be deallocated */
@@ -730,8 +808,8 @@ void c_iacl(llong i) { acl_glob(i, FNM_CASEFOLD); }
 static void acl_re(llong i, int options)
 {
 	Stack[SP++] = get_acl(1)
-		? rematch(&Strbuf[i], get_acl(1), options) ||
-			(attr.facl_verbose && rematch(&Strbuf[i], attr.facl_verbose, options))
+		? rematch(&Strbuf[i], get_acl(1), -1, options) ||
+			(attr.facl_verbose && rematch(&Strbuf[i], attr.facl_verbose, -1, options))
 		: 0;
 }
 
@@ -1339,7 +1417,7 @@ void c_iea(llong i) { ea_glob(i, FNM_CASEFOLD); }
 
 static void ea_re(llong i, int options)
 {
-	Stack[SP++] = get_ea(1) && attr.fea_ok ? rematch(&Strbuf[i], get_ea(1), options) : 0;
+	Stack[SP++] = get_ea(1) && attr.fea_ok ? rematch(&Strbuf[i], get_ea(1), -1, options) : 0;
 }
 
 void c_reea(llong i)  { ea_re(i, 0); }
@@ -1613,6 +1691,14 @@ char *instruction_name(void (*func)(llong))
 		(func == c_remime) ? "remime" :
 		(func == c_reimime) ? "reimime" :
 		#endif
+		#endif
+		(func == c_body) ? "body" :
+		#ifdef FNM_CASEFOLD
+		(func == c_ibody) ? "ibody" :
+		#endif
+		#ifdef HAVE_PCRE2
+		(func == c_rebody) ? "rebody" :
+		(func == c_reibody) ? "reibody" :
 		#endif
 		#ifdef HAVE_ACL
 		(func == c_acl) ? "acl" :

@@ -275,6 +275,15 @@ static symbol_t init_syms[] =
 #endif
 #endif
 
+	{ ".body",     PATMOD, 0, c_body,    NULL },
+#ifdef FNM_CASEFOLD
+	{ ".ibody",    PATMOD, 0, c_ibody,   NULL },
+#endif
+#ifdef HAVE_PCRE2
+	{ ".rebody",   PATMOD, 0, c_rebody,  NULL },
+	{ ".reibody",  PATMOD, 0, c_reibody, NULL },
+#endif
+
 #ifdef HAVE_ACL
 	{ ".acl",      PATMOD, 0, c_acl,     NULL },
 #ifdef FNM_CASEFOLD

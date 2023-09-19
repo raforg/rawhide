@@ -173,6 +173,7 @@ static void caches_init(void)
 	attr.linkdirsize_done = 0;
 	attr.what_done = 0;
 	attr.mime_done = 0;
+	attr.body_done = 0;
 	attr.facl_done = 0;
 	attr.facl = NULL;
 	attr.facl_verbose = NULL;
@@ -716,6 +717,13 @@ int rawhide_search(char *fpath)
 	{
 		free(attr.ttybuf);
 		attr.ttybuf = NULL;
+	}
+
+	if (attr.body)
+	{
+		free(attr.body);
+		attr.body = NULL;
+		attr.body_size = 0;
 	}
 
 	wcoffset(NULL);

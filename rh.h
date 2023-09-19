@@ -178,6 +178,11 @@ struct runtime_t
 	const char *what;       /* The file type (libmagic-managed data) */
 	const char *mime;       /* The mime type (libmagic-managed data) */
 
+	int body_done;          /* Have we read the content yet? */
+	char *body;             /* The content of the file */
+	size_t body_size;       /* The size of the file content buffer (file size + 1 nul byte) */
+	size_t body_length;     /* The length of the file content */
+
 	int attr_done;          /* Have we loaded the Linux ext2-style attributes/BSD flags yet? */
 	unsigned long attr;     /* Linux ext2-style attributes/BSD flags */
 	int proj_done;          /* Have we loaded the Linux ext2-style project yet? */

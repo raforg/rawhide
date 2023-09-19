@@ -94,6 +94,21 @@ then
 	test_rawhide "$rh -Ye '\"*\".m'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \"*\".m (abbrev)"
 fi
 
+# Test body
+
+printf '\nXXX\n\n' > $d/body
+test_rawhide "$rh -e '\"*xxx*\".body' $d" ""          "" 0 "\"*xxx*\".body"
+test_rawhide "$rh -e '\"*XXX*\".body' $d" "$d/body\n" "" 0 "\"*XXX*\".body"
+test_rawhide "$rh -e '\"*XXX*\".bod'  $d" "$d/body\n" "" 0 "\"*XXX*\".bod"
+test_rawhide "$rh -e '\"*XXX*\".bo'   $d" "$d/body\n" "" 0 "\"*XXX*\".bo"
+test_rawhide "$rh -e '\"*XXX*\".b'    $d" "$d/body\n" "" 0 "\"*XXX*\".b"
+rm $d/body
+
+printf '\nXXX\n\n' > $d/body2
+chmod 0 $d/body2
+[ "`whoami`" != root ] && test_rawhide "$rh -e '\"*XXX*\".body' $d" "" "./rh: $d/body2: Permission denied\n" 1 "\"*XXX*\".body with unreadable file"
+rm -f $d/body2
+
 # Test i ipath ilink if available
 
 if $rh -h | grep -q '\.ipath'
@@ -152,6 +167,19 @@ then
 	test_rawhide "$rh -Ye '\"*\".imim'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \"*\".imim (abbrev)"
 	test_rawhide "$rh -Ye '\"*\".imi'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \"*\".imi (abbrev)"
 	test_rawhide "$rh -Ye '\"*\".im'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \"*\".im (abbrev)"
+fi
+
+# Test ibody if available
+
+if $rh -h | grep -q '\.ibody'
+then
+	printf '\nXXX\n\n' > $d/body
+	test_rawhide "$rh -e '\"*xxx*\".ibody'    $d" "$d/body\n" "" 0 "\"*xxx*\".ibody"
+	test_rawhide "$rh -e '\"*XXX*\".ibody'    $d" "$d/body\n" "" 0 "\"*XXX*\".ibody"
+	test_rawhide "$rh -e '\"*XXX*\".ibod'     $d" "$d/body\n" "" 0 "\"*XXX*\".ibod"
+	test_rawhide "$rh -e '\"*XXX*\".ibo'      $d" "$d/body\n" "" 0 "\"*XXX*\".ibo"
+	test_rawhide "$rh -e '\"*XXX*\".ib'       $d" "$d/body\n" "" 0 "\"*XXX*\".ib"
+	rm $d/body
 fi
 
 # Test re repath relink rei reipath reilink if available
@@ -274,6 +302,32 @@ then
 	test_rawhide "$rh -Ye '\".*\".reimim'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \".*\".reimim (abbrev)"
 	test_rawhide "$rh -Ye '\".*\".reimi'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \".*\".reimi (abbrev)"
 	test_rawhide "$rh -Ye '\".*\".reim'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \".*\".reim (abbrev)"
+fi
+
+# Test rebody if available
+
+if $rh -h | grep -q '\.rebody'
+then
+	printf '\nXXX\n\n' > $d/body
+	test_rawhide "$rh -e '\"xxx\".rebody' $d" ""          "" 0 "\"xxx\".rebody"
+	test_rawhide "$rh -e '\"XXX\".rebody' $d" "$d/body\n" "" 0 "\"XXX\".rebody"
+	test_rawhide "$rh -e '\"XXX\".rebod'  $d" "$d/body\n" "" 0 "\"XXX\".rebod"
+	test_rawhide "$rh -e '\"XXX\".rebo'   $d" "$d/body\n" "" 0 "\"XXX\".rebo"
+	test_rawhide "$rh -e '\"XXX\".reb'    $d" "$d/body\n" "" 0 "\"XXX\".reb"
+	rm $d/body
+fi
+
+# Test rebody if available
+
+if $rh -h | grep -q '\.reibody'
+then
+	printf '\nXXX\n\n' > $d/body
+	test_rawhide "$rh -e '\"xxx\".reibody' $d" "$d/body\n" "" 0 "\"xxx\".reibody"
+	test_rawhide "$rh -e '\"XXX\".reibody' $d" "$d/body\n" "" 0 "\"XXX\".reibody"
+	test_rawhide "$rh -e '\"XXX\".reibod'  $d" "$d/body\n" "" 0 "\"XXX\".reibod"
+	test_rawhide "$rh -e '\"XXX\".reibo'   $d" "$d/body\n" "" 0 "\"XXX\".reibo"
+	test_rawhide "$rh -e '\"XXX\".reib'    $d" "$d/body\n" "" 0 "\"XXX\".reib"
+	rm $d/body
 fi
 
 # Test sh

@@ -151,6 +151,7 @@ a high-level interface to the built-in symbols mentioned above, and makes
        .link         .ilink        .relink       .reilink
        .what         .iwhat        .rewhat       .reiwhat
        .mime         .imime        .remime       .reimime
+       .body         .ibody        .rebody       .reibody
        .acl          .iacl         .reacl        .reiacl
        .ea           .iea          .reea         .reiea
        .sh
@@ -353,6 +354,11 @@ Find text files with ISO-8859 encoding:
 
         $ rh 'f && "*ISO-8859 text".what'
         $ rh 'f && "text/*; charset=iso-8859*".mime'
+
+Find files that contain `TODO`:
+
+        $ rh '"*TODO*".body'
+        $ rh '"TODO".rebody'
 
 Find files using a *Perl*-compatible regular expression (regex):
 
