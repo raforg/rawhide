@@ -655,7 +655,9 @@ char *get_body(void)
 
 			ssize_t bytes = 0;
 
-			while (attr.body_length < attr.statbuf->st_size && (bytes = read(fd, attr.body + attr.body_length, attr.statbuf->st_size - attr.body_length)) > 0)
+			#define READ_MAX 0x7ffff000 /* Limit on Linux, also needed on macOS */
+
+			while (attr.body_length < attr.statbuf->st_size && (bytes = read(fd, attr.body + attr.body_length, (attr.statbuf->st_size - attr.body_length > READ_MAX) ? READ_MAX : (attr.statbuf->st_size - attr.body_length))) > 0)
 				attr.body_length += bytes;
 
 			if (bytes == -1)

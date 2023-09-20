@@ -1255,12 +1255,18 @@ is read in its entirety to determine whether or not the pattern matches. It
 can be worthwhile preceding this with other predicates to reduce the number
 and limit the size of candidate files that this is applied to.
 
+This probably shouldn't be used with very large files. It would require a
+lot of memory or swap, and on 32-bit systems, the possible file size is also
+limited by the available address space. If this is an issue, you can always
+use I<grep(1)> (or similar) via the C<sh> "pattern" modifier instead.
+
 Also note that this only works with regular files that are readable to the
 current user.
 
 Also note that the C<body> and I<ibody> glob pattern modifiers shouldn't be
 used with binary files that might contain null bytes. For binary files, use
-the C<rebody> or C<reibody> regular expression pattern modifiers instead.
+the C<rebody> or C<reibody> regular expression pattern modifiers instead
+(see below).
 
 Note: If the current candidate file is a symlink, its body is unaffected by
 the C<-y> or C<-Y> options. For the purpose of this predicate, the symlink
