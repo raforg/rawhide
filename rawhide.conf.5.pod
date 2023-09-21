@@ -1368,11 +1368,6 @@ treat C<(>I<...>C<)> as C<(?:>I<...>C<)>). There are no uses for captures in
 I<rh(1)>, and this should make matching ever so slightly smaller and faster,
 without the explicit C<?:>. This is like I<Perl>'s C</n> modifier.
 
-=item C<PCRE2_NEVER_BACKSLASH_C>
-
-Prevent the use of the C<\C> escape sequence. This avoids the possibility of
-breaking apart multi-byte I<UTF-8> characters.
-
 =back
 
 Note that the regex pattern and the text being matched are generally assumed

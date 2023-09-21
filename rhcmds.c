@@ -476,7 +476,6 @@ static int rematch(const char *pattern, const char *subject, size_t subject_leng
 	options |= PCRE2_EXTENDED;          /* Ignore whitespace and # comments (except in character classes) (like /x) */
 	options |= PCRE2_EXTENDED_MORE;     /* Ignore space and tab inside character classes as well (like /xx) */
 	options |= PCRE2_NO_AUTO_CAPTURE;   /* Prevent automatic numbered capturing parentheses (like /n) */
-	options |= PCRE2_NEVER_BACKSLASH_C; /* Prevent the use of the \C escape in patterns */
 
 	if (attr.utf)
 		options |= PCRE2_UTF | PCRE2_MATCH_INVALID_UTF; /* Assume UTF-8 patterns and subject text */
