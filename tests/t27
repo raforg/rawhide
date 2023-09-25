@@ -45,7 +45,7 @@ if [ $ACL = 1 ]
 then
 	case "`uname`" in
 		Linux) # setfacl setfattr
-			if [ -x "`which setfacl 2>/dev/null`" ]
+			if [ -n "`command -v setfacl`" ]
 			then
 				setfacl -m user:root:rwx $d/acl $d/both
 				test_rawhide "$rh    -L '%z\n' $d/none"    "user::rw-,group::r--,other::r--\n"                         "" 0 "-L %z (no acl or ea)"
@@ -133,7 +133,7 @@ then
 			;;
 
 		FreeBSD) # setfacl setextattr
-			if [ -x "`which setfacl 2>/dev/null`" ]
+			if [ -n "`command -v setfacl`" ]
 			then
 				setfacl -a 0 user:root:rwxpaARWcCos::allow $d/acl $d/both
 				test_rawhide "$rh    -L '%z\n' $d/none"    "            owner@:rw-p--aARWcCos:-------:allow,            group@:r-----a-R-c--s:-------:allow,         everyone@:r-----a-R-c--s:-------:allow\n"                                                 "" 0 "-L %z (no acl or ea)"
@@ -190,7 +190,7 @@ then
 			;;
 
 		SunOS) # chmod runat
-			if [ -x "`which chmod 2>/dev/null`" ]
+			if [ -n "`command -v chmod`" ]
 			then
 				chmod A+user:root:rwxpaARWcCos::allow $d/acl $d/both
 				test_rawhide "$rh    -L '%z\n' $d/none"    "owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n"                                        "" 0 "-L %z (no acl or ea)"
@@ -254,7 +254,7 @@ then
 			;;
 
 		CYGWIN*) # setfacl setfattr
-			if [ -x "`which setfacl 2>/dev/null`" ]
+			if [ -n "`command -v setfacl`" ]
 			then
 				root=Administrator
 				ROOT=ADMINISTRATOR
@@ -309,7 +309,7 @@ if [ $EA = 1 ]
 then
 	case "`uname`" in
 		Linux) # setfacl setfattr
-			if [ -x "`which setfattr 2>/dev/null`" ]
+			if [ -n "`command -v setfattr`" ]
 			then
 				setfattr -n user.rawhide-attrtest -v "abc\012def\033ghi\177jkl\200" $d/ea $d/both
 				# getfattr $d/ea
@@ -421,7 +421,7 @@ then
 			;;
 
 		FreeBSD) # setfacl setextattr (symlinks can have their own ea here)
-			if [ -x "`which setextattr 2>/dev/null`" ]
+			if [ -n "`command -v setextattr`" ]
 			then
 				setextattr -h user rawhide-attrtest "`printf \"abc\012def\033ghi\177jkl\200\"`" $d/ea $d/both
 				setextattr -h user rawhide-attrtest "`printf \"abc\012def\033ghi\177jkl\200m\"`" $d/symlink
@@ -478,7 +478,7 @@ then
 			;;
 
 		SunOS) # chmod runat
-			if [ -x "`which runat 2>/dev/null`" ]
+			if [ -n "`command -v runat`" ]
 			then
 				printf "abc\012def\033ghi\177jkl\200" > rawhide-attrtest
 				runat $d/ea cp $saved_pwd/rawhide-attrtest .
@@ -587,7 +587,7 @@ then
 			;;
 
 		CYGWIN*) # setfacl setfattr
-			if [ -x "`which setfattr 2>/dev/null`" ]
+			if [ -n "`command -v setfattr`" ]
 			then
 				setfattr -n user.rawhide-attrtest -v "abc\012def\033ghi\177jkl\200" $d/ea $d/both
 				# getfattr $d/ea

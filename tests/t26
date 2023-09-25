@@ -614,7 +614,7 @@ if [ "`whoami`" = root ]
 then
 	if $rh -h | grep -wq proj # Linux
 	then
-		if [ -n "`which chattr`" ]
+		if [ -n "`command -v chattr`" ]
 		then
 			test_rawhide_post_hook() { test_rh_sort_post_hook; }
 			mkdir $d/d
@@ -670,7 +670,7 @@ then
 		fi
 	elif $rh -h | grep -wq attr # BSD
 	then
-		if [ -n "`which chflags`" ]
+		if [ -n "`command -v chflags`" ]
 		then
 			test_rawhide_post_hook() { test_rh_sort_post_hook; }
 			mkdir $d/d

@@ -129,7 +129,7 @@ test_rawhide "$rh  -FQ $d" "\"$d\"/\n\"$d/exe\"*\n" "" 0 "-FQ with executable"
 
 rm $d/exe
 
-if [ -x "`which mkfifo 2>/dev/null`" ] && mkfifo $d/fifo >/dev/null 2>/dev/null
+if [ -n "`command -v mkfifo`" ] && mkfifo $d/fifo >/dev/null 2>/dev/null
 then
 	test_rawhide "$rh  -p $d" "$d/\n$d/fifo\n"           "" 0 "-p with fifo"
 	test_rawhide "$rh  -t $d" "$d/\n$d/fifo|\n"          "" 0 "-t with fifo"
@@ -158,7 +158,7 @@ int main(int ac, char **av)
 }
 END
 
-if [ -x "`which cc 2>/dev/null`" ] && cc -o mksock mksock.c >/dev/null 2>/dev/null
+if [ -n "`command -v cc`" ] && cc -o mksock mksock.c >/dev/null 2>/dev/null
 then
 	# This sometimes fails to execute on Cygwin (Win10)
 	# ./mksock: cannot execute binary file: Exec format error
@@ -624,7 +624,7 @@ fi
 
 case "$LANG" in
 	*.UTF-8)
-		if [ "`uname`" = Linux -a "`whoami`" = root -a -x "`which adduser 2>/dev/null`" -a -x "`which addgroup 2>/dev/null`" -a -x "`which deluser 2>/dev/null`" -a -x "`which delgroup 2>/dev/null`" -a -x "`which perl 2>/dev/null`" ]
+		if [ "`uname`" = Linux -a "`whoami`" = root -a -n "`command -v adduser`" -a -n "`command -v addgroup`" -a -n "`command -v deluser`" -a -n "`command -v delgroup`" -a -n "`command -v perl`" ]
 		then
 			if adduser -h 2>/dev/null | grep -q 'bad.*name' && addgroup -h 2>/dev/null | grep -q 'bad.*name'
 			then

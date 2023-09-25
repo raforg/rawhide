@@ -68,9 +68,9 @@ saved_pwd="`pwd`"
 
 if [ x"$VALGRIND" = x1 ]
 then
-	valgrind="`which valgrind 2>/dev/null`"
+	valgrind="`command -v valgrind`"
 
-	if [ -x "$valgrind" ]
+	if [ -n "$valgrind" ]
 	then
 		valgrind="$valgrind --log-fd=9 --show-error-list=yes --leak-check=full --track-fds=yes --show-leak-kinds=all $VALGRIND_OPTIONS "
 		exec 9>>"$saved_pwd/valgrind.out"

@@ -394,7 +394,7 @@ if [ "`whoami`" = root ]
 then
 	if $rh -h | grep -wq proj # Linux
 	then
-		if [ -n "`which chattr`" ]
+		if [ -n "`command -v chattr`" ]
 		then
 			mkdir $d/d
 			touch $d/f
@@ -415,7 +415,7 @@ then
 		fi
 	elif $rh -h | grep -wq attr # BSDs
 	then
-		if [ -n "`which chflags`" ]
+		if [ -n "`command -v chflags`" ]
 		then
 			mkdir $d/d
 			touch $d/f

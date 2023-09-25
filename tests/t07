@@ -120,7 +120,7 @@ then
 	rm $d.conf
 fi
 
-if [ -x "`which mkfifo 2>/dev/null`" ] && mkfifo $d.fifo >/dev/null 2>/dev/null
+if [ -n "`command -v mkfifo`" ] && mkfifo $d.fifo >/dev/null 2>/dev/null
 then
 	test_rawhide "$rh -f $d.fifo $d" "" "./rh: invalid -f option argument: $d.fifo (not a file or directory)\n" 1 "-f with non-file-or-directory"
 	rm $d.fifo

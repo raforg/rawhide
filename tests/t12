@@ -267,7 +267,7 @@ test_rawhide "$rh -e '[\"str\".exists]'   $d" "" "./rh: command line: -e '[\"str
 f=tests/$t.f
 rm -f $f
 touch $f
-if [ -x "`which perl`" ]
+if [ -n "`command -v perl`" ]
 then
 	perl -e '
 		use warnings;
