@@ -630,7 +630,7 @@ case "$LANG" in
 			then
 				if [ "x$RAWHIDE_TEST_MULTIBYTE_USER_GROUP" = x ]
 				then
-					echo "$t: Set RAWHIDE_TEST_MULTIBYTE_USER_GROUP=1 to allow tests that create/remove new user/group names (not worth it)"
+					echo "$t: Set RAWHIDE_TEST_MULTIBYTE_USER_GROUP=1 to allow tests that create/remove new user/group names"
 				elif [ "x$RAWHIDE_TEST_MULTIBYTE_USER_GROUP" = x1 ]
 				then
 					if grep -q 'notauser-temp1' /etc/passwd
