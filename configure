@@ -794,7 +794,7 @@ case "$*" in
 	*--disable-pcre2*)
 		;;
 	*)
-		case "$*" in *--enable-pcre2*) pcre2_reason="";; *) pcre2_reason=" (default when present)";; esac
+		case "$*" in *--enable-pcre2*) pcre2_reason="";; *) pcre2_reason=" (default)";; esac
 
 		PCRE2_CFLAGS="`pcre2-config --cflags 2>/dev/null`"
 		PCRE2_LDFLAGS="`pcre2-config --libs8 2>/dev/null`"
