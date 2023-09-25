@@ -355,23 +355,37 @@ then
 			rm $d/ld $d/lf $d/f
 			rmdir $d/d
 		fi
-	elif $rh -h | grep -wq attr # BSDs
+	elif $rh -h | grep -wq attr # FreeBSD, OpenBSD, NetBSD, macOS
 	then
 		if [ -n "`command -v chflags`" ]
 		then
-			mkdir $d/d
-			touch $d/f
-			ln -s d $d/ld
-			ln -s f $d/lf
-			chflags uappnd $d/d
-			chflags uappnd $d/f
+			case `sysctl -n kern.securelevel` in
+				-1|0)
+					mkdir $d/d
+					touch $d/f
+					ln -s d $d/ld
+					ln -s f $d/lf
+					# uappnd works on OpenBSD and NetBSD and macOS,
+					# but now fails on FreeBSD, but sappnd works on FreeBSD
+					if chflags uappnd $d/d $d/f 2>/dev/null
+					then
+						test_rawhide "$rh -e 'attr & 0x00000004' $d" "$d/d\n$d/f\n" "" 0 "attr & UF_APPEND"
+						chflags nouappnd $d/d $d/f
+					elif chflags sappend $d/d $d/f
+					then
+						test_rawhide "$rh -e 'attr & 0x00040000' $d" "$d/d\n$d/f\n" "" 0 "attr & SF_APPEND"
+						chflags nouappnd $d/d $d/f
+					else
+						echo "$t: Skipping chflags tests (chflags uappnd/sappend failed)"
+					fi
 
-			test_rawhide "$rh -e 'attr & 0x00000004' $d" "$d/d\n$d/f\n"                   "" 0 "attr & UF_APPEND"
-
-			chflags nouappnd $d/d
-			chflags nouappnd $d/f
-			rm $d/ld $d/lf $d/f
-			rmdir $d/d
+					rm -f $d/ld $d/lf $d/f
+					rmdir $d/d
+					;;
+				*)
+					echo "$t: Skipping chflags tests (kern.securelevel is too high)"
+					;;
+			esac
 		fi
 	fi
 fi

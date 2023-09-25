@@ -668,35 +668,61 @@ then
 			rmdir $d/d
 			test_rawhide_post_hook() { true; }
 		fi
-	elif $rh -h | grep -wq attr # BSD
+	elif $rh -h | grep -wq attr # FreeBSD, OpenBSD, NetBSD, macOS
 	then
 		if [ -n "`command -v chflags`" ]
 		then
-			test_rawhide_post_hook() { test_rh_sort_post_hook; }
-			mkdir $d/d
-			touch $d/f
-			ln -s d $d/ld
-			ln -s f $d/lf
-			chflags uappnd $d/d
-			chflags uappnd $d/f
+			case `sysctl -n kern.securelevel` in
+				-1|0)
+					test_rawhide_post_hook() { test_rh_sort_post_hook; }
+					mkdir $d/d
+					touch $d/f
+					ln -s d $d/ld
+					ln -s f $d/lf
+					# uappnd works on OpenBSD and NetBSD and macOS,
+					# but now fails on FreeBSD, but sappnd works on FreeBSD
+					if chflags uappnd $d/d $d/f 2>/dev/null
+					then
+						test_rawhide_grep "$rh -e 'd && attr & 0x00000004' -L '%p %e\n' $d" "$d/d .*append.*" "" 0 "-L %e (attribute) d"
+						test_rawhide_grep "$rh -e 'f && attr & 0x00000004' -L '%p %e\n' $d" "$d/f .*append.*" "" 0 "-L %e (attribute) f"
 
-			test_rawhide_grep "$rh -e 'd && attr & 0x00000004' -L '%p %e\n' $d" "$d/d .*append.*" "" 0 "-L %e (attribute) d"
-			test_rawhide_grep "$rh -e 'f && attr & 0x00000004' -L '%p %e\n' $d" "$d/f .*append.*" "" 0 "-L %e (attribute) f"
+						test_rawhide_grep "$rh -e 'f && attr & 0x00000004' -L '%e\n'      $d/f" "^[^ ].*[^ ]$" "" 0 "-L '%e\\\\n' $d/f"
+						test_rawhide_grep "$rh -e 'f && attr & 0x00000004' -L '%15e\n'    $d/f" "^ +.+$"       "" 0 "-L '%15e\\\\n' $d/f"
+						test_rawhide_grep "$rh -e 'f && attr & 0x00000004' -L '%-15e\n'   $d/f" "^.+ +$"       "" 0 "-L '%-15e\\\\n' $d/f"
+						test_rawhide_grep "$rh -e 'f && attr & 0x00000004' -L '%15.5e\n'  $d/f" "^ +.....$"    "" 0 "-L '%15.5e\\\\n' $d/f"
+						test_rawhide_grep "$rh -e 'f && attr & 0x00000004' -L '%-15.5e\n' $d/f" "^..... +$"    "" 0 "-L '%-15.5e\\\\n' $d/f"
 
-			test_rawhide_grep "$rh -e 'f && attr & 0x00000004' -L '%e\n'      $d/f" "^[^ ].*[^ ]$" "" 0 "-L '%e\\\\n' $d/f"
-			test_rawhide_grep "$rh -e 'f && attr & 0x00000004' -L '%15e\n'    $d/f" "^ +.+$"       "" 0 "-L '%15e\\\\n' $d/f"
-			test_rawhide_grep "$rh -e 'f && attr & 0x00000004' -L '%-15e\n'   $d/f" "^.+ +$"       "" 0 "-L '%-15e\\\\n' $d/f"
-			test_rawhide_grep "$rh -e 'f && attr & 0x00000004' -L '%15.5e\n'  $d/f" "^ +.....$"    "" 0 "-L '%15.5e\\\\n' $d/f"
-			test_rawhide_grep "$rh -e 'f && attr & 0x00000004' -L '%-15.5e\n' $d/f" "^..... +$"    "" 0 "-L '%-15.5e\\\\n' $d/f"
+						# For test coverage
+						test_rawhide_grep "RAWHIDE_TEST_ATTR_FORMAT=1 $rh -e 'd && attr & 0x00000004' -L '%p %e\n' $d" "$d/d .*append.*" "" 0 "-L %e (attribute) d all attributes"
 
-			# For test coverage
-			test_rawhide_grep "RAWHIDE_TEST_ATTR_FORMAT=1 $rh -e 'd && attr & 0x00000004' -L '%p %e\n' $d" "$d/d .*append.*" "" 0 "-L %e (attribute) d all attributes"
+						chflags nouappnd $d/d $d/f
+					elif chflags sappend $d/d $d/f
+					then
+						test_rawhide_grep "$rh -e 'd && attr & 0x00040000' -L '%p %e\n' $d" "$d/d .*append.*" "" 0 "-L %e (attribute) d"
+						test_rawhide_grep "$rh -e 'f && attr & 0x00040000' -L '%p %e\n' $d" "$d/f .*append.*" "" 0 "-L %e (attribute) f"
 
-			chflags nouappnd $d/d
-			chflags nouappnd $d/f
-			rm $d/ld $d/lf $d/f
-			rmdir $d/d
-			test_rawhide_post_hook() { true; }
+						test_rawhide_grep "$rh -e 'f && attr & 0x00040000' -L '%e\n'      $d/f" "^[^ ].*[^ ]$" "" 0 "-L '%e\\\\n' $d/f"
+						test_rawhide_grep "$rh -e 'f && attr & 0x00040000' -L '%16e\n'    $d/f" "^ +.+$"       "" 0 "-L '%16e\\\\n' $d/f"
+						test_rawhide_grep "$rh -e 'f && attr & 0x00040000' -L '%-16e\n'   $d/f" "^.+ +$"       "" 0 "-L '%-16e\\\\n' $d/f"
+						test_rawhide_grep "$rh -e 'f && attr & 0x00040000' -L '%16.5e\n'  $d/f" "^ +.....$"    "" 0 "-L '%16.5e\\\\n' $d/f"
+						test_rawhide_grep "$rh -e 'f && attr & 0x00040000' -L '%-16.5e\n' $d/f" "^..... +$"    "" 0 "-L '%-16.5e\\\\n' $d/f"
+
+						# For test coverage
+						test_rawhide_grep "RAWHIDE_TEST_ATTR_FORMAT=1 $rh -e 'd && attr & 0x00040000' -L '%p %e\n' $d" "$d/d .*append.*" "" 0 "-L %e (attribute) d all attributes"
+
+						chflags nouappnd $d/d $d/f
+					else
+						echo "$t: Skipping chflags tests (chflags uappnd/sappend failed)"
+					fi
+
+					rm -f $d/ld $d/lf $d/f
+					rmdir $d/d
+					test_rawhide_post_hook() { true; }
+					;;
+				*)
+					echo "$t: Skipping chflags tests (kern.securelevel is too high)"
+					;;
+			esac
 		fi
 	fi
 fi
