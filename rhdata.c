@@ -253,6 +253,15 @@ static symbol_t init_syms[] =
 	{ ".reilink",  PATMOD, 0, c_reilink, NULL },
 #endif
 
+	{ ".body",     PATMOD, 0, c_body,    NULL },
+#ifdef FNM_CASEFOLD
+	{ ".ibody",    PATMOD, 0, c_ibody,   NULL },
+#endif
+#ifdef HAVE_PCRE2
+	{ ".rebody",   PATMOD, 0, c_rebody,  NULL },
+	{ ".reibody",  PATMOD, 0, c_reibody, NULL },
+#endif
+
 #ifdef HAVE_MAGIC
 	{ ".what",     PATMOD, 0, c_what,     NULL },
 #ifdef FNM_CASEFOLD
@@ -273,15 +282,6 @@ static symbol_t init_syms[] =
 	{ ".remime",   PATMOD, 0, c_remime,   NULL },
 	{ ".reimime",  PATMOD, 0, c_reimime,  NULL },
 #endif
-#endif
-
-	{ ".body",     PATMOD, 0, c_body,    NULL },
-#ifdef FNM_CASEFOLD
-	{ ".ibody",    PATMOD, 0, c_ibody,   NULL },
-#endif
-#ifdef HAVE_PCRE2
-	{ ".rebody",   PATMOD, 0, c_rebody,  NULL },
-	{ ".reibody",  PATMOD, 0, c_reibody, NULL },
 #endif
 
 #ifdef HAVE_ACL

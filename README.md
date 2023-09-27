@@ -149,9 +149,9 @@ a high-level interface to the built-in symbols mentioned above, and makes
                      .i            .re           .rei
        .path         .ipath        .repath       .reipath
        .link         .ilink        .relink       .reilink
+       .body         .ibody        .rebody       .reibody
        .what         .iwhat        .rewhat       .reiwhat
        .mime         .imime        .remime       .reimime
-       .body         .ibody        .rebody       .reibody
        .acl          .iacl         .reacl        .reiacl
        .ea           .iea          .reea         .reiea
        .sh

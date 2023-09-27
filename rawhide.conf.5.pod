@@ -1201,6 +1201,33 @@ Apply the glob pattern to each candidate symlink's target path, rather than
 its base name. Slash characters (C<"/">) are not treated as special
 characters. For example, C<"./sr*sc".path> would match C<./src/misc>.
 
+=item C<body> (or C<b>)
+
+Apply the glob pattern to each candidate file's contents, rather than its
+base name. Slash characters (C<"/">) are not treated as special characters.
+
+Note that this is an expensive pattern modifier because each candidate file
+is read in its entirety to determine whether or not the pattern matches. It
+can be worthwhile preceding this with other predicates to reduce the number
+and limit the size of candidate files that this is applied to.
+
+This probably shouldn't be used with very large files. It would require a
+lot of memory or swap, and on 32-bit systems, the possible file size is also
+limited by the available address space. If this is an issue, you can always
+use I<grep(1)> (or similar) via the C<sh> "pattern" modifier instead.
+
+Also note that this only works with regular files that are readable to the
+current user.
+
+Also note that the C<body> and I<ibody> glob pattern modifiers shouldn't be
+used with binary files that might contain null bytes. For binary files, use
+the C<rebody> or C<reibody> regular expression pattern modifiers instead
+(see below).
+
+Note: If the current candidate file is a symlink, its body is unaffected by
+the C<-y> or C<-Y> options. For the purpose of this predicate, the symlink
+is always followed.
+
 =item C<what> (or C<w>)
 
 Apply the glob pattern to each candidate file's file type description (as
@@ -1245,33 +1272,6 @@ use the C<-L> option with its C<%W> format conversion.
 Note: If the current candidate file is a symlink, its MIME type is affected
 by the C<-y> or C<-Y> options.
 
-=item C<body> (or C<b>)
-
-Apply the glob pattern to each candidate file's contents, rather than its
-base name. Slash characters (C<"/">) are not treated as special characters.
-
-Note that this is an expensive pattern modifier because each candidate file
-is read in its entirety to determine whether or not the pattern matches. It
-can be worthwhile preceding this with other predicates to reduce the number
-and limit the size of candidate files that this is applied to.
-
-This probably shouldn't be used with very large files. It would require a
-lot of memory or swap, and on 32-bit systems, the possible file size is also
-limited by the available address space. If this is an issue, you can always
-use I<grep(1)> (or similar) via the C<sh> "pattern" modifier instead.
-
-Also note that this only works with regular files that are readable to the
-current user.
-
-Also note that the C<body> and I<ibody> glob pattern modifiers shouldn't be
-used with binary files that might contain null bytes. For binary files, use
-the C<rebody> or C<reibody> regular expression pattern modifiers instead
-(see below).
-
-Note: If the current candidate file is a symlink, its body is unaffected by
-the C<-y> or C<-Y> options. For the purpose of this predicate, the symlink
-is always followed.
-
 =item C<i>
 
 Apply the glob pattern without case-sensitivity. This is available on most
@@ -1297,6 +1297,11 @@ full path starting from the search directory instead.
 Like the C<link> modifier, but apply the glob pattern without
 case-sensitivity. This is available on most systems, but maybe not all.
 
+=item C<ibody> (or C<ib>)
+
+Like the C<body> modifier, but apply the glob pattern without
+case-sensitivity.
+
 =item C<iwhat> (or C<iw>)
 
 Like the C<what> modifier, but apply the glob pattern without
@@ -1308,11 +1313,6 @@ installed, but maybe not all.
 Like the C<mime> modifier, but apply the glob pattern without
 case-sensitivity. This is available on most systems with I<libmagic(3)>
 installed, but maybe not all.
-
-=item C<ibody> (or C<ib>)
-
-Like the C<body> modifier, but apply the glob pattern without
-case-sensitivity.
 
 =item C<re>
 
@@ -1397,6 +1397,11 @@ the file's full path starting from the search directory instead.
 Like the C<re> modifier, but apply the regex to each candidate symlink's
 target path, rather than its base name.
 
+=item C<rebody> (or C<reb>)
+
+Like the C<re> modifier, but apply the regex to each candidate file's
+contents, rather than its base name. See C<body> above for more details.
+
 =item C<rewhat> (or C<rew>)
 
 Like the C<re> modifier, but apply the regex to each candidate file's file
@@ -1409,11 +1414,6 @@ more details.
 Like the C<re> modifier, but apply the regex to each candidate file's MIME
 type, rather than its base name. This is available on systems that have
 I<libpcre2-8> and I<libmagic> installed. See C<mime> above for more details.
-
-=item C<rebody> (or C<reb>)
-
-Like the C<re> modifier, but apply the regex to each candidate file's
-contents, rather than its base name. See C<body> above for more details.
 
 =item C<rei>
 
@@ -1434,6 +1434,10 @@ the file's full path starting from the search directory instead.
 
 Like the C<relink> modifier, but apply the regex without case-sensitivity.
 
+=item C<reibody> (or C<reib>)
+
+Like the C<rebody> modifier, but apply the regex without case-sensitivity.
+
 =item C<reiwhat> (or C<reiw>)
 
 Like the C<rewhat> modifier, but apply the regex without case-sensitivity.
@@ -1441,10 +1445,6 @@ Like the C<rewhat> modifier, but apply the regex without case-sensitivity.
 =item C<reimime> (or C<reim>)
 
 Like the C<remime> modifier, but apply the regex without case-sensitivity.
-
-=item C<reibody> (or C<reib>)
-
-Like the C<rebody> modifier, but apply the regex without case-sensitivity.
 
 =item C<acl> (or C<a>)
 

@@ -504,6 +504,83 @@ void c_reilink(llong i) { Stack[SP++] = (islink(attr.statbuf)) ? rematch(&Strbuf
 
 #endif /* HAVE_PCRE2 */
 
+/* Load the file's content into attr.body (deallocated at exit) */
+
+char *get_body(void)
+{
+	if (!isreg(attr.statbuf))
+		return NULL;
+
+	if (!attr.body_done)
+	{
+		attr.body_length = 0;
+
+		int fd;
+
+		if ((fd = open(attr.fpath, O_RDONLY)) == -1)
+		{
+			errorsys("%s", ok(attr.fpath));
+			attr.exit_status = EXIT_FAILURE;
+		}
+		else
+		{
+			/* Increase the buffer size when necessary (include space for a nul byte) */
+
+			if (attr.body_size < attr.statbuf->st_size + 1)
+			{
+				if (!(attr.body = realloc(attr.body, attr.statbuf->st_size + 1)))
+					fatalsys("out of memory");
+
+				attr.body_size = attr.statbuf->st_size + 1;
+			}
+
+			/* Read the file */
+
+			ssize_t bytes = 0;
+
+			#define READ_MAX 0x7ffff000 /* Limit on Linux, also needed on macOS */
+
+			while (attr.body_length < attr.statbuf->st_size && (bytes = read(fd, attr.body + attr.body_length, (attr.statbuf->st_size - attr.body_length > READ_MAX) ? READ_MAX : (attr.statbuf->st_size - attr.body_length))) > 0)
+				attr.body_length += bytes;
+
+			if (bytes == -1)
+				errorsys("read %s", ok(attr.fpath));
+
+			close(fd);
+
+			/* Nul-terminate the buffer for fnmatch() */
+
+			attr.body[attr.body_length] = '\0';
+		}
+
+		attr.body_done = 1;
+	}
+
+	return attr.body;
+}
+
+static void body_glob(llong i, int options)
+{
+	Stack[SP++] = get_body() ? fnmatch(&Strbuf[i], get_body(), FNM_EXTMATCH | options) == 0 : 0;
+}
+
+void c_body(llong i)  { body_glob(i, 0); }
+#ifdef FNM_CASEFOLD
+void c_ibody(llong i) { body_glob(i, FNM_CASEFOLD); }
+#endif
+
+#ifdef HAVE_PCRE2
+
+static void body_re(llong i, int options)
+{
+	Stack[SP++] = get_body() ? rematch(&Strbuf[i], get_body(), attr.body_length, options) : 0;
+}
+
+void c_rebody(llong i)  { body_re(i, 0); }
+void c_reibody(llong i) { body_re(i, PCRE2_CASELESS); }
+
+#endif
+
 /* Load the file type description into attr.what (libmagic-managed data - deallocated at exit) */
 
 const char *get_what(void)
@@ -618,83 +695,6 @@ void c_remime(llong i)  { mime_re(i, 0); }
 void c_reimime(llong i) { mime_re(i, PCRE2_CASELESS); }
 
 #endif
-#endif
-
-/* Load the file's content into attr.body (deallocated at exit) */
-
-char *get_body(void)
-{
-	if (!isreg(attr.statbuf))
-		return NULL;
-
-	if (!attr.body_done)
-	{
-		attr.body_length = 0;
-
-		int fd;
-
-		if ((fd = open(attr.fpath, O_RDONLY)) == -1)
-		{
-			errorsys("%s", ok(attr.fpath));
-			attr.exit_status = EXIT_FAILURE;
-		}
-		else
-		{
-			/* Increase the buffer size when necessary (include space for a nul byte) */
-
-			if (attr.body_size < attr.statbuf->st_size + 1)
-			{
-				if (!(attr.body = realloc(attr.body, attr.statbuf->st_size + 1)))
-					fatalsys("out of memory");
-
-				attr.body_size = attr.statbuf->st_size + 1;
-			}
-
-			/* Read the file */
-
-			ssize_t bytes = 0;
-
-			#define READ_MAX 0x7ffff000 /* Limit on Linux, also needed on macOS */
-
-			while (attr.body_length < attr.statbuf->st_size && (bytes = read(fd, attr.body + attr.body_length, (attr.statbuf->st_size - attr.body_length > READ_MAX) ? READ_MAX : (attr.statbuf->st_size - attr.body_length))) > 0)
-				attr.body_length += bytes;
-
-			if (bytes == -1)
-				errorsys("read %s", ok(attr.fpath));
-
-			close(fd);
-
-			/* Nul-terminate the buffer for fnmatch() */
-
-			attr.body[attr.body_length] = '\0';
-		}
-
-		attr.body_done = 1;
-	}
-
-	return attr.body;
-}
-
-static void body_glob(llong i, int options)
-{
-	Stack[SP++] = get_body() ? fnmatch(&Strbuf[i], get_body(), FNM_EXTMATCH | options) == 0 : 0;
-}
-
-void c_body(llong i)  { body_glob(i, 0); }
-#ifdef FNM_CASEFOLD
-void c_ibody(llong i) { body_glob(i, FNM_CASEFOLD); }
-#endif
-
-#ifdef HAVE_PCRE2
-
-static void body_re(llong i, int options)
-{
-	Stack[SP++] = get_body() ? rematch(&Strbuf[i], get_body(), attr.body_length, options) : 0;
-}
-
-void c_rebody(llong i)  { body_re(i, 0); }
-void c_reibody(llong i) { body_re(i, PCRE2_CASELESS); }
-
 #endif
 
 /* Load ACLs into attr.facl (and attr.facl_verbose on FreeBSD/Solaris) which must be deallocated */
@@ -1673,6 +1673,14 @@ char *instruction_name(void (*func)(llong))
 		(func == c_reipath) ? "reipath" :
 		(func == c_reilink) ? "reilink" :
 		#endif
+		(func == c_body) ? "body" :
+		#ifdef FNM_CASEFOLD
+		(func == c_ibody) ? "ibody" :
+		#endif
+		#ifdef HAVE_PCRE2
+		(func == c_rebody) ? "rebody" :
+		(func == c_reibody) ? "reibody" :
+		#endif
 		#ifdef HAVE_MAGIC
 		(func == c_what) ? "what" :
 		#ifdef FNM_CASEFOLD
@@ -1692,14 +1700,6 @@ char *instruction_name(void (*func)(llong))
 		(func == c_remime) ? "remime" :
 		(func == c_reimime) ? "reimime" :
 		#endif
-		#endif
-		(func == c_body) ? "body" :
-		#ifdef FNM_CASEFOLD
-		(func == c_ibody) ? "ibody" :
-		#endif
-		#ifdef HAVE_PCRE2
-		(func == c_rebody) ? "rebody" :
-		(func == c_reibody) ? "reibody" :
 		#endif
 		#ifdef HAVE_ACL
 		(func == c_acl) ? "acl" :
