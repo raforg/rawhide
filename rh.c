@@ -101,6 +101,7 @@ static void help_message(void)
 	printf("  -v           - Verbose: All columns, implies -ldiBsSac (unless -xXU0L)\n");
 	printf("  -0           - Output null chars instead of newlines (for xargs -0)\n");
 	printf("  -L format    - Output matching entries in a user-supplied format\n");
+	printf("  -j           - Output matching entries as JSON (same as -L \"%%j\\n\")\n");
 	printf("\n");
 	printf("path format options:\n");
 	printf("  -Q           - Enclose paths in double quotes\n");
@@ -425,8 +426,8 @@ int main(int argc, char *argv[]);
 Parse the command line:
 
 The --help and --version options are supported (if first).
-The -e, -x, -X, and -L options can only appear once.
-The -l, -0, -L, -x, -X, and -U options are mutually exclusive.
+The -e, -x, -X, -L, and -j options can only appear once.
+The -l, -0, -L, -j, -x, -X, and -U options are mutually exclusive.
 
 Read /etc/rawhide.conf and /etc/rawhide.conf.d (unless -N).
 Read ~/.rhrc and ~/.rhrc.d (unless -n).
@@ -452,6 +453,7 @@ The -l option and other options include more details.
 There are many options to affect the formatting.
 The -0 option outputs nul characters rather than newlines.
 The -L option outputs information in a user-defined format.
+The -j option outputs information as JSON (same as -L "%j\n").
 The -x option executes a shell command for each
 matching file instead.
 The -X option is the same, but executes each command
@@ -508,7 +510,7 @@ int main(int argc, char *argv[])
 	attr.ctime_column = 0;      /* -c */
 	attr.verbose = 0;           /* -v */
 	attr.nul = 0;               /* -0 */
-	attr.format = NULL;         /* -L */
+	attr.format = NULL;         /* -L/-j */
 
 	attr.quote_name = 0;        /* -Q */
 	attr.escape_name = 0;       /* -E/-b */
@@ -562,7 +564,7 @@ int main(int argc, char *argv[])
 	if (argc >= 2 && !strcmp(argv[1], "--version"))
 		version_message();
 
-	while ((o = getopt(argc, argv, ":hVNnf:e:rm:M:D1yYx:X:UldiBsSgoaucv0L:QEbqptFHIT#?:")) != -1)
+	while ((o = getopt(argc, argv, ":hVNnf:e:rm:M:D1yYx:X:UldiBsSgoaucv0L:jQEbqptFHIT#?:")) != -1)
 	{
 		switch (o)
 		{
@@ -814,9 +816,20 @@ int main(int argc, char *argv[])
 					fatal("missing -L option argument (see %s -h for help)", prog_name);
 
 				if (attr.format)
-					fatal("too many -L options");
+					fatal("too many -L or -j options");
 
 				attr.format = optarg;
+				attr.visitf = visitf_format;
+
+				break;
+			}
+
+			case 'j':
+			{
+				if (attr.format)
+					fatal("too many -L or -j options");
+
+				attr.format = "%j\n";
 				attr.visitf = visitf_format;
 
 				break;
@@ -956,7 +969,7 @@ int main(int argc, char *argv[])
 		fatal("-x and -0 options are mutually exclusive");
 
 	if (attr.command && !attr.local && attr.format)
-		fatal("-x and -L options are mutually exclusive");
+		fatal("-x and -L/-j options are mutually exclusive");
 
 	if (attr.command && attr.local && opt_l)
 		fatal("-X and -l options are mutually exclusive");
@@ -965,13 +978,13 @@ int main(int argc, char *argv[])
 		fatal("-X and -0 options are mutually exclusive");
 
 	if (attr.command && attr.local && attr.format)
-		fatal("-X and -L options are mutually exclusive");
+		fatal("-X and -L/-j options are mutually exclusive");
 
 	if (opt_l && attr.nul)
 		fatal("-l and -0 options are mutually exclusive");
 
 	if (opt_l && attr.format)
-		fatal("-l and -L options are mutually exclusive");
+		fatal("-l and -L/-j options are mutually exclusive");
 
 	if (attr.unlink && attr.command && !attr.local)
 		fatal("-x and -U options are mutually exclusive");
@@ -986,10 +999,10 @@ int main(int argc, char *argv[])
 		fatal("-0 and -U options are mutually exclusive");
 
 	if (attr.nul && attr.format)
-		fatal("-0 and -L options are mutually exclusive");
+		fatal("-0 and -L/-j options are mutually exclusive");
 
 	if (attr.unlink && attr.format)
-		fatal("-U and -L options are mutually exclusive");
+		fatal("-U and -L/-j options are mutually exclusive");
 
 	if (attr.escape_name && attr.mask_name)
 		fatal("-E/-b and -q options are mutually exclusive");

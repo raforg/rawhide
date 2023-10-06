@@ -64,6 +64,7 @@ I<rh> - (I<rawhide>) find files using pretty I<C> expressions
    -v           - Verbose: All columns, implies -ldiBsSac (unless -xXU0L)
    -0           - Output null chars instead of newlines (for xargs -0)
    -L format    - Output matching entries in a user-supplied format
+   -j           - Output matching entries as JSON (same as -L "%j\n")
 
  path format options:
    -Q           - Enclose paths in double quotes
@@ -450,8 +451,8 @@ only symlinks they will ever get to see are broken ones.
 
 By default, I<rh> outputs each matching filesystem entry's full path
 starting from the search directory. These options provide alternative
-actions. They, and the C<-l>, C<-0>, and C<-L> options, are all mutually
-exclusive.
+actions. They, and the C<-l>, C<-0>, C<-L>, and C<-j> options, are all
+mutually exclusive.
 
 =over 4
 
@@ -498,8 +499,8 @@ this is needed for security. This means that you can't rely on C<$PATH> to
 find an executable that is in the current directory. An explicit path would
 be needed instead (e.g., S<C<-x './>I<cmd>C< %s'>>).
 
-This option, and the C<-l>, C<-0>, C<-L>, C<-X>, and C<-U> options, are all
-mutually exclusive.
+This option, and the C<-l>, C<-0>, C<-L>, C<-j>, C<-X>, and C<-U> options,
+are all mutually exclusive.
 
 =item C<-X> C<'>I<cmd>C<'>
 
@@ -552,8 +553,8 @@ C<%s> suffers from many path-based race conditions, which is insecure on
 hosts with malicious local actors that have write access to the directory
 tree being searched, and so should not generally be used.
 
-This option, and the C<-l>, C<-0>, C<-L>, C<-x>, and C<-U> options, are all
-mutually exclusive.
+This option, and the C<-l>, C<-0>, C<-L>, C<-j>, C<-x>, and C<-U> options,
+are all mutually exclusive.
 
 =item C<-U -U -U>
 
@@ -583,8 +584,8 @@ when a symlink to a non-directory is followed, and the symlink's ultimate
 target matches the search criteria, the symlink is removed, not the ultimate
 target.
 
-This option, and the C<-l>, C<-0>, C<-L>, C<-x>, and C<-X> options, are all
-mutually exclusive.
+This option, and the C<-l>, C<-0>, C<-L>, C<-j>, C<-x>, and C<-X> options,
+are all mutually exclusive.
 
 =back
 
@@ -621,8 +622,8 @@ I<selinux(8)> context, this is indicated by a dot character (C<".">) (e.g.,
 C<-rw-rw-r--.>). If a file has none of the above, there's just a space
 character (S<C<" ">>) at the end of the file type and permissions column.
 
-This option, and the C<-0>, C<-L>, C<-x>, C<-X>, and C<-U> options, are all
-mutually exclusive.
+This option, and the C<-0>, C<-L>, C<-j>, C<-x>, C<-X>, and C<-U> options,
+are all mutually exclusive.
 
 =item C<-d>
 
@@ -742,8 +743,8 @@ local actors that have write access to the directory tree being searched,
 and so should not generally be done. It is much safer to use the C<-X>
 option instead (see above).
 
-This option, and the C<-l>, C<-L>, C<-x>, C<-X>, and C<-U> options, are all
-mutually exclusive.
+This option, and the C<-l>, C<-L>, C<-j>, C<-x>, C<-X>, and C<-U> options,
+are all mutually exclusive.
 
 =item C<-L> I<format>
 
@@ -756,8 +757,8 @@ Unlike the C<-l> and C<-0> options, no newline or null character is appended
 automatically. An empty C<-L> option argument (i.e., S<C<-L ''>>) will
 produce no output.
 
-This option, and the C<-l>, C<-0>, C<-x>, C<-X>, and C<-U> options, are all
-mutually exclusive.
+This option, and the C<-l>, C<-0>, C<-j>, C<-x>, C<-X>, and C<-U> options,
+are all mutually exclusive.
 
 The supported backslash escape sequences are:
 
@@ -1371,6 +1372,14 @@ I<stat(2)> structure. This is arguably compatible, but not identical. This
 also makes the output of the C<%S> (sparseness) conversion different for
 readable directories (but it isn't meaningful for directories, so that
 shouldn't matter).
+
+=item C<-j>
+
+This option causes I<rh> to output matching entries in I<JSON> format. This
+is the same as S<C<-L "%j\n">> (see above).
+
+This option, and the C<-l>, C<-0>, C<-L>, C<-x>, C<-X>, and C<-U> options,
+are all mutually exclusive.
 
 =back
 
@@ -2046,6 +2055,7 @@ Sum the sizes of all regular files in the current directory (with I<jq(1)>):
 
     $ rh -r -L '%j\n' f | jq .size | jq -s add
     $ rh -r -L '%s\n' f | jq -s add
+    $ rh -rj f | jq .size | jq -s add
 
 Some command line shell syntactic sugar to save keystrokes:
 
@@ -2119,7 +2129,7 @@ Some command line shell syntactic sugar to save keystrokes:
     alias rv='rh -rv' # rh -v version of ls -lA
     alias rvr='rh -v' # rh -v version of ls -lAR
 
-    alias rj='rh -L "%j\n"'
+    alias rj='rh -j'
     
     alias r0='rh -0'
     
@@ -2134,6 +2144,15 @@ Some command line shell syntactic sugar to save keystrokes:
     alias rY='rh -Y'
     alias rYl='rh -Yl'
     alias rYv='rh -Yv'
+
+
+    # rhs - plain rh sorted by path (via jq)
+    rhs() { rh -j "$@" | jq -sr 'sort_by(.path) | .[].path'; }
+    alias rs=rhs
+
+    # rht - plain rh sorted by modified time reversed (via jq)
+    rht() { rh -j "$@" | jq -sr 'sort_by(.mtime) | reverse | .[].path'; }
+    alias rt=rht
 
 =head1 FIND(1) COMPARISON EXAMPLES
 

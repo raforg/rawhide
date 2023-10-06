@@ -90,7 +90,7 @@ alias rlr='rh -l' # rh -l version of ls -lAR
 alias rv='rh -rv' # rh -v version of ls -lA
 alias rvr='rh -v' # rh -v version of ls -lAR
 
-alias rj='rh -L "%j\n"'
+alias rj='rh -j'
 
 alias r0='rh -0'
 
@@ -105,6 +105,15 @@ alias ryv='rh -yv'
 alias rY='rh -Y'
 alias rYl='rh -Yl'
 alias rYv='rh -Yv'
+
+
+# rhs - plain rh sorted by path (via jq)
+rhs() { rh -j "$@" | jq -sr 'sort_by(.path) | .[].path'; }
+alias rs=rhs
+
+# rht - plain rh sorted by modified time reversed (via jq)
+rht() { rh -j "$@" | jq -sr 'sort_by(.mtime) | reverse | .[].path'; }
+alias rt=rht
 
 
 # export RAWHIDE_CONFIG=/etc/rawhide.conf

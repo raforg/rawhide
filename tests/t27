@@ -24,7 +24,7 @@
 
 . tests/.common
 
-label="acl ea %z %x %Z %X %j"
+label="acl ea %z %x %Z %X %j -j"
 
 touch $d/none
 touch $d/acl
@@ -85,6 +85,7 @@ then
 				fi
 
 				test_rawhide_grep "$rh -L '%j\n' $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*\\}$"                     "" 0 "-L %j (json) with acl"
+				test_rawhide_grep "$rh -j        $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*\\}$"                     "" 0 "-j (json) with acl"
 			else
 				echo "$t: Skipping ACL tests (setfacl not found)"
 				ACL=0
@@ -130,6 +131,7 @@ then
 			fi
 
 			test_rawhide_grep "$rh -L '%j\n' $d/acl" "^{\"path\":\"$d/acl\", .*\"access_control_list\":.*}$"                     "" 0 "-L %j (json) with acl"
+			test_rawhide_grep "$rh -j        $d/acl" "^{\"path\":\"$d/acl\", .*\"access_control_list\":.*}$"                     "" 0 "-j (json) with acl"
 			;;
 
 		FreeBSD) # setfacl setextattr
@@ -183,6 +185,7 @@ then
 				fi
 
 				test_rawhide_grep "$rh -L '%j\n' $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*\\}$"                     "" 0 "-L %j (json) with acl"
+				test_rawhide_grep "$rh -j        $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*\\}$"                     "" 0 "-j (json) with acl"
 			else
 				echo "$t: Skipping ACL tests (setfacl not found)"
 				ACL=0
@@ -240,6 +243,7 @@ then
 				fi
 
 				test_rawhide_grep "$rh -L '%j\n' $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*\\}$"                     "" 0 "-L %j (json) with acl"
+				test_rawhide_grep "$rh -j        $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*\\}$"                     "" 0 "-j (json) with acl"
 
 				# Test environment variable
 
@@ -296,6 +300,7 @@ then
 				fi
 
 				test_rawhide_grep "$rh -L '%j\n' $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*\\}$"                     "" 0 "-L %j (json) with acl"
+				test_rawhide_grep "$rh -j        $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*\\}$"                     "" 0 "-j (json) with acl"
 			else
 				echo "$t: Skipping ACL tests (setfacl not found)"
 				ACL=0
@@ -370,6 +375,7 @@ then
 				test_rawhide_grep "$rh -L '%Z\n' $d/none" "^(|.*_u:.*_r:.*t:s[0-3])$" "" 0 "-L %Z"
 
 				test_rawhide_grep "$rh -L '%j\n' $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-L %j (json) with ea"
+				test_rawhide_grep "$rh -j        $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-j (json) with ea"
 			else
 				echo "$t: Skipping EA tests (setfattr not found)"
 				EA=0
@@ -418,6 +424,7 @@ then
 			fi
 
 			test_rawhide_grep "$rh -L '%j\n' $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-L %j (json) with ea"
+			test_rawhide_grep "$rh -j        $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-j (json) with ea"
 			;;
 
 		FreeBSD) # setfacl setextattr (symlinks can have their own ea here)
@@ -471,6 +478,7 @@ then
 				fi
 
 				test_rawhide_grep "$rh -L '%j\n' $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-L %j (json) with ea"
+				test_rawhide_grep "$rh -j        $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-j (json) with ea"
 			else
 				echo "$t: Skipping EA tests (setextattr not found)"
 				EA=0
@@ -580,6 +588,7 @@ then
 				fi
 
 				test_rawhide_grep "$rh -L '%j\n' $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-L %j (json) with ea"
+				test_rawhide_grep "$rh -j        $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-j (json) with ea"
 			else
 				echo "$t: Skipping EA tests (runat not found)"
 				EA=0
@@ -638,6 +647,7 @@ then
 				fi
 
 				test_rawhide_grep "$rh -L '%j\n' $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-L %j (json) with ea"
+				test_rawhide_grep "$rh -j        $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-j (json) with ea"
 			else
 				echo "$t: Skipping EA tests (setfattr not found)"
 				EA=0

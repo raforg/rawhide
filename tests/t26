@@ -26,7 +26,7 @@
 
 TZ=UTC; export TZ
 
-label="-L option"
+label="-L/-j option"
 
 touch $d/f
 chmod 644 $d/f
@@ -573,9 +573,12 @@ test_rawhide "$rh -L '%Y\n'             $d/ll" "L\n"                            
 rm $d/ll $d/loop
 
 test_rawhide_grep "$rh -L '%j\n'        $d/f"    "^\\{\"path\":\"$d/f\", .*\\}$"                     "" 0 "-L %j (json) file"
+test_rawhide_grep "$rh -j               $d/f"    "^\\{\"path\":\"$d/f\", .*\\}$"                     "" 0 "-j (json) file"
 test_rawhide_grep "$rh -L '%j\n'        $d/l"    "^\\{\"path\":\"$d/l\", .*\"target\":\"f\", .*\\}$" "" 0 "-L %j (json) symlink"
+test_rawhide_grep "$rh -j               $d/l"    "^\\{\"path\":\"$d/l\", .*\"target\":\"f\", .*\\}$" "" 0 "-j (json) symlink"
 touch "$d/`printf 'abc\ndef\a'`"
 test_rawhide_grep "$rh -L '%j\n'        $d/abc*" "^\\{\"path\":\"$d/abc\\\\ndef\\\\u0007\", .*\\}$"  "" 0 "-L %j (json) file with binary name"
+test_rawhide_grep "$rh -j               $d/abc*" "^\\{\"path\":\"$d/abc\\\\ndef\\\\u0007\", .*\\}$"  "" 0 "-j (json) file with binary name"
 rm $d/abc*
 
 # For %z %Z, see tests/t27

@@ -102,6 +102,7 @@ a high-level interface to the built-in symbols mentioned above, and makes
        -v           - Verbose: All columns, implies -ldiBsSac (unless -xXU0L)
        -0           - Output null chars instead of newlines (for xargs -0)
        -L format    - Output matching entries in a user-supplied format
+       -j           - Output matching entries as JSON (same as -L "%j\n")
 
      path format options:
        -Q           - Enclose paths in double quotes
