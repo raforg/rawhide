@@ -69,7 +69,8 @@ static void help_message(void)
 	printf("  -V --version - Show the version message, then exit\n");
 	printf("  -N           - Don't read system-wide config (" RAWHIDE_CONF ")\n");
 	printf("  -n           - Don't read user-specific config (~" RAWHIDE_RC ")\n");
-	printf("  -f fname     - Read functions and/or expression from a file/stdin\n");
+	printf("  -f-          - Read functions and/or expression from stdin\n");
+	printf("  -f fname     - Read functions and/or expression from a file\n");
 	printf(" [-e] 'expr'   - Read functions and/or expression from the cmdline\n");
 	printf("\n");
 	printf("traversal options:\n");

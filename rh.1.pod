@@ -32,7 +32,8 @@ I<rh> - (I<rawhide>) find files using pretty I<C> expressions
    -V --version - Show the version message, then exit
    -N           - Don't read system-wide config (/etc/rawhide.conf)
    -n           - Don't read user-specific config (~/.rhrc)
-   -f fname     - Read functions and/or expression from a file/stdin
+   -f-          - Read functions and/or expression from stdin
+   -f fname     - Read functions and/or expression from a file
   [-e] 'expr'   - Read functions and/or expression from the cmdline
 
  traversal options:
@@ -257,7 +258,7 @@ and then (in lexicographic order) from any files in the C<~/.rhrc.d>
 directory whose names do not start with dot (C<".">). This option suppresses
 that behaviour.
 
-=item C<-f> I<fname>
+=item C<-f->, C<-f> I<fname>
 
 After reading any configuration files, this option causes I<rh> to read code
 from the file specified by I<fname>. If there is also a directory whose name

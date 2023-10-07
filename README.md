@@ -70,7 +70,8 @@ a high-level interface to the built-in symbols mentioned above, and makes
        -V --version - Show the version message, then exit
        -N           - Don't read system-wide config (/etc/rawhide.conf)
        -n           - Don't read user-specific config (~/.rhrc)
-       -f fname     - Read functions and/or expression from a file/stdin
+       -f-          - Read functions and/or expression from stdin
+       -f fname     - Read functions and/or expression from a file
       [-e] 'expr'   - Read functions and/or expression from the cmdline
 
      traversal options:
