@@ -298,6 +298,7 @@ rm $f
 
 factorial='factorial(n) { (n <= 0) ? 1 : factorial(n - 1) * n }'
 test_rawhide "$rh -e '$factorial factorial(3)== 6'       $d" "$d\n" ""                       0 "factorial function - no error"
+[ x"$ubsan" != x1 ] && \
 test_rawhide "$rh -e '$factorial factorial(333331) && 0' $d" ""     ""                       0 "factorial function - no stack overflow (just) but result is meaningless"
 test_rawhide "$rh -e '$factorial factorial(333332) && 0' $d" ""     "./rh: stack overflow\n" 1 "factorial function - stack overflow (just)"
 

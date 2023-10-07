@@ -58,6 +58,10 @@ do
 			echo "  --disable-major    - Forget location of major/minor (for distribution)"
 			echo "  --enable-gcov      - Enable gcov test coverage measurement (do not install)"
 			echo "  --disable-gcov     - Disable gcov test coverage measurement (default)"
+			echo "  --enable-ubsan     - Enable the undefined behaviour sanitizer (do not install)"
+			echo "  --disable-ubsan    - Disable the undefined behaviour sanitizer (default)"
+			echo "  --enable-asan      - Enable the address sanitizer (do not install)"
+			echo "  --disable-asan     - Disable the address sanitizer (default)"
 			echo "  --disable-cc-other - Forget non-default compiler (for distribution)"
 			echo "  --static=SIZE      - Adjust static memory: large (default), small, tiny"
 			echo "  --default          - Restore Makefile to its defaults (for distribution)"
@@ -144,7 +148,7 @@ case "$1" in
 			--destdir= --prefix=/usr/local --etcdir=/etc --mandir='$(PREFIX)/share/man' \
 			--disable-pcre2 --disable-acl --disable-ea --disable-attr --disable-magic \
 			--disable-ndebug --disable-mangz --disable-major --disable-gcov \
-			--disable-cc-other --static=large
+			--disable-ubsan --disable-asan --disable-cc-other --static=large
 		;;
 esac
 
@@ -1140,6 +1144,47 @@ do
 			echo "Configuring $opt"
 			editconf Makefile \
 				-e 's,^\(GCOV_CFLAGS =.*\)$,#\1,'
+			;;
+
+		--enable-ubsan)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^#\(UBSAN_CFLAGS =.*\)$,\1,' \
+				-e 's,^#\(UBSAN_LDFLAGS =.*\)$,\1,'
+			;;
+
+		--disable-ubsan)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^\(UBSAN_CFLAGS =.*\)$,#\1,' \
+				-e 's,^\(UBSAN_LDFLAGS =.*\)$,#\1,'
+			;;
+
+		--enable-asan)
+			if $CC --version | grep -wq 'Free Software Foundation'
+			then
+				echo "Configuring $opt"
+				editconf Makefile \
+					-e 's,^#\(ASAN_CFLAGS =.*\)$,\1,' \
+					-e 's,^#\(ASAN_LDFLAGS =.*\)$,\1,'
+			elif $CC --version | grep -wq clang
+			then
+				echo "Configuring $opt"
+				editconf Makefile \
+					-e 's,^#\(SAN_CFLAGS =.*\)$,\1,' \
+					-e 's,^#\(SAN_LDFLAGS =.*\)$,\1,'
+			else
+				echo "Configuring $opt - not supported"
+			fi
+			;;
+
+		--disable-asan)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^\(ASAN_CFLAGS =.*\)$,#\1,' \
+				-e 's,^\(ASAN_LDFLAGS =.*\)$,#\1,' \
+				-e 's,^\(SAN_CFLAGS =.*\)$,#\1,' \
+				-e 's,^\(SAN_LDFLAGS =.*\)$,#\1,'
 			;;
 
 		--disable-cc-other)

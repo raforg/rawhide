@@ -131,16 +131,24 @@ RAWHIDE_DEFINES = \
 # then run gcov *.c then examine *.c.gcov or run gcov_summary (97.12% on Linux)
 #GCOV_CFLAGS = -fprofile-arcs -ftest-coverage
 
-# Undefined behaviour checks: Uncomment this, run tests (as non-root and as root)
+# Undefined behaviour sanitizer: Uncomment this, run tests (as non-root and as root)
 #UBSAN_CFLAGS = -fsanitize=undefined
 #UBSAN_LDFLAGS = -fsanitize=undefined
+
+# Address sanitizer for gcc: Uncomment this, run tests (as non-root and as root)
+#ASAN_CFLAGS = -fsanitize=address
+#ASAN_LDFLAGS = -fsanitize=address -static-libasan
+
+# Address sanitizer for clang: Uncomment this, run tests (as non-root and as root)
+#SAN_CFLAGS = -fsanitize=address
+#SAN_LDFLAGS = -fsanitize=address -static-libsan
 
 CC = cc
 #CC = gcc
 #CC = other
 ALL_CPPFLAGS = $(CPPFLAGS) $(RAWHIDE_DEFINES) $(PCRE2_DEFINES) $(ACL_DEFINES) $(EA_DEFINES) $(ATTR_DEFINES) $(FLAG_DEFINES) $(MAGIC_DEFINES) $(DEBUG_DEFINES) $(HAVE_SYS_SYSMACROS) $(HAVE_SYS_MKDEV)
-ALL_CFLAGS = -O3 -g -Wall -pedantic $(CFLAGS) $(ALL_CPPFLAGS) $(PCRE2_CFLAGS) $(ACL_CFLAGS) $(EA_CFLAGS) $(ATTR_CFLAGS) $(FLAG_CFLAGS) $(MAGIC_CFLAGS) $(GCOV_CFLAGS) $(UBSAN_CFLAGS)
-ALL_LDFLAGS = $(LDFLAGS) $(PCRE2_LDFLAGS) $(ACL_LDFLAGS) $(EA_LDLAGS) $(ATTR_LDFLAGS) $(FLAG_LDFLAGS) $(MAGIC_LDFLAGS) $(UBSAN_LDFLAGS)
+ALL_CFLAGS = -O3 -g -Wall -pedantic $(CFLAGS) $(ALL_CPPFLAGS) $(PCRE2_CFLAGS) $(ACL_CFLAGS) $(EA_CFLAGS) $(ATTR_CFLAGS) $(FLAG_CFLAGS) $(MAGIC_CFLAGS) $(GCOV_CFLAGS) $(UBSAN_CFLAGS) $(ASAN_CFLAGS) $(SAN_CFLAGS)
+ALL_LDFLAGS = $(LDFLAGS) $(PCRE2_LDFLAGS) $(ACL_LDFLAGS) $(EA_LDLAGS) $(ATTR_LDFLAGS) $(FLAG_LDFLAGS) $(MAGIC_LDFLAGS) $(UBSAN_LDFLAGS) $(ASAN_LDFLAGS) $(SAN_LDFLAGS)
 
 OBJS = rhcmds.o rh.o rhparse.o rhdir.o rhdata.o rhstr.o rherr.o
 
@@ -330,6 +338,29 @@ help:
 	@echo
 	@echo "But be warned that including RAWHIDE_TEST_MULTIBYTE_USER_GROUP=1 above"
 	@echo "includes tests that add and remove new users and groups (Linux only)."
+	@echo "Note: Do not install the resulting binary."
+	@echo
+	@echo "To run tests with the undefined behaviour sanitizer:"
+	@echo
+	@echo "  ./configure --enable-ubsan"
+	@echo "  make"
+	@echo "  make quiet=1 ubsan=1 test"
+	@echo "  sudo make quiet=1 ubsan=1 RAWHIDE_TEST_MULTIBYTE_USER_GROUP=1 test"
+	@echo
+	@echo "The ubsan=1 variable suppresses a test that deliberately performs"
+	@echo "an integer overflow in the search criteria."
+	@echo "Note: Do not install the resulting binary."
+	@echo
+	@echo "To run tests with the address sanitizer (like valgrind but fast):"
+	@echo
+	@echo "  ./configure --enable-asan"
+	@echo "  make"
+	@echo "  make quiet=1 test"
+	@echo "  sudo make quiet=1 asan=1 RAWHIDE_TEST_MULTIBYTE_USER_GROUP=1 test"
+	@echo
+	@echo "The asan=1 variable suppresses a setuid test that would trigger a fatal"
+	@echo "error for the LeakSanitizer which doesn't work with setuid programs."
+	@echo "Note: Do not install the resulting binary."
 	@echo
 	@echo "Other make targets:"
 	@echo
