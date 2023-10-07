@@ -20,6 +20,8 @@
 #
 # 20230609 raf <raf@raf.org>
 
+# .rh.sh - Some command line shell syntactic sugar to save keystrokes
+
 # rq - rh with automatic "" around the first argument
 # usage: rq pattern [options] [path...]
 # e.g.:  rq '*.c' instead of rh '"*.c"'
@@ -84,11 +86,11 @@ reil() { reil_pat="$1"; shift && rh -le "\"$reil_pat\".rei" "$@"; }
 reiv() { reiv_pat="$1"; shift && rh -ve "\"$reiv_pat\".rei" "$@"; }
 
 
-alias rl='rh -rl' # rh -l version of ls -lA
-alias rlr='rh -l' # rh -l version of ls -lAR
+alias rl='rh -rl' # rh -l version of ls -lA (unsorted)
+alias rlr='rh -l' # rh -l version of ls -lAR (unsorted)
 
-alias rv='rh -rv' # rh -v version of ls -lA
-alias rvr='rh -v' # rh -v version of ls -lAR
+alias rv='rh -rv' # rh -v version of ls -lA (unsorted)
+alias rvr='rh -v' # rh -v version of ls -lAR (unsorted)
 
 alias rj='rh -j'
 
@@ -107,13 +109,95 @@ alias rYl='rh -Yl'
 alias rYv='rh -Yv'
 
 
-# rhs - plain rh sorted by path (via jq)
-rhs() { rh -j "$@" | jq -sr 'sort_by(.path) | .[].path'; }
-alias rs=rhs
+# jqs - (helper) use jq to sort rh -j by path
+# usage: jq arguments that don't conflict with -s
+# e.g.: rh -j | jqs -r
+jqs() { jq -s "$@" 'sort_by(.path) | .[].path'; }
 
-# rht - plain rh sorted by modified time reversed (via jq)
-rht() { rh -j "$@" | jq -sr 'sort_by(.mtime) | reverse | .[].path'; }
-alias rt=rht
+# jqt - (helper) use jq to sort rh -j by mtime, most recent first
+# usage: jq arguments that don't conflict with -s
+# e.g.: rh -j | jqt -r
+jqt() { jq -s "$@" 'sort_by(.mtime) | reverse | .[].path'; }
+
+# jqz - (helper) use jq to sort rh -j by size
+# usage: jq arguments that don't conflict with -s
+# e.g.: rh -j | jqz -r
+jqz() { jq -s "$@" 'sort_by(.size) | .[].path'; }
+
+# rhs - plain rh sorted by path (like ls -1AR)
+# usage: rh arguments that don't conflict with -j
+# e.g.: rhs f
+rhs() { rh -j "$@" | jqs -r; }
+
+# rht - plain rh sorted by mtime, most recent first (like ls -1ARt)
+# usage: rh arguments that don't conflict with -j
+# e.g.: rht f
+rht() { rh -j "$@" | jqt -r; }
+
+# rhz - plain rh sorted by size (like ls -1AR but sorted by size)
+# usage: rh arguments that don't conflict with -j
+# e.g.: rhz 'size > 1M'
+rhz() { rh -j "$@" | jqz -r; }
+
+# rls - rh -rl sorted by path (like ls -lA)
+# usage: rh arguments that don't conflict with -r or -j
+# e.g.: rls f
+rls() { eval rh -lM0 `rh -rj "$@" | jqs`; }
+
+# rlt - rh -rl sorted by mtime, most recent first (like ls -lAt)
+# usage: rh arguments that don't conflict with -r or -j
+# e.g.: rlt f
+rlt() { eval rh -lM0 `rh -rj "$@" | jqt`; }
+
+# rlz - rh -rl sorted by size (like ls -lA but sorted by size)
+# usage: rh arguments that don't conflict with -r or -j
+# e.g.: rlz 'size > 1M'
+rlz() { eval rh -lM0 `rh -rj "$@" | jqz`; }
+
+# rlrs - rh -l sorted by path (like ls -lAR)
+# usage: rh arguments that don't conflict with -j
+# e.g.: rlrs f
+rlrs() { eval rh -lM0 `rh -j "$@" | jqs`; }
+
+# rlrt - rh -l sorted by mtime, most recent first (like ls -lARt)
+# usage: rh arguments that don't conflict with -r or -j
+# e.g.: rlrt f
+rlrt() { eval rh -lM0 `rh -j "$@" | jqt`; }
+
+# rlrz - rh -l sorted by size (like ls -lAR but sorted by size)
+# usage: rh arguments that don't conflict with -r or -j
+# e.g.: rlrz 'size > 1M'
+rlrz() { eval rh -lM0 `rh -j "$@" | jqz`; }
+
+# rvs - rh -rv sorted by path (like ls -lA)
+# usage: rh arguments that don't conflict with -r or -j
+# e.g.: rvs f
+rvs() { eval rh -vM0 `rh -rj "$@" | jqs`; }
+
+# rvt - rh -rv sorted by mtime, most recent first (like ls -lAt)
+# usage: rh arguments that don't conflict with -r or -j
+# e.g.: rvt f
+rvt() { eval rh -vM0 `rh -rj "$@" | jqt`; }
+
+# rvz - rh -rv sorted by size (like ls -lA but sorted by size)
+# usage: rh arguments that don't conflict with -r or -j
+# e.g.: rvz 'size > 1M'
+rvz() { eval rh -vM0 `rh -rj "$@" | jqz`; }
+
+# rvrs - rh -v sorted by path (like ls -lAR)
+# usage: rh arguments that don't conflict with -j
+# e.g.: rvrs f
+rvrs() { eval rh -vM0 `rh -j "$@" | jqs`; }
+
+# rvrt - rh -v sorted by mtime, most recent first (like ls -lARt)
+# usage: rh arguments that don't conflict with -r or -j
+# e.g.: rvrt f
+rvrt() { eval rh -vM0 `rh -j "$@" | jqt`; }
+
+# rvrz - rh -v sorted by size (like ls -lAR but sorted by size)
+# usage: rh arguments that don't conflict with -r or -j
+# e.g.: rvrz 'size > 1M'
+rvrz() { eval rh -vM0 `rh -j "$@" | jqz`; }
 
 
 # export RAWHIDE_CONFIG=/etc/rawhide.conf
