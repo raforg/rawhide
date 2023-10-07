@@ -232,23 +232,23 @@ liberties taken):
       | "len"
 
   <built-in> ::=
-        "dev"      | "major"      | "minor"    | "ino"      | "mode"
-      | "nlink"    | "uid"        | "gid"      | "rdev"     | "rmajor"
-      | "rminor"   | "size"       | "blksize"  | "blocks"   | "atime"
-      | "mtime"    | "ctime"      | "attr"     | "proj"     | "gen"
-      | "nouser"   | "nogroup"    | "readable" | "writable" | "executable"
-      | "strlen"   | "depth"      | "prune"    | "trim"     | "exit"
-      | "now"      | "today"      | "second"   | "minute"   | "hour"
-      | "day"      | "week"       | "month"    | "year"     | "IFREG"
-      | "IFDIR"    | "IFLNK"      | "IFCHR"    | "IFBLK"    | "IFSOCK"
-      | "IFIFO"    | "IFDOOR"     | "IFMT"     | "ISUID"    | "ISGID"
-      | "ISVTX"    | "IRWXU"      | "IRUSR"    | "IWUSR"    | "IXUSR"
-      | "IRWXG"    | "IRGRP"      | "IWGRP"    | "IXGRP"    | "IRWXO"
-      | "IROTH"    | "IWOTH"      | "IXOTH"    | "texists"  | "tdev"
-      | "tmajor"   | "tminor"     | "tino"     | "tmode"    | "tnlink"
-      | "tuid"     | "tgid"       | "trdev"    | "trmajor"  | "trminor"
-      | "tsize"    | "tblksize"   | "tblocks"  | "tatime"   | "tmtime"
-      | "tctime"   | "tstrlen"
+        "dev"    | "major"    | "minor"    | "ino"      | "mode"
+      | "nlink"  | "uid"      | "gid"      | "rdev"     | "rmajor"
+      | "rminor" | "size"     | "blksize"  | "blocks"   | "atime"
+      | "mtime"  | "ctime"    | "attr"     | "proj"     | "gen"
+      | "nouser" | "nogroup"  | "readable" | "writable" | "executable"
+      | "strlen" | "depth"    | "prune"    | "trim"     | "exit"
+      | "now"    | "today"    | "second"   | "minute"   | "hour"
+      | "day"    | "week"     | "month"    | "year"     | "IFREG"
+      | "IFDIR"  | "IFLNK"    | "IFCHR"    | "IFBLK"    | "IFSOCK"
+      | "IFIFO"  | "IFDOOR"   | "IFMT"     | "ISUID"    | "ISGID"
+      | "ISVTX"  | "IRWXU"    | "IRUSR"    | "IWUSR"    | "IXUSR"
+      | "IRWXG"  | "IRGRP"    | "IWGRP"    | "IXGRP"    | "IRWXO"
+      | "IROTH"  | "IWOTH"    | "IXOTH"    | "texists"  | "tdev"
+      | "tmajor" | "tminor"   | "tino"     | "tmode"    | "tnlink"
+      | "tuid"   | "tgid"     | "trdev"    | "trmajor"  | "trminor"
+      | "tsize"  | "tblksize" | "tblocks"  | "tatime"   | "tmtime"
+      | "tctime" | "tstrlen"
 
   <function-call> ::=
       IDENTIFIER <arguments>
@@ -2506,7 +2506,7 @@ C</etc/rawhide.conf.d/attributes> library:
   ATTR_IMAGIC           { 0x00002000 }
   ATTR_JOURNAL_DATA     { 0x00004000 } # File data should be journaled
   ATTR_NOTAIL           { 0x00008000 } # File tail should not be merged
-  ATTR_DIRSYNC          { 0x00010000 } # Synchronous directory modifications
+  ATTR_DIRSYNC          { 0x00010000 } # Synchronous dir modifications
   ATTR_TOPDIR           { 0x00020000 } # Top of directory hierarchies
   ATTR_HUGE_FILE        { 0x00040000 } # Set to each huge file
   ATTR_EXTENTS          { 0x00080000 } # Inode uses extents
@@ -2596,8 +2596,8 @@ There is a similar file on I<OpenBSD>, I<NetBSD>, and I<macOS> systems:
   # See rh(1) and rawhide.conf(5) for more information.
 
   /*
-  This file defines aliases for the built-in symbols for FreeBSD file flags,
-  and the related constants and predicates. See <sys/stat.h>.
+  This file defines aliases for the built-in symbols for FreeBSD file
+  flags, and the related constants and predicates. See <sys/stat.h>.
   */
 
   // Aliases for the FreeBSD file flags built-ins

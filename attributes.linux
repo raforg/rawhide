@@ -36,7 +36,7 @@ ATTR_INDEX            { 0x00001000 } # Hash-indexed directory
 ATTR_IMAGIC           { 0x00002000 }
 ATTR_JOURNAL_DATA     { 0x00004000 } # File data should be journaled
 ATTR_NOTAIL           { 0x00008000 } # File tail should not be merged
-ATTR_DIRSYNC          { 0x00010000 } # Synchronous directory modifications
+ATTR_DIRSYNC          { 0x00010000 } # Synchronous dir modifications
 ATTR_TOPDIR           { 0x00020000 } # Top of directory hierarchies
 ATTR_HUGE_FILE        { 0x00040000 } # Set to each huge file
 ATTR_EXTENTS          { 0x00080000 } # Inode uses extents

@@ -2,8 +2,8 @@
 # See rh(1) and rawhide.conf(5) for more information.
 
 /*
-This file defines aliases for the built-in symbols for NetBSD file flags,
-and the related constants and predicates. See <sys/stat.h>.
+This file defines aliases for the built-in symbols for NetBSD file
+flags, and the related constants and predicates. See <sys/stat.h>.
 */
 
 // Aliases for the NetBSD file flags built-ins
