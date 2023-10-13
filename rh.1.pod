@@ -202,8 +202,8 @@ control flow, more file information, and candidate symlink target inode
 metadata.
 
 File glob patterns and I<Perl>-compatible regular expressions (regexes) can
-be used to match files by their name, path, symlink target path, file type
-description, MIME type, access control list, and extended attributes.
+be used to match files by their name, path, symlink target path, body, file
+type description, MIME type, access control list, and extended attributes.
 
 Search criteria can also include comparisons with the inode metadata of
 arbitrary reference files, and the exit success status of arbitrary shell
@@ -1836,7 +1836,7 @@ See I<perlre(1)>, I<pcre2pattern(3)>, and I<pcre2syntax(3)> for details.
 The same, but with documentation:
 
     $ rh '"
-      ^         # Anchor the match to the start of the base name 
+      ^         # Anchor the match to the start of the base name
       \w+       # Starts with at least one word character
       \d{2,3}   # Followed by two or three digits
       \.        # Followed by a literal dot

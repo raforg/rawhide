@@ -213,10 +213,15 @@ liberties taken):
       | STRING NOSPACE "." NOSPACE <pattern-modifier>
 
   <pattern-modifier> ::=
-        "i"     | "path"   | "ipath"   | "link"   | "ilink"
-      | "acl"   | "iacl"   | "ea"      | "iea"    | "re"
-      | "rei"   | "repath" | "reipath" | "relink" | "reilink"
-      | "reacl" | "reiacl" | "reea"    | "reiea"  | "sh"
+                 "i"     | "re"     | "rei"
+      | "path" | "ipath" | "repath" | "reipath"
+      | "link" | "ilink  | "relink" | "reilink"
+      | "body" | "ibody  | "rebody" | "reibody"
+      | "what" | "iwhat  | "rewhat" | "reiwhat"
+      | "mime" | "imime  | "remime" | "reimime"
+      | "acl"  | "iacl"  | "reacl"  | "reiacl"
+      | "ea"   | "iea"   | "reea"   | "reiea"
+      | "sh"
 
   <reference-file> ::=
       STRING NOSPACE "." NOSPACE <reference-file-field>
@@ -1493,7 +1498,7 @@ On I<FreeBSD>, I<NFSv4> ACL text has each item on a separate line,
 terminated by a newline character, and there are leading spaces for vertical
 alignment before each item. On I<Solaris>, I<NFSv4> ACL text is a
 comma-separated list of items with no leading spaces and no newline
-character. 
+character.
 
 I<macOS> has its own I<Extended> ACLs that look like this:
 

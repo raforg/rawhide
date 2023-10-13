@@ -47,8 +47,8 @@ control flow, more file information, and candidate symlink target inode
 metadata.
 
 File glob patterns and *Perl*-compatible regular expressions (regexes) can
-be used to match files by their name, path, symlink target path, file type
-description, MIME type, access control list, and extended attributes.
+be used to match files by their name, path, symlink target path, body, file
+type description, MIME type, access control list, and extended attributes.
 
 Search criteria can also include comparisons with the inode metadata of
 arbitrary reference files, and the exit success status of arbitrary shell
