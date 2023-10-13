@@ -2306,7 +2306,7 @@ static char *json(void)
 	static char buf[JSON_BUFSIZE];
 	struct passwd *pwd;
 	struct group *grp;
-	char *base, *selinux, *acl, *ea;
+	char *base, *selinux, *ea;
 	int pos = 0;
 
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "{");
@@ -2375,12 +2375,12 @@ static char *json(void)
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"generation\":%lu, ", get_gen());
 	#endif
 
-	if ((acl = get_acl(1)))
+	if (get_acl(1))
 	{
-		pos += add_field(buf + pos, JSON_BUFSIZE - pos, "access_control_list", acl);
+		pos += add_field(buf + pos, JSON_BUFSIZE - pos, "access_control_list", attr.facl);
 
 		if (attr.facl_verbose)
-			pos += add_field(buf + pos, JSON_BUFSIZE - pos, "access_control_list_verbose", acl);
+			pos += add_field(buf + pos, JSON_BUFSIZE - pos, "access_control_list_verbose", attr.facl_verbose);
 	}
 
 	if ((ea = get_ea(1)) && attr.fea_ok)

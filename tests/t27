@@ -130,8 +130,8 @@ then
 				test_rawhide "$rh -Y '\"group:.*:ALLOW:write\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"    "" 0 "-Y .reiacl"
 			fi
 
-			test_rawhide_grep "$rh -L '%j\n' $d/acl" "^{\"path\":\"$d/acl\", .*\"access_control_list\":.*}$"                     "" 0 "-L %j (json) with acl"
-			test_rawhide_grep "$rh -j        $d/acl" "^{\"path\":\"$d/acl\", .*\"access_control_list\":.*}$"                     "" 0 "-j (json) with acl"
+			test_rawhide_grep "$rh -L '%j\n' $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*\\}$"                     "" 0 "-L %j (json) with acl"
+			test_rawhide_grep "$rh -j        $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*\\}$"                     "" 0 "-j (json) with acl"
 			;;
 
 		FreeBSD) # setfacl setextattr
@@ -184,8 +184,8 @@ then
 					test_rawhide "$rh -Y '\"user:ROOT:rwxp\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .reiacl"
 				fi
 
-				test_rawhide_grep "$rh -L '%j\n' $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*\\}$"                     "" 0 "-L %j (json) with acl"
-				test_rawhide_grep "$rh -j        $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*\\}$"                     "" 0 "-j (json) with acl"
+				test_rawhide_grep "$rh -L '%j\n' $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list_verbose\":.*read_data.*\\}$" "" 0 "-L %j (json) with acl"
+				test_rawhide_grep "$rh -j        $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list_verbose\":.*read_data.*\\}$" "" 0 "-j (json) with acl"
 			else
 				echo "$t: Skipping ACL tests (setfacl not found)"
 				ACL=0
@@ -242,8 +242,8 @@ then
 					test_rawhide "$rh -Y '\"user:ROOT:rwxp\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .reiacl"
 				fi
 
-				test_rawhide_grep "$rh -L '%j\n' $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*\\}$"                     "" 0 "-L %j (json) with acl"
-				test_rawhide_grep "$rh -j        $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*\\}$"                     "" 0 "-j (json) with acl"
+				test_rawhide_grep "$rh -L '%j\n' $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*, \"access_control_list_verbose\":.*read_data.*\\}$" "" 0 "-L %j (json) with acl"
+				test_rawhide_grep "$rh -j        $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*, \"access_control_list_verbose\":.*read_data.*\\}$" "" 0 "-j (json) with acl"
 
 				# Test environment variable
 
