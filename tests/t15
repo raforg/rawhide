@@ -238,7 +238,7 @@ then
 	test_rawhide "$rh -e 'uid != \$\$'      $d" ""     "" 0 "not same as \$\$"
 	test_rawhide "$rh -e 'uid != \$$myuser' $d" ""     "" 0 "not same as \$$myuser"
 
-	mygroup="`groups $myuser 2>/dev/null | sed 's/ .*$//'`"
+	mygroup="`id -gn`"
 
 	if [ -n "$mygroup" ] && grep -q "^$mygroup:" /etc/group 2>/dev/null
 	then
