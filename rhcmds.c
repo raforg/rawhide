@@ -544,7 +544,10 @@ char *get_body(void)
 				attr.body_length += bytes;
 
 			if (bytes == -1)
+			{
 				errorsys("read %s", ok(attr.fpath));
+				attr.exit_status = EXIT_FAILURE;
+			}
 
 			close(fd);
 
@@ -1378,15 +1381,15 @@ int has_real_acl(void)
 	if (!acl)
 		return 0;
 
-	/* "POSIX" ACLs */
-
-	if (strstr(acl, "user::"))
-		return strstr(acl, "mask::") || (get_ea(0) && attr.fea_ok && strstr(attr.fea, "system.posix_acl_access: "));
-
 	/* NFSv4 ACLs */
 
 	if (strstr(acl, "owner@:"))
 		return strstr(acl, "user:") || strstr(acl, "group:");
+
+	/* "POSIX" ACLs */
+
+	if (strstr(acl, "user::"))
+		return strstr(acl, "mask::") || (get_ea(0) && attr.fea_ok && strstr(attr.fea, "system.posix_acl_access: "));
 
 	/* macOS ACLs */
 
