@@ -391,6 +391,9 @@ test_rh_errno_post_hook()
 		-e 's/File exists/Directory not empty/' \
 		-e 's/Number of symbolic links encountered during path name traversal exceeds MAXSYMLINKS/Too many levels of symbolic links/' \
 		-e 's/Symbolic link loop/Too many levels of symbolic links/' \
+		-e 's/Undefined error: 0/Success/' \
+		-e 's/No error: 0/Success/' \
+		-e 's/Error 0/Success/' \
 		$stderr > $stderr.tmp && mv $stderr.tmp $stderr
 }
 
@@ -448,7 +451,7 @@ test_rawhide_grep()
 		echo "TEST $t fail ($label - $desc - stdout)"
 		echo "$cmd"
 		echo "$expected_stdout_pattern"
-		grep -v "$expected_stdout_pattern" < $stdout
+		$grep -E -v "$expected_stdout_pattern" < $stdout
 		errors=1
 		failed=1
 	else

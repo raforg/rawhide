@@ -1792,9 +1792,6 @@ This is for better security when the -X option or "cmd".sh is used.
 When changing to each matching file's directory, and then executing
 a shell command, we don't want those directories in $PATH.
 
-If rh is setuid or setgid for some silly reason, $PATH is set to
-"/bin:/usr/bin:/sbin:/usr/sbin".
-
 */
 
 int remove_danger_from_path(void)
@@ -1803,13 +1800,6 @@ int remove_danger_from_path(void)
 	int rc = 0;
 
 	#define DEFAULT_PATH "/bin:/usr/bin:/sbin:/usr/sbin"
-
-	if (geteuid() != getuid() || getegid() != getgid())
-	{
-		debug_extra(("path not safe, setting default path"));
-
-		return setenv("PATH", DEFAULT_PATH, 1);
-	}
 
 	if (!(oldpath = getenv("PATH")) || !*oldpath)
 	{

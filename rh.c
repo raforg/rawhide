@@ -473,9 +473,21 @@ int main(int argc, char *argv[])
 	llong max_pathlen, pathbufsize;
 	struct stat statbuf[1];
 	int o, i, expr_index = 0, any = 0, stdin_read = 0;
+	uid_t uid;
+	gid_t gid;
 
 	setlocale(LC_ALL, "");
 	prog_name = argv[0];
+
+	/* Revoke any unexpected privileges */
+
+	if (getegid() != (gid = getgid()))
+		if (setgid(gid) == -1 || getegid() != getgid() || env_flag("RAWHIDE_TEST_SETGID_FAILURE"))
+			fatalsys("failed to revoke unexpected setgid privileges");
+
+	if (geteuid() != (uid = getuid()))
+		if (setuid(gid) == -1 || geteuid() != getuid() || env_flag("RAWHIDE_TEST_SETUID_FAILURE"))
+			fatalsys("failed to revoke unexpected setuid privileges");
 
 	/* Defaults */
 

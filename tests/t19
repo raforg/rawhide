@@ -114,19 +114,62 @@ test_rawhide "$rh -M0 -X 'echo \`pwd\` .%s.%S.' /usr/bin"  "/usr ./usr/bin.bin.\
 test_rawhide "$rh -M0 -X 'echo \`pwd\` .%s.%S.' /usr/bin/" "/usr ./usr/bin.bin.\n" "" 0 "chdir for -X in /usr/bin/ directory (with trailing /)"
 test_rawhide "$rh -M0 -X 'true' ."                         ""                      "" 0 "chdir for -X in . (no chdir - just for coverage)"
 
+# On OpenBSD, setuid/setgid bits don't change euid/egid
 if [ "`uname`" != OpenBSD -a "`whoami`" = root ] && grep -q '^nobody:' /etc/passwd && grep -q '^nogroup:' /etc/group
 then
-	# On OpenBSD, setuid/setgid bits don't change euid/egid
 	chmod 666 *.gcda 2>/dev/null
-	cp ./rh ./rh2
-	chown nobody ./rh2
-	chgrp nogroup ./rh2
-	chmod 4750 ./rh2
-	[ x"$asan" != x1 ] && \
-	test_rawhide "./rh2 -Nn -f rawhide.conf -M0 -X 'echo \$PATH' -e exit $d" "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "reset PATH if setuid"
-	chmod 2750 ./rh2
-	test_rawhide "./rh2 -Nn -f rawhide.conf -M0 -X 'echo \$PATH' -e exit $d" "/bin:/usr/bin:/sbin:/usr/sbin\n" "" 0 "reset PATH if setgid"
-	rm ./rh2
+	cp rh rh2
+	chown nobody rh2
+	chgrp nogroup rh2
+	chmod 4755 rh2
+	test_rawhide_post_hook() { test_rh_errno_post_hook; }
+
+	if [ x"$asan" != x1 ] # ASAN doesn't work when setuid
+	then
+		test_rawhide "RAWHIDE_TEST_SETUID_FAILURE=1 ./rh2 -Nn -f rawhide.conf -M0 -X 'echo %S' -e exit $d" "" "./rh2: failed to revoke unexpected setuid privileges: Success\n" 1 "fail to revoke setuid privileges"
+
+		test_rawhide "./rh2 -Nn -f rawhide.conf -M0 -X 'echo %S' -e exit $d" ".$t\n" "" 0 "revoke setuid privileges (just for coverage)"
+
+		if grep -q '^daemon:' /etc/passwd && [ -x "`command -v sudo`" ]
+		then
+			mkdir $d/otherd
+			touch $d/otherd/otherf
+			chown nobody $d/otherd $d/otherd/otherf
+			chgrp nogroup $d/otherd $d/otherd/otherf
+			chmod 750 $d/otherd
+			chmod 644 $d/otherd/otherf
+
+			test_rawhide "               ./rh2 -Nn -f rawhide.conf $d/otherd" "$d/otherd\n$d/otherd/otherf\n" ""                                              0 "revoke setuid privileges (as root setuid nobody)"
+			test_rawhide "sudo -u daemon ./rh2 -Nn -f rawhide.conf $d/otherd" "$d/otherd\n"                   "./rh2: tests/.t19/otherd: Permission denied\n" 1 "revoke setuid privileges (as daemon setuid nobody)"
+
+			rm -r $d/otherd
+		fi
+	fi
+
+	chmod 2755 rh2
+
+	test_rawhide "RAWHIDE_TEST_SETGID_FAILURE=1 ./rh2 -Nn -f rawhide.conf -M0 -X 'echo %S' -e exit $d" "" "./rh2: failed to revoke unexpected setgid privileges: Success\n" 1 "fail to revoke setgid privileges"
+
+	test_rawhide "./rh2 -Nn -f rawhide.conf -M0 -X 'echo %S' -e exit $d" ".$t\n" "" 0 "revoke setgid privileges (just for coverage)"
+
+	if grep -q '^daemon:' /etc/passwd && [ -x "`command -v sudo`" ]
+	then
+		mkdir $d/otherd
+		touch $d/otherd/otherf
+		chown nobody $d/otherd $d/otherd/otherf
+		chgrp nogroup $d/otherd $d/otherd/otherf
+		chmod 750 $d/otherd
+		chmod 644 $d/otherd/otherf
+
+		test_rawhide "               ./rh2 -Nn -f rawhide.conf $d/otherd" "$d/otherd\n$d/otherd/otherf\n" ""                                              0 "revoke setuid privileges (as root setuid nobody)"
+		test_rawhide "sudo -u daemon ./rh2 -Nn -f rawhide.conf $d/otherd" "$d/otherd\n"                   "./rh2: tests/.t19/otherd: Permission denied\n" 1 "revoke setuid privileges (as daemon setuid nobody)"
+
+		rm -r $d/otherd
+	fi
+
+	test_rawhide_post_hook() { true; }
+
+	rm rh2
 	chmod 644 *.gcda 2>/dev/null
 fi
 
