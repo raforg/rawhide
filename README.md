@@ -472,8 +472,8 @@ Find files on *Solaris* with setuid executable extended attributes (silly):
 
 *Rawhide*'s source distribution can be downloaded from these locations:
 
-- <https://raf.org/rawhide/download/rawhide-3.2.tar.gz> (or [archive.org](https://web.archive.org/web/20230000000000*/https://raf.org/rawhide/download/rawhide-3.2.tar.gz))
-- <https://github.com/raforg/rawhide/releases/download/v3.2/rawhide-3.2.tar.gz>
+- <https://raf.org/rawhide/download/rawhide-3.3.tar.gz> (or [archive.org](https://web.archive.org/web/20230000000000*/https://raf.org/rawhide/download/rawhide-3.3.tar.gz))
+- <https://github.com/raforg/rawhide/releases/download/v3.3/rawhide-3.3.tar.gz>
 
 This is free software released under the terms of the GNU General Public
 Licence version 3 or later (*GPLv3+*).
@@ -482,8 +482,8 @@ Licence version 3 or later (*GPLv3+*).
 
 To install *rawhide*:
 
-        tar xzf rawhide-3.2.tar.gz
-        cd rawhide-3.2
+        tar xzf rawhide-3.3.tar.gz
+        cd rawhide-3.3
         ./configure
         make
         make test # optional (lots of output, or set quiet=1)
@@ -558,6 +558,6 @@ character encodings are not supported.
     URL: https://raf.org/rawhide
     GIT: https://github.com/raforg/rawhide
     GIT: https://codeberg.org/raforg/rawhide
-    Date: 20230609
+    Date: 20231013
     Authors: 1990 Ken Stauffer, 2022-2023 raf <raf@raf.org>
 

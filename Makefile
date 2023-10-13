@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
-# 20230609 raf <raf@raf.org>
+# 20231013 raf <raf@raf.org>
 
 DESTDIR =
 #PREFIX = /usr
@@ -43,8 +43,8 @@ FMT_MANDIR = $(MAN_INSDIR)/man$(FMT_MANSECT)
 MAN_GZIP = 0
 
 RAWHIDE_NAME = rawhide
-RAWHIDE_VERSION = 3.2
-RAWHIDE_DATE = 20230609
+RAWHIDE_VERSION = 3.3
+RAWHIDE_DATE = 20231013
 RAWHIDE_PROG_NAME = rh
 RAWHIDE_ID = $(RAWHIDE_NAME)-$(RAWHIDE_VERSION)
 RAWHIDE_DIST = $(RAWHIDE_ID).tar.gz

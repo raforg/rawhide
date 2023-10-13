@@ -1,3 +1,27 @@
+3.3 (20231013)
+
+    - Makefile - Place env CFLAGS after explicit flags so they can override the explicit flags
+    - configure - Fix --prefix= buglet (only worked if it was the first argument)
+    - Makefile - Include env CPPFLAGS (just in case)
+    - configure - Add --macports-prefix for macports with non-default prefix
+    - configure - Add missing --etcdir and fix --destdir and --mandir
+    - tests - Adapt to identify new adduser/addgroup help message
+    - Add body pattern modifiers: .body .ibody .rebody .reibody
+    - .reuse/dep5 - Make more accurate (strlcpy/strlcat not exactly BSD-3-Clause)
+    - pcre2 - Stop using the PCRE2_NEVER_BACKSLASH_C option
+    - configure - Remove 'when present' from pcre2 message for consistency
+    - configure/tests - Replace `which` with `command -v` (more consistent)
+    - tests - Make RAWHIDE_TEST_MULTIBYTE_USER_GROUP message shorter
+    - tests - On FreeBSD chflags uappnd fails on zfs so test with sappnd
+    - Add -j option (same as -L "%j\n")
+    - configure - Add --enable-ubsan --enable-asan (undefined behaviour/address sanitizers)
+    - doc - Show explicit -f- (as distinct from: -f fname) in --help output and SYNOPSIS
+    - doc - Add rhs/rht/rhz etc. shell functions (rh/-r/-l/-v sorted (via jq) by path/mtime/size)
+    - doc - Make rawhide.conf(5) manual entry fit in 80 columns again
+    - doc - Update grammar to include recently added pattern modifiers
+    - Fix -L %j access_control_list_verbose on FreeBSD/Solaris (wasn't verbose)
+    - Revoke any setuid/setgid privileges at the start
+
 3.2 (20230609)
 
     - Add support for attr (flags) on FreeBSD, OpenBSD, NetBSD, and macOS
