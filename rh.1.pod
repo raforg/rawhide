@@ -2155,12 +2155,12 @@ Some command line shell syntactic sugar to save keystrokes:
     # jqt - (helper) use jq to sort rh -j by mtime, most recent first
     # usage: jq arguments that don't conflict with -s
     # e.g.: rh -j | jqt -r
-    jqt() { jq -s "$@" 'sort_by(.mtime) | reverse | .[].path'; }
+    jqt() { jq -s "$@" 'sort_by(-.mtime_unix,.path) | .[].path'; }
     
     # jqz - (helper) use jq to sort rh -j by size
     # usage: jq arguments that don't conflict with -s
     # e.g.: rh -j | jqz -r
-    jqz() { jq -s "$@" 'sort_by(.size) | .[].path'; }
+    jqz() { jq -s "$@" 'sort_by(.size,.path) | .[].path'; }
     
     # rhs - plain rh sorted by path (like ls -1AR)
     # usage: rh arguments that don't conflict with -j
