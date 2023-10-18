@@ -210,7 +210,7 @@ case "`uname`" in
 			-e 's,^\(MAN_GZIP =\) 1,\1 0,'
 		;;
 
-	SunOS*) # prefix=/usr/local etcdir=/etc mandir=$prefix/man manzip=0
+	SunOS*|Solaris) # prefix=/usr/local etcdir=/etc mandir=$prefix/man manzip=0
 		echo "Configuring for Solaris"
 		editconf Makefile \
 			-e 's,^\(PREFIX = \).*$,\1/usr/local,' \

@@ -152,6 +152,8 @@ ALL_LDFLAGS = $(LDFLAGS) $(PCRE2_LDFLAGS) $(ACL_LDFLAGS) $(EA_LDLAGS) $(ATTR_LDF
 
 OBJS = rhcmds.o rh.o rhparse.o rhdir.o rhdata.o rhstr.o rherr.o
 
+all: $(RAWHIDE_PROG_NAME)
+
 $(RAWHIDE_PROG_NAME): Makefile $(OBJS)
 	$(CC) $(ALL_CFLAGS) -o $(RAWHIDE_PROG_NAME) $(OBJS) $(ALL_LDFLAGS)
 
