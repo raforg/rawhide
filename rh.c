@@ -549,6 +549,8 @@ int main(int argc, char *argv[])
 	else
 		attr.utf = env_flag("RAWHIDE_PCRE2_UTF8_DEFAULT");
 
+	attr.multiline = env_flag("RAWHIDE_PCRE2_MULTILINE_ALWAYS");
+
 	attr.report_broken_symlinks = env_flag("RAWHIDE_REPORT_BROKEN_SYMLINKS");
 	attr.report_cycles = !env_flag("RAWHIDE_DONT_REPORT_CYCLES");
 	attr.facl_solaris_no_trivial = env_flag("RAWHIDE_SOLARIS_ACL_NO_TRIVIAL");

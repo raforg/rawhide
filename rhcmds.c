@@ -472,13 +472,16 @@ static int rematch(const char *pattern, const char *subject, size_t subject_leng
 	int rc;
 
 	options |= PCRE2_DOTALL;            /* . matches anything including newline (like /s) */
-	options |= PCRE2_MULTILINE;         /* ^ matches after every newline, $ matches before every newline (like /m) */
+	options |= PCRE2_DOLLAR_ENDONLY;    /* $ matches only at the end of the subject */
 	options |= PCRE2_EXTENDED;          /* Ignore whitespace and # comments (except in character classes) (like /x) */
 	options |= PCRE2_EXTENDED_MORE;     /* Ignore space and tab inside character classes as well (like /xx) */
 	options |= PCRE2_NO_AUTO_CAPTURE;   /* Prevent automatic numbered capturing parentheses (like /n) */
 
 	if (attr.utf)
 		options |= PCRE2_UTF | PCRE2_MATCH_INVALID_UTF; /* Assume UTF-8 patterns and subject text */
+
+	if (attr.multiline)
+		options |= PCRE2_MULTILINE;     /* ^ matches after every newline, $ matches before every newline (like /m) */
 
 	re = pcre2_compile_cached(pattern, options);
 
@@ -576,7 +579,7 @@ void c_ibody(llong i) { body_glob(i, FNM_CASEFOLD); }
 
 static void body_re(llong i, int options)
 {
-	Stack[SP++] = get_body() ? rematch(&Strbuf[i], get_body(), attr.body_length, options) : 0;
+	Stack[SP++] = get_body() ? rematch(&Strbuf[i], get_body(), attr.body_length, PCRE2_MULTILINE | options) : 0;
 }
 
 void c_rebody(llong i)  { body_re(i, 0); }
@@ -633,7 +636,7 @@ void c_iwhat(llong i) { what_glob(i, FNM_CASEFOLD); }
 
 static void what_re(llong i, int options)
 {
-	Stack[SP++] = get_what() ? rematch(&Strbuf[i], get_what(), -1, options) : 0;
+	Stack[SP++] = get_what() ? rematch(&Strbuf[i], get_what(), -1, PCRE2_MULTILINE | options) : 0;
 }
 
 void c_rewhat(llong i)  { what_re(i, 0); }
@@ -812,7 +815,7 @@ void c_iacl(llong i) { acl_glob(i, FNM_CASEFOLD); }
 static void acl_re(llong i, int options)
 {
 	Stack[SP++] = get_acl(1)
-		? rematch(&Strbuf[i], get_acl(1), -1, options) ||
+		? rematch(&Strbuf[i], get_acl(1), -1, PCRE2_MULTILINE | options) ||
 			(attr.facl_verbose && rematch(&Strbuf[i], attr.facl_verbose, -1, options))
 		: 0;
 }
@@ -1421,7 +1424,7 @@ void c_iea(llong i) { ea_glob(i, FNM_CASEFOLD); }
 
 static void ea_re(llong i, int options)
 {
-	Stack[SP++] = get_ea(1) && attr.fea_ok ? rematch(&Strbuf[i], get_ea(1), -1, options) : 0;
+	Stack[SP++] = get_ea(1) && attr.fea_ok ? rematch(&Strbuf[i], get_ea(1), -1, PCRE2_MULTILINE | options) : 0;
 }
 
 void c_reea(llong i)  { ea_re(i, 0); }

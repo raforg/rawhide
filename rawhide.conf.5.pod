@@ -1332,7 +1332,8 @@ regular expressions are available on the local system.
 Regex patterns are not automatically anchored to the start and end, and so
 do not have to match the entire text.
 
-The following I<PCRE2> options are always enabled:
+The following I<PCRE2> options are enabled by default. Unless otherwise
+stated, these options are always enabled.
 
 =over 4
 
@@ -1342,6 +1343,12 @@ The C<.> meta-character matches any character, including the newline
 character. This prevents surprises when files have newline characters in
 their names. This is like I<Perl>'s C</s> modifier.
 
+=item C<PCRE2_DOLLAR_ENDONLY>
+
+The C<$> meta-character only matches the end of the string, not also before
+a newline at the end of the string. This only applies when
+C<PCRE2_MULTILINE> is not also set.
+
 =item C<PCRE2_MULTILINE>
 
 The C<^> meta-character matches after every internal newline character, not
@@ -1349,6 +1356,13 @@ just at the start. The C<$> meta-character matches before every internal
 newline character, not just at the end. This is useful for access control
 list (ACL) and extended attribute (EA) searches (see below) where the text
 can occupy multiple lines. This is like I<Perl>'s C</m> modifier.
+
+This option is not enabled by default when matching file names, paths,
+symlink target paths, or MIME types (e.g., `re`, `repath`, `relink`,
+`remime`) because it can be unhelpful in the face of malicious paths. It is
+only enabled by default when matching everything else (e.g., `reacl`,
+`reea`, `rewhat`, `rebody`). It can be enabled in all cases by setting the
+environment variable C<RAWHIDE_PCRE2_MULTILINE_ALWAYS=1>.
 
 =item C<PCRE2_EXTENDED>
 

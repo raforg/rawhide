@@ -240,6 +240,15 @@ then
 	test_rawhide "$rh -e '\"^.*\$\".reilin'      $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"^.*\$\".reilin (abbrev)"
 	test_rawhide "$rh -e '\"^.*\$\".reili'       $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"^.*\$\".reili (abbrev)"
 	test_rawhide "$rh -e '\"^.*\$\".reil'        $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"^.*\$\".reil (abbrev)"
+
+	# Test RAWHIDE_PCRE2_MULTILINE_ALWAYS
+
+	mkdir $d/m
+	touch $d/m/foo.txt
+	touch "$d/m/$(printf 'foo.txt\nbar.exe')"
+	test_rawhide "                                 $rh -e '\"\\.txt\$\".re' $d/m" "$d/m/foo.txt\n"                        "" 0 "\"\\.txt\$\".re with a mid-name newline without RAWHIDE_PCRE2_MULTILINE_ALWAYS=1 (good)"
+	test_rawhide "RAWHIDE_PCRE2_MULTILINE_ALWAYS=1 $rh -e '\"\\.txt\$\".re' $d/m" "bar.exe\n$d/m/foo.txt\n$d/m/foo.txt\n" "" 0 "\"\\.txt\$\".re with a mid-name newline with RAWHIDE_PCRE2_MULTILINE_ALWAYS=1 (not good)"
+	rm -r $d/m
 fi
 
 # Test rewhat rewhat if available

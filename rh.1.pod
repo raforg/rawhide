@@ -2648,6 +2648,17 @@ C<"UTF-8">). When the locale doesn't use I<UTF-8>, and you want I<rh> to
 assume that everything is I<UTF-8> anyway, set the environment variable
 C<RAWHIDE_PCRE2_UTF8_DEFAULT=1>.
 
+Setting the environment variable C<RAWHIDE_PCRE2_MULTILINE_ALWAYS=1> causes
+regex patterns to treat the subject as multiple lines. This means that the
+C<^> meta-character matches after every internal newline character, not just
+at the start. The C<$> meta-character matches before every internal newline
+character, not just at the end. This is like I<Perl>'s C</m> modifier. This
+is not enabled by default when matching file names, paths, symlink target
+paths, or MIME types (e.g., `re`, `repath`, `relink`, `remime`) because it
+can be unhelpful in the face of malicious paths. It is only enabled by
+default when matching everything else (e.g., `reacl`, `reea`, `rewhat`,
+`rebody`).
+
 On I<Solaris>, setting the environment variable
 C<RAWHIDE_SOLARIS_ACL_NO_TRIVIAL=1> suppresses trivial access control lists
 (ACLs). By default on I<Solaris>, ACLs are always present, even if they are
