@@ -2496,14 +2496,23 @@ the names of any existing functions or built-in symbols.
 
 Locale support is peculiar. The only supported locales are those that use
 I<UTF-8> or an I<ASCII>-compatible single-byte character encoding like
-I<ISO-8859-*> (but the S<C<-L %j>> (I<JSON>) conversion is only supported
-with I<UTF-8> locales). All non-I<ASCII> characters are considered to be
+I<ISO-8859-*>. But the C<-j> (I<JSON>) option and the S<C<-L %j>> conversion
+are only supported in I<UTF-8> locales. In locales with an
+I<ASCII>-compatible single-byte character encoding, JSON output might be
+invalid I<UTF-8> (and hence invalid JSON) because it might contain strings
+like file names or user names or group names in their original encoding,
+which wouldn't be I<UTF-8>. Such invalid JSON output can be fixed by piping
+it through S<C<iconv -t utf8>> to convert it to I<UTF-8>. But only if the
+user's locale's character set is the only character set used on the system.
+Otherwise, it could become a mess of miscoded characters.
+
+All non-I<ASCII> characters in the search criteria are considered to be
 "letters" when parsing the names of functions, parameters, users, and
 groups. This means that all languages and scripts, and even emojis, can be
 used in names, but non-I<ASCII> digits and numbers in other scripts cannot
 be used in numeric constants. Other multi-byte character encodings are not
 supported (e.g., I<UTF-16>, I<GB 18030>, I<Big5>, I<Shift JIS>, and
-I<EUC-*>). This limitation lets I<rh> enjoy most of the benefits of
+I<EUC-*>). These limitations let I<rh> enjoy most of the benefits of
 I<Unicode> without needing to expend any time or energy decoding and
 encoding characters.
 
