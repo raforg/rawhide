@@ -142,62 +142,62 @@ rhz() { rh -j "$@" | jqz -r; }
 # rls - rh -rl sorted by path (like ls -lA)
 # usage: rh arguments that don't conflict with -r or -j
 # e.g.: rls f
-rls() { eval rh -lM0 `rh -rj "$@" | jqs`; }
+rls() { eval rh -lM0 $(rh -rj "$@" | jqs); }
 
 # rlt - rh -rl sorted by mtime, most recent first (like ls -lAt)
 # usage: rh arguments that don't conflict with -r or -j
 # e.g.: rlt f
-rlt() { eval rh -lM0 `rh -rj "$@" | jqt`; }
+rlt() { eval rh -lM0 $(rh -rj "$@" | jqt); }
 
 # rlz - rh -rl sorted by size (like ls -lA but sorted by size)
 # usage: rh arguments that don't conflict with -r or -j
 # e.g.: rlz 'size > 1M'
-rlz() { eval rh -lM0 `rh -rj "$@" | jqz`; }
+rlz() { eval rh -lM0 $(rh -rj "$@" | jqz); }
 
 # rlrs - rh -l sorted by path (like ls -lAR)
 # usage: rh arguments that don't conflict with -j
 # e.g.: rlrs f
-rlrs() { eval rh -lM0 `rh -j "$@" | jqs`; }
+rlrs() { eval rh -lM0 $(rh -j "$@" | jqs); }
 
 # rlrt - rh -l sorted by mtime, most recent first (like ls -lARt)
 # usage: rh arguments that don't conflict with -r or -j
 # e.g.: rlrt f
-rlrt() { eval rh -lM0 `rh -j "$@" | jqt`; }
+rlrt() { eval rh -lM0 $(rh -j "$@" | jqt); }
 
 # rlrz - rh -l sorted by size (like ls -lAR but sorted by size)
 # usage: rh arguments that don't conflict with -r or -j
 # e.g.: rlrz 'size > 1M'
-rlrz() { eval rh -lM0 `rh -j "$@" | jqz`; }
+rlrz() { eval rh -lM0 $(rh -j "$@" | jqz); }
 
 # rvs - rh -rv sorted by path (like ls -lA)
 # usage: rh arguments that don't conflict with -r or -j
 # e.g.: rvs f
-rvs() { eval rh -vM0 `rh -rj "$@" | jqs`; }
+rvs() { eval rh -vM0 $(rh -rj "$@" | jqs); }
 
 # rvt - rh -rv sorted by mtime, most recent first (like ls -lAt)
 # usage: rh arguments that don't conflict with -r or -j
 # e.g.: rvt f
-rvt() { eval rh -vM0 `rh -rj "$@" | jqt`; }
+rvt() { eval rh -vM0 $(rh -rj "$@" | jqt); }
 
 # rvz - rh -rv sorted by size (like ls -lA but sorted by size)
 # usage: rh arguments that don't conflict with -r or -j
 # e.g.: rvz 'size > 1M'
-rvz() { eval rh -vM0 `rh -rj "$@" | jqz`; }
+rvz() { eval rh -vM0 $(rh -rj "$@" | jqz); }
 
 # rvrs - rh -v sorted by path (like ls -lAR)
 # usage: rh arguments that don't conflict with -j
 # e.g.: rvrs f
-rvrs() { eval rh -vM0 `rh -j "$@" | jqs`; }
+rvrs() { eval rh -vM0 $(rh -j "$@" | jqs); }
 
 # rvrt - rh -v sorted by mtime, most recent first (like ls -lARt)
 # usage: rh arguments that don't conflict with -r or -j
 # e.g.: rvrt f
-rvrt() { eval rh -vM0 `rh -j "$@" | jqt`; }
+rvrt() { eval rh -vM0 $(rh -j "$@" | jqt); }
 
 # rvrz - rh -v sorted by size (like ls -lAR but sorted by size)
 # usage: rh arguments that don't conflict with -r or -j
 # e.g.: rvrz 'size > 1M'
-rvrz() { eval rh -vM0 `rh -j "$@" | jqz`; }
+rvrz() { eval rh -vM0 $(rh -j "$@" | jqz); }
 
 
 # export RAWHIDE_CONFIG=/etc/rawhide.conf
