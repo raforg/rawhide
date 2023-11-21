@@ -1343,11 +1343,12 @@ The C<.> meta-character matches any character, including the newline
 character. This prevents surprises when files have newline characters in
 their names. This is like I<Perl>'s C</s> modifier.
 
-=item C<PCRE2_DOLLAR_ENDONLY>
-
-The C<$> meta-character only matches the end of the string, not also before
-a newline at the end of the string. This only applies when
-C<PCRE2_MULTILINE> is not also set.
+This option is enabled by default when matching file names, paths, symlink
+target paths, or MIME types (e.g., `re`, `repath`, `relink`, `remime`)
+because it can be helpful in the face of malicious paths. It is not enabled
+by default when matching everything else (e.g., `reacl`, `reea`, `rewhat`,
+`rebody`). It can be enabled in all cases by setting the environment
+variable C<RAWHIDE_PCRE2_DOTALL_ALWAYS=1>.
 
 =item C<PCRE2_MULTILINE>
 
@@ -1363,6 +1364,12 @@ symlink target paths, or MIME types (e.g., `re`, `repath`, `relink`,
 only enabled by default when matching everything else (e.g., `reacl`,
 `reea`, `rewhat`, `rebody`). It can be enabled in all cases by setting the
 environment variable C<RAWHIDE_PCRE2_MULTILINE_ALWAYS=1>.
+
+=item C<PCRE2_DOLLAR_ENDONLY>
+
+The C<$> meta-character only matches the end of the string, not also before
+a newline at the end of the string. This only applies when
+C<PCRE2_MULTILINE> is not also set.
 
 =item C<PCRE2_EXTENDED>
 

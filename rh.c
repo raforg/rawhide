@@ -549,6 +549,7 @@ int main(int argc, char *argv[])
 	else
 		attr.utf = env_flag("RAWHIDE_PCRE2_UTF8_DEFAULT");
 
+	attr.dotall = env_flag("RAWHIDE_PCRE2_DOTALL_ALWAYS");
 	attr.multiline = env_flag("RAWHIDE_PCRE2_MULTILINE_ALWAYS");
 
 	attr.report_broken_symlinks = env_flag("RAWHIDE_REPORT_BROKEN_SYMLINKS");

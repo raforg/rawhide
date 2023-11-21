@@ -2648,6 +2648,15 @@ C<"UTF-8">). When the locale doesn't use I<UTF-8>, and you want I<rh> to
 assume that everything is I<UTF-8> anyway, set the environment variable
 C<RAWHIDE_PCRE2_UTF8_DEFAULT=1>.
 
+Setting the environment variable C<RAWHIDE_PCRE2_DOTALL_ALWAYS=1> causes
+regex patterns to treat the subject as a single line. This means that the
+C<.> meta-character matches any character, including the newline character.
+This is like I<Perl>'s C</s> modifier. This is enabled by default when
+matching file names, paths, symlink target paths, or MIME types (e.g., `re`,
+`repath`, `relink`, `remime`) because it can be helpful in the face of
+malicious paths. It is not enabled by default when matching everything else
+(e.g., `reacl`, `reea`, `rewhat`, `rebody`).
+
 Setting the environment variable C<RAWHIDE_PCRE2_MULTILINE_ALWAYS=1> causes
 regex patterns to treat the subject as multiple lines. This means that the
 C<^> meta-character matches after every internal newline character, not just
