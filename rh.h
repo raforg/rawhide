@@ -216,8 +216,8 @@ struct runtime_t
 	int tty;                /* Is stdout a tty? (to default to -q) */
 	int ttyerr;             /* Is stderr a tty? */
 	int utf;                /* Does the user not want default utf8 suppressed in pcre? */
-	int dotall;             /* Does the user always want /s in pcre? */
-	int multiline;          /* Does the user always want /m in pcre? */
+	int dotall_always;      /* Does the user always want /s by default in pcre? */
+	int multiline_always;   /* Does the user always want /m by default in pcre? */
 	int report_broken_symlinks; /* Does the user want to report broken symlinks? */
 	int report_cycles;      /* Does the user want to report filesystem cycles (default)? */
 

@@ -1886,8 +1886,8 @@ access to the user C<drew>:
     '
 
     $ rh '(uid == $drew)
-        ?    "owner@:[^:]+/write_data/[^:]+(:[^:]*)?:allow".reacl
-        : "user:drew:[^:]+/write_data/[^:]+(:[^:]*)?:allow".reacl
+        ?    "owner@:[^:\n]+/write_data/[^:\n]+(:[^:\n]*)?:allow".reacl
+        : "user:drew:[^:\n]+/write_data/[^:\n]+(:[^:\n]*)?:allow".reacl
     '
 
 Note that, with I<NFSv4> ACLs, you can search for ACLs using either the
@@ -1898,7 +1898,7 @@ least on I<Solaris>).
 Find files on I<macOS> with ACLs that grant write access to the user
 C<drew>:
 
-    $ rh '(uid == $drew) ? uw : "user:[^:]+:drew:\d+:allow:write".reacl'
+    $ rh '(uid == $drew) ? uw : "user:[^:\n]+:drew:\d+:allow:write".reacl'
 
 Find files with non-trivial access control lists (ACL):
 
@@ -2638,35 +2638,44 @@ really an error, and is just reported by default for compatibility with the
 familiar behaviour of I<find(1)>.
 
 Setting the environment variable C<RAWHIDE_PCRE2_NOT_UTF8_DEFAULT=1>
-suppresses the assumption that regex patterns, and the file names, paths,
-symlink target paths, access control lists, and extended attributes that
-they match against, are encoded as I<UTF-8>. When this environment variable
-is set, individual regex patterns can still enable I<UTF-8> interpretation
-with a leading C<(*UTF)>. This I<UTF-8> assumption is made when the locale
-uses I<UTF-8> (i.e., when the C<$LANG> environment variable includes
-C<"UTF-8">). When the locale doesn't use I<UTF-8>, and you want I<rh> to
-assume that everything is I<UTF-8> anyway, set the environment variable
-C<RAWHIDE_PCRE2_UTF8_DEFAULT=1>.
+suppresses the assumption that regular expression patterns, and the file
+names, paths, symlink target paths, access control lists, and extended
+attributes that they match against, are encoded as I<UTF-8>. When this
+environment variable is set, individual regular expression patterns can
+still enable I<UTF-8> interpretation with a leading C<(*UTF)>. This I<UTF-8>
+assumption is made when the locale uses I<UTF-8> (i.e., when the C<$LANG>
+environment variable includes C<"UTF-8">). When the locale doesn't use
+I<UTF-8>, and you want I<rh> to assume that everything is I<UTF-8> anyway,
+set the environment variable C<RAWHIDE_PCRE2_UTF8_DEFAULT=1>.
 
 Setting the environment variable C<RAWHIDE_PCRE2_DOTALL_ALWAYS=1> causes
-regex patterns to treat the subject as a single line. This means that the
-C<.> meta-character matches any character, including the newline character.
-This is like I<Perl>'s C</s> modifier. This is enabled by default when
-matching file names, paths, symlink target paths, or MIME types (e.g., `re`,
-`repath`, `relink`, `remime`) because it can be helpful in the face of
-malicious paths. It is not enabled by default when matching everything else
-(e.g., `reacl`, `reea`, `rewhat`, `rebody`).
+regular expression patterns to always treat the subject text as a single
+line by default. This means that the C<.> meta-character matches any
+character, including the newline character. This is like C<(?s)> or
+I<Perl>'s C</s> modifier. This is enabled by default when matching file
+names, paths, symlink target paths, and MIME types (e.g., C<re>, C<repath>,
+C<relink>, and C<remime>) because it can be helpful when faced with
+malicious paths. These are all considered to be a single "line" (even if
+they actually contain newlines). It is not enabled by default when matching
+everything else (e.g., C<reacl>, C<reea>, C<rewhat>, and C<rebody>). These
+are all considered to be multiple lines. When this environment variable is
+set, its effect can be disabled for individual matches by starting the
+regular expression with C<(?-s)>.
 
 Setting the environment variable C<RAWHIDE_PCRE2_MULTILINE_ALWAYS=1> causes
-regex patterns to treat the subject as multiple lines. This means that the
-C<^> meta-character matches after every internal newline character, not just
-at the start. The C<$> meta-character matches before every internal newline
-character, not just at the end. This is like I<Perl>'s C</m> modifier. This
-is not enabled by default when matching file names, paths, symlink target
-paths, or MIME types (e.g., `re`, `repath`, `relink`, `remime`) because it
-can be unhelpful in the face of malicious paths. It is only enabled by
-default when matching everything else (e.g., `reacl`, `reea`, `rewhat`,
-`rebody`).
+regular expression patterns to always treat the subject text as multiple
+lines by default. This means that the C<^> meta-character matches after
+every internal newline character, not just at the start. The C<$>
+meta-character matches before every internal newline character, not just at
+the end. This is like C<(?m)> or I<Perl>'s C</m> modifier. This is not
+enabled by default when matching file names, paths, symlink target paths,
+and MIME types (e.g., C<re>, C<repath>, C<relink>, and C<remime>) because it
+can be unhelpful when faced with malicious paths. These are all considered
+to be a single "line" (even if they actually contain newlines). It is only
+enabled by default when matching everything else (e.g., C<reacl>, C<reea>,
+C<rewhat>, and C<rebody>). These are all considered to be multiple
+lines. When this environment variable is set, its effect can be disabled for
+individual matches by starting the regular expression with C<(?-m)>.
 
 On I<Solaris>, setting the environment variable
 C<RAWHIDE_SOLARIS_ACL_NO_TRIVIAL=1> suppresses trivial access control lists

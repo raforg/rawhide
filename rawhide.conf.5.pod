@@ -1322,9 +1322,11 @@ installed, but maybe not all.
 =item C<re>
 
 Match each candidate file's base name against a I<Perl>-compatible regular
-expression (regex) instead of a glob pattern. See I<perlre(1)>,
-I<pcre2pattern(3)>, and I<pcre2syntax(3)> for details. This is available on
-systems that have I<libpcre2-8> installed.
+expression (regex) instead of a glob pattern. By default, the file's base
+name is considered to be a single "line" (i.e., as if the regular expression
+started with C<(?s)>, or I<Perl>'s C</s> modifier were used). See
+I<perlre(1)>, I<pcre2pattern(3)>, and I<pcre2syntax(3)> for details. This is
+available on systems that have I<libpcre2-8> installed.
 
 The output of S<C<rh --help>> states whether or not I<Perl>-compatible
 regular expressions are available on the local system.
@@ -1332,8 +1334,8 @@ regular expressions are available on the local system.
 Regex patterns are not automatically anchored to the start and end, and so
 do not have to match the entire text.
 
-The following I<PCRE2> options are enabled by default. Unless otherwise
-stated, these options are always enabled.
+The following I<PCRE2> options are always enabled by default, unless
+otherwise stated.
 
 =over 4
 
@@ -1344,11 +1346,16 @@ character. This prevents surprises when files have newline characters in
 their names. This is like I<Perl>'s C</s> modifier.
 
 This option is enabled by default when matching file names, paths, symlink
-target paths, or MIME types (e.g., `re`, `repath`, `relink`, `remime`)
-because it can be helpful in the face of malicious paths. It is not enabled
-by default when matching everything else (e.g., `reacl`, `reea`, `rewhat`,
-`rebody`). It can be enabled in all cases by setting the environment
-variable C<RAWHIDE_PCRE2_DOTALL_ALWAYS=1>.
+target paths, and MIME types (e.g., C<re>, C<repath>, C<relink>, and
+C<remime>) because it can be helpful when faced with malicious paths. These
+are all considered to be a single "line" (even if they actually contain
+newlines). It is not enabled by default when matching everything else (e.g.,
+C<reacl>, C<reea>, C<rewhat>, and C<rebody>). These are all considered to be
+multiple lines. It can be enabled by default in all cases by setting the
+environment variable C<RAWHIDE_PCRE2_DOTALL_ALWAYS=1>. It can be enabled for
+individual matches by starting the regular expression with C<(?s)>. It can
+be disabled for individual matches by starting the regular expression with
+C<(?-s)>.
 
 =item C<PCRE2_MULTILINE>
 
@@ -1359,11 +1366,16 @@ list (ACL) and extended attribute (EA) searches (see below) where the text
 can occupy multiple lines. This is like I<Perl>'s C</m> modifier.
 
 This option is not enabled by default when matching file names, paths,
-symlink target paths, or MIME types (e.g., `re`, `repath`, `relink`,
-`remime`) because it can be unhelpful in the face of malicious paths. It is
-only enabled by default when matching everything else (e.g., `reacl`,
-`reea`, `rewhat`, `rebody`). It can be enabled in all cases by setting the
-environment variable C<RAWHIDE_PCRE2_MULTILINE_ALWAYS=1>.
+symlink target paths, and MIME types (e.g., C<re>, C<repath>, C<relink>, and
+C<remime>) because it can be unhelpful when faced with malicious
+paths. These are all considered to be a single "line" (even if they actually
+contain newlines). It is only enabled by default when matching everything
+else (e.g., C<reacl>, C<reea>, C<rewhat>, and C<rebody>). These are all
+considered to be multiple lines. It can be enabled by default in all cases
+by setting the environment variable C<RAWHIDE_PCRE2_MULTILINE_ALWAYS=1>. It
+can be enabled for individual matches by starting the regular expression
+with C<(?m)>. It can be disabled for individual matches by starting the
+regular expression with C<(?-m)>.
 
 =item C<PCRE2_DOLLAR_ENDONLY>
 
@@ -1409,7 +1421,9 @@ variable C<RAWHIDE_PCRE2_UTF8_DEFAULT=1>.
 =item C<repath> (or C<rep>)
 
 Like the C<re> modifier, but apply the regex to each candidate file's full
-path starting from the search directory, not just its base name.
+path starting from the search directory, not just its base name. By default,
+the path is considered to be a single "line" (i.e., as if the regular
+expression started with C<(?s)>, or I<Perl>'s C</s> modifier were used).
 
 Note: Since a slash character can never appear in a file's base name, if a
 regex pattern string with the C<re> pattern modifier does contain a slash
@@ -1421,25 +1435,36 @@ the file's full path starting from the search directory instead.
 =item C<relink> (or C<rel>)
 
 Like the C<re> modifier, but apply the regex to each candidate symlink's
-target path, rather than its base name.
+target path, rather than its base name. By default, the symlink's target
+path is considered to be a single "line" (i.e., as if the regular expression
+started with C<(?s)>, or I<Perl>'s C</s> modifier were used).
 
 =item C<rebody> (or C<reb>)
 
 Like the C<re> modifier, but apply the regex to each candidate file's
-contents, rather than its base name. See C<body> above for more details.
+contents, rather than its base name. See C<body> above for more details. By
+default, the file's contents are considered to be multiple lines (i.e., as
+if the regular expression started with C<(?m)>, or I<Perl>'s C</m> modifier
+were used). But note that this is not restricted to text files. Matches can
+be performed against binary files as well.
 
 =item C<rewhat> (or C<rew>)
 
 Like the C<re> modifier, but apply the regex to each candidate file's file
-type description, rather than its base name. This is available on systems
-that have I<libpcre2-8> and I<libmagic> installed. See C<what> above for
-more details.
+type description, rather than its base name. By default, the file's type
+description is considered to be multiple lines (i.e., as if the regular
+expression started with C<(?m)>, or I<Perl>'s C</m> modifier were
+used). This is available on systems that have I<libpcre2-8> and I<libmagic>
+installed. See C<what> above for more details.
 
 =item C<remime> (or C<rem>)
 
 Like the C<re> modifier, but apply the regex to each candidate file's MIME
-type, rather than its base name. This is available on systems that have
-I<libpcre2-8> and I<libmagic> installed. See C<mime> above for more details.
+type, rather than its base name. By default, the file's MIME type is
+considered to be a single "line" (i.e., as if the regular expression started
+with C<(?s)>, or I<Perl>'s C</s> modifier were used). This is available on
+systems that have I<libpcre2-8> and I<libmagic> installed. See C<mime> above
+for more details.
 
 =item C<rei>
 
@@ -1553,9 +1578,11 @@ case-sensitivity. This might not be available on all systems.
 
 Like the C<acl> modifier, but match each candidate file's access control
 list (ACL) against a I<Perl>-compatible regular expression (regex) instead
-of a glob pattern. This is available on systems that have I<libpcre2-8>
-installed, and supported access control lists. See the C<re> modifier above
-for more information.
+of a glob pattern. By default, the file's ACL is considered to be multiple
+lines (i.e., as if the regular expression started with C<(?m)>, or the
+I<Perl> C</m> modifier were used). This is available on systems that have
+I<libpcre2-8> installed, and supported access control lists. See the C<re>
+modifier above for more information.
 
 =item C<reiacl> (or C<reia>)
 
@@ -1652,7 +1679,9 @@ case-sensitivity. This might not be available on all systems.
 
 Like the C<ea> modifier, but match each candidate file's extended attributes
 (EA) against a I<Perl>-compatible regular expression (regex) instead of a
-glob pattern. This is available on systems that have I<libpcre2-8>
+glob pattern. By default, the file's EAs are considered to be multiple lines
+(i.e., as if the regular expression started with C<(?m)>, or I<Perl>'s C</m>
+modifier were used). This is available on systems that have I<libpcre2-8>
 installed, and supported extended attributes. See the C<re> modifier above
 for more information.
 

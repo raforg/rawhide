@@ -474,10 +474,10 @@ static int rematch(const char *pattern, const char *subject, size_t subject_leng
 	if (attr.utf)
 		options |= PCRE2_UTF | PCRE2_MATCH_INVALID_UTF; /* Assume UTF-8 patterns and subject text */
 
-	if (attr.dotall)
+	if (attr.dotall_always)
 		options |= PCRE2_DOTALL;        /* . matches anything including newline (like /s) */
 
-	if (attr.multiline)
+	if (attr.multiline_always)
 		options |= PCRE2_MULTILINE;     /* ^ matches after every newline, $ matches before every newline (like /m) */
 
 	options |= PCRE2_DOLLAR_ENDONLY;    /* $ matches only at the end of the subject */
