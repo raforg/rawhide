@@ -1,0 +1,273 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+# https://codeberg.org/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022-2023 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20231013 raf <raf@raf.org>
+
+. tests/.common
+
+label="rawhide.conf-tiny library"
+
+touch $d/f
+mkdir $d/d
+ln -s f $d/l
+# Skip b c s p D (unreliable to set up, not enough code to hide a bug in(!))
+
+test_rawhide_post_hook() { test_rh_sort_post_hook; }
+
+rh="./rh -Nn -f samples/rawhide.conf-tiny -m1"
+test_rawhide "$rh -e f $d" "$d/f\n" "" 0 "f"
+test_rawhide "$rh -e d $d" "$d/d\n" "" 0 "d"
+test_rawhide "$rh -e b $d" ""       "" 0 "b"
+test_rawhide "$rh -e c $d" ""       "" 0 "c"
+test_rawhide "$rh -e l $d" "$d/l\n" "" 0 "l"
+test_rawhide "$rh -e s $d" ""       "" 0 "s"
+test_rawhide "$rh -e p $d" ""       "" 0 "p"
+test_rawhide "$rh -e D $d" ""       "" 0 "D"
+
+rm -r $d/f $d/d $d/l
+
+touch $d/ur; chmod 400 $d/ur
+touch $d/uw; chmod 200 $d/uw
+touch $d/ux; chmod 100 $d/ux
+touch $d/gr; chmod 040 $d/gr
+touch $d/gw; chmod 020 $d/gw
+touch $d/gx; chmod 010 $d/gx
+touch $d/or; chmod 004 $d/or
+touch $d/ow; chmod 002 $d/ow
+touch $d/ox; chmod 001 $d/ox
+touch $d/allr; chmod 444 $d/allr
+touch $d/allw; chmod 222 $d/allw
+touch $d/allx; chmod 111 $d/allx
+touch $d/none; chmod 0 $d/none
+
+test_rawhide "$rh -e 'f && ur' $d" "$d/allr\n$d/ur\n" "" 0 "ur"
+test_rawhide "$rh -e 'f && uw' $d" "$d/allw\n$d/uw\n" "" 0 "uw"
+test_rawhide "$rh -e 'f && ux' $d" "$d/allx\n$d/ux\n" "" 0 "ux"
+test_rawhide "$rh -e 'f && gr' $d" "$d/allr\n$d/gr\n" "" 0 "gr"
+test_rawhide "$rh -e 'f && gw' $d" "$d/allw\n$d/gw\n" "" 0 "gw"
+test_rawhide "$rh -e 'f && gx' $d" "$d/allx\n$d/gx\n" "" 0 "gx"
+test_rawhide "$rh -e 'f && or' $d" "$d/allr\n$d/or\n" "" 0 "or"
+test_rawhide "$rh -e 'f && ow' $d" "$d/allw\n$d/ow\n" "" 0 "ow"
+test_rawhide "$rh -e 'f && ox' $d" "$d/allx\n$d/ox\n" "" 0 "ox"
+test_rawhide "$rh -e 'f && wr' $d" "$d/allr\n$d/or\n" "" 0 "wr"
+test_rawhide "$rh -e 'f && ww' $d" "$d/allw\n$d/ow\n" "" 0 "ww"
+test_rawhide "$rh -e 'f && wx' $d" "$d/allx\n$d/ox\n" "" 0 "wx"
+
+test_rawhide "$rh -e 'f && allr' $d" "$d/allr\n"                                                              "" 0 "allr"
+test_rawhide "$rh -e 'f && allw' $d" "$d/allw\n"                                                              "" 0 "allw"
+test_rawhide "$rh -e 'f && allx' $d" "$d/allx\n"                                                              "" 0 "allx"
+test_rawhide "$rh -e 'f && anyr' $d" "$d/allr\n$d/gr\n$d/or\n$d/ur\n"                                         "" 0 "anyr"
+test_rawhide "$rh -e 'f && anyw' $d" "$d/allw\n$d/gw\n$d/ow\n$d/uw\n"                                         "" 0 "anyw"
+test_rawhide "$rh -e 'f && anyx' $d" "$d/allx\n$d/gx\n$d/ox\n$d/ux\n"                                         "" 0 "anyx"
+test_rawhide "$rh -e 'f && noner' $d" "$d/allw\n$d/allx\n$d/gw\n$d/gx\n$d/none\n$d/ow\n$d/ox\n$d/uw\n$d/ux\n" "" 0 "noner"
+test_rawhide "$rh -e 'f && nonew' $d" "$d/allr\n$d/allx\n$d/gr\n$d/gx\n$d/none\n$d/or\n$d/ox\n$d/ur\n$d/ux\n" "" 0 "nonew"
+test_rawhide "$rh -e 'f && nonex' $d" "$d/allr\n$d/allw\n$d/gr\n$d/gw\n$d/none\n$d/or\n$d/ow\n$d/ur\n$d/uw\n" "" 0 "nonex"
+
+touch $d/suid; chmod 4755 $d/suid
+touch $d/sgid; chmod 2755 $d/sgid
+mkdir $d/svtx; chmod 1755 $d/svtx # FreeBSD only allows sticky bit on directories
+
+test_rawhide "$rh -e 'suid'    $d" "$d/suid\n" "" 0 "suid"
+test_rawhide "$rh -e 'sgid'    $d" "$d/sgid\n" "" 0 "sgid"
+test_rawhide "$rh -e 'svtx'    $d" "$d/svtx\n" "" 0 "svtx"
+
+test_rawhide "$rh -e 'setuid'  $d" "$d/suid\n" "" 0 "setuid"
+test_rawhide "$rh -e 'setgid'  $d" "$d/sgid\n" "" 0 "setgid"
+test_rawhide "$rh -e 'sticky'  $d" "$d/svtx\n" "" 0 "sticky"
+
+test_rawhide "$rh -e 'inode != ino'          $d" "" "" 0 "inode"
+test_rawhide "$rh -e 'nlinks != nlink'       $d" "" "" 0 "nlinks"
+test_rawhide "$rh -e 'user != uid'           $d" "" "" 0 "user"
+test_rawhide "$rh -e 'group != gid'          $d" "" "" 0 "group"
+test_rawhide "$rh -e 'space != blocks * 512' $d" "" "" 0 "space"
+test_rawhide "$rh -e 'accessed != atime'     $d" "" "" 0 "accessed"
+test_rawhide "$rh -e 'modified != mtime'     $d" "" "" 0 "modified"
+test_rawhide "$rh -e 'changed != ctime'      $d" "" "" 0 "changed"
+test_rawhide "$rh -e 'len != strlen'         $d" "" "" 0 "len"
+test_rawhide "$rh -e 'sz != size'            $d" "" "" 0 "sz"
+
+test_rawhide "$rh -e 'seconds != second'     $d" "" "" 0 "seconds"
+test_rawhide "$rh -e 'minutes != minute'     $d" "" "" 0 "minutes"
+test_rawhide "$rh -e 'hours != hour'         $d" "" "" 0 "hours"
+test_rawhide "$rh -e 'days != day'           $d" "" "" 0 "days"
+test_rawhide "$rh -e 'weeks != week'         $d" "" "" 0 "weeks"
+test_rawhide "$rh -e 'months != month'       $d" "" "" 0 "months"
+test_rawhide "$rh -e 'years != year'         $d" "" "" 0 "years"
+test_rawhide "$rh -e 'quit != exit'          $d" "" "" 0 "quit"
+
+rm $d/suid $d/sgid
+rmdir $d/svtx
+
+if [ "`whoami`" != root ]
+then
+	test_rawhide "$rh -e 'f && imayread'  $d" "$d/allr\n$d/ur\n" "" 0 "imayread (note gr not there)"
+	test_rawhide "$rh -e 'f && imaywrite' $d" "$d/allw\n$d/uw\n" "" 0 "imaywrite (note gw not there)"
+	test_rawhide "$rh -e 'f && imayexec'  $d" "$d/allx\n$d/ux\n" "" 0 "imayexec (note gx not there)"
+
+	test_rawhide "$rh -e 'f && ir' $d" "$d/allr\n$d/ur\n" "" 0 "ir (note gr not there)"
+	test_rawhide "$rh -e 'f && iw' $d" "$d/allw\n$d/uw\n" "" 0 "iw (note gw not there)"
+	test_rawhide "$rh -e 'f && ix' $d" "$d/allx\n$d/ux\n" "" 0 "ix (note gx not there)"
+
+	test_rawhide "$rh -e 'f && imayread != readable'    $d" "" "" 0 "imayread (note gr not there)"
+	test_rawhide "$rh -e 'f && imaywrite != writable'   $d" "" "" 0 "imaywrite (note gw not there)"
+	test_rawhide "$rh -e 'f && imayexec != executable'  $d" "" "" 0 "imayexec (note gx not there)"
+
+	test_rawhide "$rh -e 'f && ir != readable'   $d" "" "" 0 "ir (note gr not there)"
+	test_rawhide "$rh -e 'f && iw != writable'   $d" "" "" 0 "iw (note gw not there)"
+	test_rawhide "$rh -e 'f && ix != executable' $d" "" "" 0 "ix (note gx not there)"
+fi
+
+touch $d/f
+mkdir $d/d
+ln -s f $d/l
+ln -s d $d/ld
+ln -s broken $d/lb # broken
+
+test_rawhide "$rh -e 'l && tf' $d" "$d/l\n"  "" 0 "tf"
+test_rawhide "$rh -e 'l && td' $d" "$d/ld\n" "" 0 "td"
+test_rawhide "$rh -e 'l && tb' $d" ""        "" 0 "tb"
+test_rawhide "$rh -e 'l && tc' $d" ""        "" 0 "tc"
+#test_rawhide "$rh -e 'l && tl' $d" ""        "" 0 "tl" # Impossible
+test_rawhide "$rh -e 'l && ts' $d" ""        "" 0 "ts"
+test_rawhide "$rh -e 'l && tp' $d" ""        "" 0 "tp"
+test_rawhide "$rh -e 'l && tD' $d" ""        "" 0 "tD"
+
+rm -r $d/f $d/d $d/l $d/ld $d/lb
+
+ln -s allr $d/lallr
+ln -s allw $d/lallw
+ln -s allx $d/lallx
+ln -s ur $d/lur
+ln -s uw $d/luw
+ln -s ux $d/lux
+ln -s gr $d/lgr
+ln -s gw $d/lgw
+ln -s gx $d/lgx
+ln -s or $d/lor
+ln -s ow $d/low
+ln -s ox $d/lox
+ln -s none $d/lnone
+
+test_rawhide "$rh -e 'l && tur' $d" "$d/lallr\n$d/lur\n" "" 0 "tur"
+test_rawhide "$rh -e 'l && tuw' $d" "$d/lallw\n$d/luw\n" "" 0 "tuw"
+test_rawhide "$rh -e 'l && tux' $d" "$d/lallx\n$d/lux\n" "" 0 "tux"
+test_rawhide "$rh -e 'l && tgr' $d" "$d/lallr\n$d/lgr\n" "" 0 "tgr"
+test_rawhide "$rh -e 'l && tgw' $d" "$d/lallw\n$d/lgw\n" "" 0 "tgw"
+test_rawhide "$rh -e 'l && tgx' $d" "$d/lallx\n$d/lgx\n" "" 0 "tgx"
+test_rawhide "$rh -e 'l && tor' $d" "$d/lallr\n$d/lor\n" "" 0 "tor"
+test_rawhide "$rh -e 'l && tow' $d" "$d/lallw\n$d/low\n" "" 0 "tow"
+test_rawhide "$rh -e 'l && tox' $d" "$d/lallx\n$d/lox\n" "" 0 "tox"
+test_rawhide "$rh -e 'l && twr' $d" "$d/lallr\n$d/lor\n" "" 0 "twr"
+test_rawhide "$rh -e 'l && tww' $d" "$d/lallw\n$d/low\n" "" 0 "tww"
+test_rawhide "$rh -e 'l && twx' $d" "$d/lallx\n$d/lox\n" "" 0 "twx"
+
+test_rawhide "$rh -e 'l && tall(0444)'  $d" "$d/lallr\n"                                                                     "" 0 "tall(0444)"
+test_rawhide "$rh -e 'l && tall(0222)'  $d" "$d/lallw\n"                                                                     "" 0 "tall(0222)"
+test_rawhide "$rh -e 'l && tall(0111)'  $d" "$d/lallx\n"                                                                     "" 0 "tall(0111)"
+test_rawhide "$rh -e 'l && tany(0444)'  $d" "$d/lallr\n$d/lgr\n$d/lor\n$d/lur\n"                                             "" 0 "tany(0444)"
+test_rawhide "$rh -e 'l && tany(0222)'  $d" "$d/lallw\n$d/lgw\n$d/low\n$d/luw\n"                                             "" 0 "tany(0222)"
+test_rawhide "$rh -e 'l && tany(0111)'  $d" "$d/lallx\n$d/lgx\n$d/lox\n$d/lux\n"                                             "" 0 "tany(0111)"
+test_rawhide "$rh -e 'l && tnone(0444)' $d" "$d/lallw\n$d/lallx\n$d/lgw\n$d/lgx\n$d/lnone\n$d/low\n$d/lox\n$d/luw\n$d/lux\n" "" 0 "tnone(0444)"
+test_rawhide "$rh -e 'l && tnone(0222)' $d" "$d/lallr\n$d/lallx\n$d/lgr\n$d/lgx\n$d/lnone\n$d/lor\n$d/lox\n$d/lur\n$d/lux\n" "" 0 "tnone(0222)"
+test_rawhide "$rh -e 'l && tnone(0111)' $d" "$d/lallr\n$d/lallw\n$d/lgr\n$d/lgw\n$d/lnone\n$d/lor\n$d/low\n$d/lur\n$d/luw\n" "" 0 "tnone(0111)"
+
+test_rawhide "$rh -e 'l && tallr'  $d" "$d/lallr\n"                                                                     "" 0 "tallr"
+test_rawhide "$rh -e 'l && tallw'  $d" "$d/lallw\n"                                                                     "" 0 "tallw"
+test_rawhide "$rh -e 'l && tallx'  $d" "$d/lallx\n"                                                                     "" 0 "tallx"
+test_rawhide "$rh -e 'l && tanyr'  $d" "$d/lallr\n$d/lgr\n$d/lor\n$d/lur\n"                                             "" 0 "tanyr"
+test_rawhide "$rh -e 'l && tanyw'  $d" "$d/lallw\n$d/lgw\n$d/low\n$d/luw\n"                                             "" 0 "tanyw"
+test_rawhide "$rh -e 'l && tanyx'  $d" "$d/lallx\n$d/lgx\n$d/lox\n$d/lux\n"                                             "" 0 "tanyx"
+test_rawhide "$rh -e 'l && tnoner' $d" "$d/lallw\n$d/lallx\n$d/lgw\n$d/lgx\n$d/lnone\n$d/low\n$d/lox\n$d/luw\n$d/lux\n" "" 0 "tnoner"
+test_rawhide "$rh -e 'l && tnonew' $d" "$d/lallr\n$d/lallx\n$d/lgr\n$d/lgx\n$d/lnone\n$d/lor\n$d/lox\n$d/lur\n$d/lux\n" "" 0 "tnonew"
+test_rawhide "$rh -e 'l && tnonex' $d" "$d/lallr\n$d/lallw\n$d/lgr\n$d/lgw\n$d/lnone\n$d/lor\n$d/low\n$d/lur\n$d/luw\n" "" 0 "tnonex"
+
+touch $d/suid; chmod 4755 $d/suid
+touch $d/sgid; chmod 2755 $d/sgid
+mkdir $d/svtx; chmod 1755 $d/svtx
+ln -s suid $d/lsuid;
+ln -s sgid $d/lsgid;
+ln -s svtx $d/lsvtx;
+
+test_rawhide "$rh -e 'l && tsuid'       $d" "$d/lsuid\n"  "" 0 "tsuid"
+test_rawhide "$rh -e 'l && tsgid'       $d" "$d/lsgid\n"  "" 0 "tsgid"
+test_rawhide "$rh -e 'l && tsvtx'       $d" "$d/lsvtx\n"  "" 0 "tsvtx"
+
+test_rawhide "$rh -e 'l && tsetuid'     $d" "$d/lsuid\n"  "" 0 "tsetuid"
+test_rawhide "$rh -e 'l && tsetgid'     $d" "$d/lsgid\n"  "" 0 "tsetgid"
+test_rawhide "$rh -e 'l && tsticky'     $d" "$d/lsvtx\n"  "" 0 "tsticky"
+
+test_rawhide "$rh -e 'l && tinode != tino'          $d" ""  "" 0 "tinode"
+test_rawhide "$rh -e 'l && tnlinks != tnlink'       $d" ""  "" 0 "tnlinks"
+test_rawhide "$rh -e 'l && tuser != tuid'           $d" ""  "" 0 "tuser"
+test_rawhide "$rh -e 'l && tgroup != tgid'          $d" ""  "" 0 "tgroup"
+test_rawhide "$rh -e 'l && tspace != tblocks * 512' $d" ""  "" 0 "tspace"
+test_rawhide "$rh -e 'l && taccessed != tatime'     $d" ""  "" 0 "taccessed"
+test_rawhide "$rh -e 'l && tmodified != tmtime'     $d" ""  "" 0 "tmodified"
+test_rawhide "$rh -e 'l && tchanged != tctime'      $d" ""  "" 0 "tchanged"
+test_rawhide "$rh -e 'l && tlen != tstrlen'         $d" ""  "" 0 "tlen"
+test_rawhide "$rh -e 'l && tsz != tsize'            $d" ""  "" 0 "tsz"
+
+rm -f $d/all[rwx] $d/u[rwx] $d/g[rwx] $d/o[rwx] $d/none $d/lall[rwx] $d/lu[rwx] $d/lg[rwx] $d/lo[rwx] $d/lnone
+rm $d/suid $d/sgid $d/lsuid $d/lsgid $d/lsvtx
+rmdir $d/svtx
+
+mkdir $d/d $d/d2
+touch $d/e
+echo hi > $d/d2/e2
+
+test_rawhide "$rh -e 'empty'  $d" "$d/d\n$d/e\n"      "" 0 "empty"
+test_rawhide "$rh -e '!empty' $d" "$d/d2\n$d/d2/e2\n" "" 0 "!empty"
+[ "`whoami`" != root ] && test_rawhide "$rh -e 'roots' $d" "" "" 0 "roots"
+[ "`whoami`" = root ] && test_rawhide "$rh -e '!roots' $d" "" "" 0 "roots"
+test_rawhide "$rh -e '!mine' $d" "" "" 0 "mine"
+# On macOS, root's primary group is wheel but it gets group staff instead
+[ "`whoami`" != root -o "`uname`" != Darwin -a "`uname`" != FreeBSD -a "`uname`" != OpenBSD -a "`uname`" != NetBSD ] && test_rawhide "$rh -e '!ours' $d" "" "" 0 "ours"
+ln -s broken $d/lbroken
+ln -s d $d/ld
+test_rawhide "$rh -e 'broken'                     $d" "$d/lbroken\n" "" 0 "broken"
+test_rawhide "$rh -e 'dangling'                   $d" "$d/lbroken\n" "" 0 "dangling"
+test_rawhide "$rh -e 'gmtoday != now - now % day' $d" ""             "" 0 "gmtoday"
+
+test_rawhide "$rh -e 'ago(10) != now - 10' $d"          "" "" 0 "ago"
+test_rawhide "$rh -e 'old(10) != mtime <= now - 10' $d" "" "" 0 "old"
+test_rawhide "$rh -e 'past(10) != mtime >= now - 10' $d" "" "" 0 "past"
+test_rawhide "$rh -e 'future != mtime > now' $d" "" "" 0 "future"
+
+test_rawhide "$rh -e 'future' $d" "" "" 0 "future when false"
+touch -t $(expr $(date +%Y) + 2)01010000 $d/e
+test_rawhide "$rh -e 'future' $d" "$d/e\n" "" 0 "future when true"
+touch $d/e
+
+test_rawhide "$rh -e 'min(10,20) != 10' $d" "" "" 0 "min"
+test_rawhide "$rh -e 'min(20,10) != 10' $d" "" "" 0 "min"
+test_rawhide "$rh -e 'min(10,10) != 10' $d" "" "" 0 "min"
+test_rawhide "$rh -e 'max(10,20) != 20' $d" "" "" 0 "max"
+test_rawhide "$rh -e 'max(20,10) != 20' $d" "" "" 0 "max"
+test_rawhide "$rh -e 'max(10,10) != 10' $d" "" "" 0 "max"
+test_rawhide "$rh -e 'abs(10) != 10'    $d" "" "" 0 "abs"
+test_rawhide "$rh -e 'abs(-10) != 10'   $d" "" "" 0 "abs"
+
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:
