@@ -43,6 +43,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <spawn.h>
 
 #ifdef HAVE_ACL
 #include <sys/acl.h>
@@ -1437,7 +1438,7 @@ EXIT_FAILURE.
 int interpolate_command(const char *srccmd, char *command, int cmdbufsize)
 {
 	const char *src;
-	char *dst, *f;
+	char *dst;
 
 	src = srccmd;
 	dst = command;
@@ -1465,104 +1466,37 @@ int interpolate_command(const char *srccmd, char *command, int cmdbufsize)
 
 			if (*src == 's')
 			{
-				/* Interpolate the file path into the command */
+				/* Interpolate "$1" (for the file path %s) into the command */
 
-				f = attr.fpath;
-
-				/* While there's room for a nul or a byte followed by a nul... */
-
-				while (dst + ((*f) ? 1 : 0) - command < cmdbufsize)
-				{
-					/* Quote shell meta-characters in the path */
-
-					if (*f && !isalnum((int)(unsigned char)*f) && !strchr("-+,./@_", *f) && !(*f & 0x80))
-					{
-						*dst++ = '\\';
-
-						/* Is there still room for a byte followed by a nul? */
-
-						if (dst + 1 - command >= cmdbufsize)
-						{
-							error("command is too big: %s (%s)", ok(srccmd), ok2(attr.fpath));
-							attr.exit_status = EXIT_FAILURE;
-
-							return -1;
-						}
-					}
-
-					/* Copy the (possibly quoted meta) character, stopping after nul */
-
-					if (!(*dst++ = *f++))
-					{
-						/* Point dst and f back to the nul */
-
-						--dst;
-						--f;
-
-						break;
-					}
-				}
-
-				/* Were we able to completely interpolate the file path? */
-
-				if (*f)
+				if (dst + 4 - command >= cmdbufsize)
 				{
 					error("command is too big: %s (%s)", ok(srccmd), ok2(attr.fpath));
 					attr.exit_status = EXIT_FAILURE;
 
 					return -1;
 				}
+
+				*dst++ = '"';
+				*dst++ = '$';
+				*dst++ = '1';
+				*dst++ = '"';
 			}
 			else if (*src == 'S')
 			{
-				/* Interpolate the file base name (or / for /) into the command */
+				/* Interpolate "$2" (for the file base name (or / for /) %S) into the command */
 
-				f = strrchr(attr.fpath, '/');
-				f = (f == attr.fpath && !f[1]) ? attr.fpath : (f) ? f + 1 : attr.fpath;
-
-				/* While there's room for a nul or a byte followed by a nul... */
-
-				while (dst + ((*f) ? 1 : 0) - command < cmdbufsize)
-				{
-					/* Quote shell meta-characters in the path */
-
-					if (*f && !isalnum((int)(unsigned char)*f) && !strchr("-+,./@_", *f) && !(*f & 0x80))
-					{
-						*dst++ = '\\';
-
-						/* Is there still room for a byte followed by a nul? */
-
-						if (dst + 1 - command >= cmdbufsize)
-						{
-							error("command is too big: %s (%s)", ok(srccmd), ok2(attr.fpath));
-							attr.exit_status = EXIT_FAILURE;
-
-							return -1;
-						}
-					}
-
-					/* Copy the (possibly quoted meta) character, stopping after nul */
-
-					if (!(*dst++ = *f++))
-					{
-						/* Point dst and f back to the nul */
-
-						--dst;
-						--f;
-
-						break;
-					}
-				}
-
-				/* Were we able to completely interpolate the file name? */
-
-				if (*f)
+				if (dst + 4 - command >= cmdbufsize)
 				{
 					error("command is too big: %s (%s)", ok(srccmd), ok2(attr.fpath));
 					attr.exit_status = EXIT_FAILURE;
 
 					return -1;
 				}
+
+				*dst++ = '"';
+				*dst++ = '$';
+				*dst++ = '2';
+				*dst++ = '"';
 			}
 			else if (*src == '%')
 			{
@@ -1596,6 +1530,20 @@ int interpolate_command(const char *srccmd, char *command, int cmdbufsize)
 
 /*
 
+static const char *get_basename(void);
+
+Return the basename part of the current candidate path (or / for /).
+
+*/
+
+static const char *get_basename(void)
+{
+	const char *basename = strrchr(attr.fpath, '/');
+	return (basename == attr.fpath && !basename[1]) ? attr.fpath : (basename) ? basename + 1 : attr.fpath;
+}
+
+/*
+
 void visitf_execute(void);
 
 The -x action for matching files. It executes a shell command. Occurrences
@@ -1619,7 +1567,7 @@ void visitf_execute(void)
 
 	if (attr.verbose)
 	{
-		printf_sanitized("%s", command);
+		printf_sanitized("%s # 1=%s 2=%s", command, attr.fpath, get_basename());
 		putchar('\n');
 		fflush(stdout);
 	}
@@ -1737,7 +1685,7 @@ void visitf_execute_local(void)
 
 	if (attr.verbose)
 	{
-		printf_sanitized("%s", command);
+		printf_sanitized("%s # 1=%s 2=%s", command, attr.fpath, get_basename());
 		putchar('\n');
 		fflush(stdout);
 	}
@@ -1766,15 +1714,119 @@ void visitf_execute_local(void)
 
 /* 
 
+int systeml(const char *command, ...);
+
+Like system(), but takes additional arguments to pass to /bin/sh -c after
+the command. The final argument must be (char *)NULL. The additional
+arguments can be referred to in the command as $1, $2, etc. You must not
+include an argument for $0. That is included automatically ("sh"). Only
+64 such positional arguments are supported ($1..${64}).
+
+During execution of the command, SIGCHLD will be blocked, and SIGINT and
+SIGQUIT will be ignored in the process that calls systeml().
+
+*/
+
+extern char **environ;
+
+static int systeml(const char *command, ...)
+{
+	/* Check if /bin/sh is available on this system */
+
+	#if 0 /* Unused here */
+	if (!command)
+		return system(NULL);
+	#endif
+
+	/* Build the /bin/sh -c command vector (support 64 positional arguments) */
+
+	#define MAX_ARGS 70
+	const char *argv[MAX_ARGS];
+	const char **av = argv;
+
+	*av++ = "/bin/sh";
+	*av++ = "-c";
+	#ifndef HAVE_FREEBSD_EA /* FreeBSD's /bin/sh doesn't doesn't work with -- here */
+	*av++ = "--";
+	#endif
+	*av++ = command;
+	#ifdef HAVE_FREEBSD_EA /* FreeBSD's /bin/sh works with -- here */
+	*av++ = "--";
+	#endif
+	*av++ = "sh"; /* $0 */
+
+	/* Append the variadic arguments */
+
+	va_list args;
+	va_start(args, command);
+	while (av < argv + MAX_ARGS && (*av = va_arg(args, char *)))
+		++av;
+	va_end(args);
+	#if 0 /* Unused here */
+	if (av == argv + MAX_ARGS)
+		return errno = ENOMEM, -1;
+	#endif
+	#undef MAX_ARGS
+
+	/* Ignore SIGINT and SIGQUIT, and block SIGCHLD */
+
+	struct sigaction action[1], saveint[1], savequit[1];
+	memset(action, 0, sizeof *action);
+	action->sa_handler = SIG_IGN;
+	sigaction(SIGINT, action, saveint);
+	sigaction(SIGQUIT, action, savequit);
+	sigaddset(&action->sa_mask, SIGCHLD);
+	sigset_t saveprocmask;
+	sigprocmask(SIG_BLOCK, &action->sa_mask, &saveprocmask);
+
+	/* Prepare to set default SIGINT and SIGQUIT handlers in the child */
+
+	sigset_t defaultprocmask;
+	sigemptyset(&defaultprocmask);
+	if (saveint->sa_handler != SIG_IGN)
+		sigaddset(&defaultprocmask, SIGINT);
+	if (savequit->sa_handler != SIG_IGN)
+		sigaddset(&defaultprocmask, SIGQUIT);
+
+	/* Prepare the spawn attributes */
+
+	posix_spawnattr_t attr;
+	posix_spawnattr_init(&attr);
+	posix_spawnattr_setsigmask(&attr, &saveprocmask);
+	posix_spawnattr_setsigdefault(&attr, &defaultprocmask);
+	posix_spawnattr_setflags(&attr, POSIX_SPAWN_SETSIGMASK | POSIX_SPAWN_SETSIGDEF);
+
+	/* Execute the command and wait for its status */
+
+	pid_t child_pid;
+	int spawn_errno = posix_spawn(&child_pid, argv[0], NULL, &attr, (char * const *)argv, environ);
+	posix_spawnattr_destroy(&attr);
+	int status = 127 << 8;
+	if (!spawn_errno)
+		while (waitpid(child_pid, &status, 0) == -1 && errno == EINTR)
+			;
+
+	/* Stop ignoring SIGINT and SIGQUIT, and unblock SIGCHLD */
+
+	sigaction(SIGINT, saveint, NULL);
+	sigaction(SIGQUIT, savequit, NULL);
+	sigprocmask(SIG_SETMASK, &saveprocmask, NULL);
+
+	return errno = spawn_errno, status;
+}
+
+/* 
+
 int syscmd(const char *cmd);
 
-Like system(), but propagate SIGINT/SIGQUIT to rh.
+Like system(), but propagate SIGINT/SIGQUIT to rh. Also includes positional
+arguments ($1=%s, $2=%S) to avoid the need to quote anything.
 
 */
 
 int syscmd(const char *cmd)
 {
-	int rc = system(cmd);
+	int rc = systeml(cmd, attr.fpath, get_basename(), (char *)NULL);
 
 	if (rc != -1 && WIFSIGNALED(rc) && (WTERMSIG(rc) == SIGINT || WTERMSIG(rc) == SIGQUIT))
 		kill(getpid(), WTERMSIG(rc));

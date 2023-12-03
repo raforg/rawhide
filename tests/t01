@@ -112,6 +112,37 @@ else
 	[ x"$quiet" = x1 ] || echo "TEST $t pass ($label - $label2)"
 fi
 
+# Extra tricky
+
+# These tests (by Stéphane Chazelas) show how `` is more dangerous
+# than $() when interpolation of %s/%S is done by quoting with
+# backslashes (which is the method that used to be used by rh).
+# When a pathname contains backticks, those backticks were backslashed
+# by rh, but those backslashes would be processed within any backticks
+# in the shell command, and so the contents of the internal backticks
+# would be executed by the shell when parsing the final resulting command.
+#
+# The first two (commented out) tests show the original behaviour with
+# `` when interpolation was done by quoting. The next two show the new
+# fixed behaviour where %s/%S are passed as positional arguments to sh -c
+# as "$1"/"$2" thus eliminating the problem that it isn't actually possible
+# to interpolate by quoting because the context in which the interpolation
+# happens affects which method of quoting is needed, and it's impossible to
+# know what context(s) will be used without actually parsing the shell
+# command (which is not an option). The last two tests show the equivalent
+# shell command using $() rather than `` which worked safely with both
+# methods of interpolation.
+
+rh2="${valgrind}`pwd`/rh -Nn -f `pwd`/rawhide.conf"
+mkdir $d/'`$X`'
+touch $d/'`$X`'/f
+#test_rawhide "X='echo tricky'             $rh -m1 -e 'd && !empty && \"[ -n \\\"\`$rh2 -ref -- %S\`\\\" ]\".sh' $d" ""             "rh: fstatat tricky: No such file or directory\n" 0 "backtick cmd with backticks in %S and arbitrary cmd with space in env (orig unsafe)"
+#test_rawhide "X='/sbin/reboot-not-really' $rh -m1 -e 'd && !empty && \"[ -n \\\"\`$rh2 -ref -- %S\`\\\" ]\".sh' $d" "$d/\`\$X\`\n" "sh: 1: /sbin/reboot-not-really: not found\n" 0 "backtick cmd with backticks in %S and arbitrary cmd with slash in env (orig unsafe)"
+test_rawhide "X='echo tricky'             $rh -m1 -e 'd && !empty && \"[ -n \\\"\`$rh2 -ref -- %S\`\\\" ]\".sh' $d" "$d/\`\$X\`\n" "" 0 "backtick cmd with backticks in %S and arbitrary cmd with space in env (safe)"
+test_rawhide "X='/sbin/reboot-not-really' $rh -m1 -e 'd && !empty && \"[ -n \\\"\`$rh2 -ref -- %S\`\\\" ]\".sh' $d" "$d/\`\$X\`\n" "" 0 "backtick cmd with backticks in %S and arbitrary cmd with slash in env (safe)"
+test_rawhide "X='echo tricky'             $rh -m1 -e 'd && !empty && \"[ -n \\\"\$($rh2 -ref -- %S)\\\" ]\".sh' $d" "$d/\`\$X\`\n" "" 0 "\$() cmd with backticks in %S and arbitrary cmd with space in env (safe)"
+test_rawhide "X='/sbin/reboot-not-really' $rh -m1 -e 'd && !empty && \"[ -n \\\"\$($rh2 -ref -- %S)\\\" ]\".sh' $d" "$d/\`\$X\`\n" "" 0 "\$() cmd with backticks in %S and arbitrary cmd with slash in env (safe)"
+
 finish
 
 exit $errors

@@ -463,20 +463,26 @@ Execute the shell command specified by I<cmd> via I<system(3)> (i.e., via
 C</bin/sh>) for each matching entry. It is an error to supply the C<-x>
 option more than once.
 
-The I<cmd> argument can contain C<%s> which will be replaced with the
-matching entry's full path starting from the search directory. It can also
-contain C<%S> which will be replaced with the matching entry's base name (or
-with C<"/"> when the matching entry is the root directory (C</>) which has
-no base name). For example, given the matching file C</etc/passwd>, C<%s>
-and C<%S> would be replaced with C<"/etc/passwd"> and C<"passwd">,
-respectively. To include a literal per cent sign (C<"%">) in the shell
-command, use C<%%>. It is an error if C<%> is not followed by C<s>, C<S>, or
-C<%>.
+The I<cmd> argument can contain C<%s> which represents the matching entry's
+full path starting from the search directory. It can also contain C<%S>
+which represents the matching entry's base name (or C<"/"> when the matching
+entry is the root directory (C</>) which has no base name). For example,
+given the matching file C</etc/passwd>, C<%s> and C<%S> would represent
+C<"/etc/passwd"> and C<"passwd">, respectively. To include a literal per
+cent sign (C<"%">) in the shell command, use C<%%>. It is an error if C<%>
+is not followed by C<s>, C<S>, or C<%>.
 
-Any shell meta-characters in the interpolated path or base name are quoted
-with preceding backslash characters (C<"\">) to prevent shell command
-injection, so there is no need to place any quote characters around C<%s> or
-C<%S>.
+There is no reason to place any quote characters around C<%s> or C<%S>. To
+prevent shell command injection, they are replaced with C<"$1"> or C<"$2">,
+respectively, and the corresponding full path and base name are passed to
+the C</bin/sh> command as separate positional arguments. This avoids the
+problem that there is no single way to quote data in a shell command that
+works correctly in all syntactic contexts.
+
+This will usually be fine, but if the double quote quoting used when
+interpolating C<%s> and C<%S> as C<"$1"> and C<"$2"> is inappropriate for a
+particular command, you can instead use C<$1> and C<$2> directly, possibly
+via the shell's B<Parameter Expansion> syntax.
 
 For this option, the C<%s> interpolation is more likely to be useful than
 the C<%S> interpolation.
@@ -514,20 +520,26 @@ executed after safely changing the current working directory to the
 directory containing each matching entry. This minimizes the number of
 path-based race conditions.
 
-The I<cmd> argument can contain C<%s> which will be replaced with the
-matching entry's full path starting from the search directory. It can also
-contain C<%S> which will be replaced with the matching entry's base name (or
-with C<"/"> when the matching entry is the root directory (C</>) which has
-no base name). For example, given the matching file C</etc/passwd>, C<%s>
-and C<%S> would be replaced with C<"/etc/passwd"> and C<"passwd">,
-respectively. To include a literal per cent sign (C<"%">) in the shell
-command, use C<%%>. It is an error if C<%> is not followed by C<s>, C<S>, or
-C<%>.
+The I<cmd> argument can contain C<%s> which represents the matching entry's
+full path starting from the search directory. It can also contain C<%S>
+which represents the matching entry's base name (or C<"/"> when the matching
+entry is the root directory (C</>) which has no base name). For example,
+given the matching file C</etc/passwd>, C<%s> and C<%S> would represent
+C<"/etc/passwd"> and C<"passwd">, respectively. To include a literal per
+cent sign (C<"%">) in the shell command, use C<%%>. It is an error if C<%>
+is not followed by C<s>, C<S>, or C<%>.
 
-Any shell meta-characters in the interpolated path or base name are quoted
-with preceding backslash characters (C<"\">) to prevent shell command
-injection, so there is no need to place any quote characters around C<%s> or
-C<%S>.
+There is no reason to place any quote characters around C<%s> or C<%S>. To
+prevent shell command injection, they are replaced with C<"$1"> or C<"$2">,
+respectively, and the corresponding full path and base name are passed to
+the C</bin/sh> command as separate positional arguments. This avoids the
+problem that there is no single way to quote data in a shell command that
+works correctly in all syntactic contexts.
+
+This will usually be fine, but if the double quote quoting used when
+interpolating C<%s> and C<%S> as C<"$1"> and C<"$2"> is inappropriate for a
+particular command, you can instead use C<$1> and C<$2> directly, possibly
+via the shell's B<Parameter Expansion> syntax.
 
 For this option, the C<%S> interpolation is more likely to be useful than
 the C<%s> interpolation.
@@ -714,9 +726,10 @@ comma-separated C<rdev> major and minor device numbers), modified time,
 accessed time, inode changed time, and path).
 
 With the C<-x> or C<-X> option, this option outputs each command before it
-is executed. When standard output (I<stdout>) is a terminal, C<"?"> is
-output in place of any control characters to prevent terminal escape
-injection.
+is executed. The C<%s> and C<%S> escape sequences will appear as C<"$1"> and
+C<"$2">, respectively, and their literal values will be included as a
+comment. When standard output (I<stdout>) is a terminal, C<"?"> is output in
+place of any control characters to prevent terminal escape injection.
 
 With the C<-U> option, this option outputs each matching path before it is
 removed. When standard output (I<stdout>) is a terminal, C<"?"> is output in

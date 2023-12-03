@@ -93,13 +93,13 @@ test_rawhide_post_hook() { true; }
 
 # Clean up /usrCWD for Freebsd where /home -> usr/home
 test_rawhide_post_hook() { sed -e "s,`pwd`,CWD,g" -e "s,/usrCWD,CWD," $stdout > $stdout.tmp && mv $stdout.tmp $stdout; }
-test_rawhide "$rh -x 'echo \`pwd\` %s %S' $d" "CWD $d .$t\nCWD $d/d1 d1\nCWD $d/d1/d2 d2\nCWD $d/d1/d2/d3 d3\nCWD $d/d1/d2/d3/d4 d4\n"                                     "" 0 "-x 'echo %s \`pwd\` %S'"
-test_rawhide "$rh -X 'echo \`pwd\` %s %S' $d" "CWD/tests $d .$t\nCWD/$d $d/d1 d1\nCWD/$d/d1 $d/d1/d2 d2\nCWD/$d/d1/d2 $d/d1/d2/d3 d3\nCWD/$d/d1/d2/d3 $d/d1/d2/d3/d4 d4\n" "" 0 "-X 'echo %s \`pwd\` %S'"
+test_rawhide "$rh -x 'echo \`pwd\` %s %S' $d" "CWD $d .$t\nCWD $d/d1 d1\nCWD $d/d1/d2 d2\nCWD $d/d1/d2/d3 d3\nCWD $d/d1/d2/d3/d4 d4\n"                                     "" 0 "-x 'echo \`pwd\` %s %S'"
+test_rawhide "$rh -X 'echo \`pwd\` %s %S' $d" "CWD/tests $d .$t\nCWD/$d $d/d1 d1\nCWD/$d/d1 $d/d1/d2 d2\nCWD/$d/d1/d2 $d/d1/d2/d3 d3\nCWD/$d/d1/d2/d3 $d/d1/d2/d3/d4 d4\n" "" 0 "-X 'echo \`pwd\` %s %S'"
 
-test_rawhide "$rh -x 'echo \`pwd\` %s %S' -v $d" "echo \`pwd\` $d .$t\nCWD $d .$t\necho \`pwd\` $d/d1 d1\nCWD $d/d1 d1\necho \`pwd\` $d/d1/d2 d2\nCWD $d/d1/d2 d2\necho \`pwd\` $d/d1/d2/d3 d3\nCWD $d/d1/d2/d3 d3\necho \`pwd\` $d/d1/d2/d3/d4 d4\nCWD $d/d1/d2/d3/d4 d4\n"                                     "" 0 "-x 'echo %s \`pwd\` %S' -v"
-test_rawhide "$rh -X 'echo \`pwd\` %s %S' -v $d" "echo \`pwd\` $d .$t\nCWD/tests $d .$t\necho \`pwd\` $d/d1 d1\nCWD/$d $d/d1 d1\necho \`pwd\` $d/d1/d2 d2\nCWD/$d/d1 $d/d1/d2 d2\necho \`pwd\` $d/d1/d2/d3 d3\nCWD/$d/d1/d2 $d/d1/d2/d3 d3\necho \`pwd\` $d/d1/d2/d3/d4 d4\nCWD/$d/d1/d2/d3 $d/d1/d2/d3/d4 d4\n" "" 0 "-X 'echo %s \`pwd\` %S' -v"
-test_rawhide "RAWHIDE_TEST_TTY=1 $rh -x 'echo \`pwd\` %s %S' -v $d" "echo \`pwd\` $d .$t\nCWD $d .$t\necho \`pwd\` $d/d1 d1\nCWD $d/d1 d1\necho \`pwd\` $d/d1/d2 d2\nCWD $d/d1/d2 d2\necho \`pwd\` $d/d1/d2/d3 d3\nCWD $d/d1/d2/d3 d3\necho \`pwd\` $d/d1/d2/d3/d4 d4\nCWD $d/d1/d2/d3/d4 d4\n"                                     "" 0 "-x 'echo %s \`pwd\` %S' -v (tty)"
-test_rawhide "RAWHIDE_TEST_TTY=1 $rh -X 'echo \`pwd\` %s %S' -v $d" "echo \`pwd\` $d .$t\nCWD/tests $d .$t\necho \`pwd\` $d/d1 d1\nCWD/$d $d/d1 d1\necho \`pwd\` $d/d1/d2 d2\nCWD/$d/d1 $d/d1/d2 d2\necho \`pwd\` $d/d1/d2/d3 d3\nCWD/$d/d1/d2 $d/d1/d2/d3 d3\necho \`pwd\` $d/d1/d2/d3/d4 d4\nCWD/$d/d1/d2/d3 $d/d1/d2/d3/d4 d4\n" "" 0 "-X 'echo %s \`pwd\` %S' -v (tty)"
+test_rawhide "$rh -x 'echo \`pwd\` %s %S' -v $d" "echo \`pwd\` \"\$1\" \"\$2\" # 1=$d 2=.$t\nCWD $d .$t\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1 2=d1\nCWD $d/d1 d1\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2 2=d2\nCWD $d/d1/d2 d2\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2/d3 2=d3\nCWD $d/d1/d2/d3 d3\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2/d3/d4 2=d4\nCWD $d/d1/d2/d3/d4 d4\n"                                                        "" 0 "-x 'echo \`pwd\` %s %S' -v"
+test_rawhide "$rh -X 'echo \`pwd\` %s %S' -v $d" "echo \`pwd\` \"\$1\" \"\$2\" # 1=$d 2=.$t\nCWD/tests $d .$t\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1 2=d1\nCWD/$d $d/d1 d1\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2 2=d2\nCWD/$d/d1 $d/d1/d2 d2\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2/d3 2=d3\nCWD/$d/d1/d2 $d/d1/d2/d3 d3\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2/d3/d4 2=d4\nCWD/$d/d1/d2/d3 $d/d1/d2/d3/d4 d4\n"                    "" 0 "-X 'echo \`pwd\` %s %S' -v"
+test_rawhide "RAWHIDE_TEST_TTY=1 $rh -x 'echo \`pwd\` %s %S' -v $d" "echo \`pwd\` \"\$1\" \"\$2\" # 1=$d 2=.$t\nCWD $d .$t\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1 2=d1\nCWD $d/d1 d1\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2 2=d2\nCWD $d/d1/d2 d2\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2/d3 2=d3\nCWD $d/d1/d2/d3 d3\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2/d3/d4 2=d4\nCWD $d/d1/d2/d3/d4 d4\n"                                     "" 0 "-x 'echo \`pwd\` %s %S' -v (tty)"
+test_rawhide "RAWHIDE_TEST_TTY=1 $rh -X 'echo \`pwd\` %s %S' -v $d" "echo \`pwd\` \"\$1\" \"\$2\" # 1=$d 2=.$t\nCWD/tests $d .$t\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1 2=d1\nCWD/$d $d/d1 d1\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2 2=d2\nCWD/$d/d1 $d/d1/d2 d2\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2/d3 2=d3\nCWD/$d/d1/d2 $d/d1/d2/d3 d3\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2/d3/d4 2=d4\nCWD/$d/d1/d2/d3 $d/d1/d2/d3/d4 d4\n" "" 0 "-X 'echo \`pwd\` %s %S' -v (tty)"
 test_rawhide_post_hook() { true; }
 
 test_rawhide "$rh -x ''" "" "./rh: missing -x option argument (see ./rh -h for help)\n" 1 "-x with empty argument"
@@ -183,10 +183,10 @@ case "$LANG" in
 	*.UTF-8)
 		rm -r $d/d1
 		touch $d/'áêìöç-🙂'
-		test_rawhide "$rh -v -x 'echo %s' $d/" "echo $d\n$d\necho $d/áêìöç-🙂\n$d/áêìöç-🙂\n" "" 0 "-v -x %s with multi-byte characters/emoji"
-		test_rawhide "$rh -v -x 'echo %S' $d/" "echo .$t\n.$t\necho áêìöç-🙂\náêìöç-🙂\n"     "" 0 "-v -x %S with multi-byte characters/emoji"
-		test_rawhide "$rh -v -X 'echo %s' $d/" "echo $d\n$d\necho $d/áêìöç-🙂\n$d/áêìöç-🙂\n" "" 0 "-v -X %s with multi-byte characters/emoji"
-		test_rawhide "$rh -v -X 'echo %S' $d/" "echo .$t\n.$t\necho áêìöç-🙂\náêìöç-🙂\n"     "" 0 "-v -X %S with multi-byte characters/emoji"
+		test_rawhide "$rh -v -x 'echo %s' $d/" "echo \"\$1\" # 1=$d 2=.$t\n$d\necho \"\$1\" # 1=$d/áêìöç-🙂 2=áêìöç-🙂\n$d/áêìöç-🙂\n" "" 0 "-v -x %s with multi-byte characters/emoji"
+		test_rawhide "$rh -v -x 'echo %S' $d/" "echo \"\$2\" # 1=$d 2=.$t\n.$t\necho \"\$2\" # 1=$d/áêìöç-🙂 2=áêìöç-🙂\náêìöç-🙂\n"   "" 0 "-v -x %S with multi-byte characters/emoji"
+		test_rawhide "$rh -v -X 'echo %s' $d/" "echo \"\$1\" # 1=$d 2=.$t\n$d\necho \"\$1\" # 1=$d/áêìöç-🙂 2=áêìöç-🙂\n$d/áêìöç-🙂\n" "" 0 "-v -X %s with multi-byte characters/emoji"
+		test_rawhide "$rh -v -X 'echo %S' $d/" "echo \"\$2\" # 1=$d 2=.$t\n.$t\necho \"\$2\" # 1=$d/áêìöç-🙂 2=áêìöç-🙂\náêìöç-🙂\n"   "" 0 "-v -X %S with multi-byte characters/emoji"
 		;;
 esac
 

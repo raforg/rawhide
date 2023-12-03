@@ -42,14 +42,10 @@ test_cmdbufsize()
 }
 
 # Where buf size checks are:
-# 1 - not interpolating (char is not %)
-# 2 - interpolating %s and char is meta character
-# 3 - interpolating %s and char is backslash before meta character
-# 3 - interpolating %s and char is not meta character
-# 4 - interpolating %S and char is meta character
-# 5 - interpolating %S and char is not meta character
-# 5 - interpolating %S and char is backslash before meta character
-# 6 - interpolating %%
+# - not interpolating (char is not %)
+# - interpolating %s
+# - interpolating %S
+# - interpolating %%
 
 # These require a buffer size of at least 19
 # echo 6789012345678
@@ -57,30 +53,24 @@ test_cmdbufsize 20 "$rh -x 'echo 6789012345678' $d" "6789012345678\n678901234567
 test_cmdbufsize 19 "$rh -x 'echo 6789012345678' $d" "6789012345678\n6789012345678\n" ""                                                                                                                          0 "not interpolating: max"
 test_cmdbufsize 18 "$rh -x 'echo 6789012345678' $d" ""                              "./rh: command is too big: echo 6789012345678 (tests/.$t)\n./rh: command is too big: echo 6789012345678 (tests/.$t/abcd )\n" 1 "not interpolating: too big"
 
-# These require a buffer size of at least 23
-# (error on space when size is 22, error on backslash when size is 21)
-# echo tests/.t02
-# echo tests/.t02/abcd\ 
-test_cmdbufsize 24 "$rh -x 'echo %s' $d" "tests/.$t\ntests/.$t/abcd \n" ""                                                       0 "interpolating %s: small"
-test_cmdbufsize 23 "$rh -x 'echo %s' $d" "tests/.$t\ntests/.$t/abcd \n" ""                                                       0 "interpolating %s: max"
-test_cmdbufsize 22 "$rh -x 'echo %s' $d" "tests/.$t\n"                  "./rh: command is too big: echo %%s (tests/.$t/abcd )\n" 1 "interpolating %s: too big (at meta character)"
-test_cmdbufsize 21 "$rh -x 'echo %s' $d" "tests/.$t\n"                  "./rh: command is too big: echo %%s (tests/.$t/abcd )\n" 1 "interpolating %s: too big (at backslash before meta character)"
+# These require a buffer size of at least 10
+# echo "$1"
+test_cmdbufsize 11 "$rh -x 'echo %s' $d" "tests/.$t\ntests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: small"
+test_cmdbufsize 10 "$rh -x 'echo %s' $d" "tests/.$t\ntests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: max"
+test_cmdbufsize  9 "$rh -x 'echo %s' $d" ""                             "./rh: command is too big: echo %%s (tests/.$t)\n./rh: command is too big: echo %%s (tests/.$t/abcd )\n" 1 "interpolating %s: too big"
+
+
+# These require a buffer size of at least 10
+# echo "$2"
+test_cmdbufsize 11 "$rh -x 'echo %S' $d" ".$t\nabcd \n" ""                                                                                                       0 "interpolating %S: small"
+test_cmdbufsize 10 "$rh -x 'echo %S' $d" ".$t\nabcd \n" ""                                                                                                       0 "interpolating %S: max"
+test_cmdbufsize 09 "$rh -x 'echo %S' $d" ""             "./rh: command is too big: echo %%S (tests/.$t)\n./rh: command is too big: echo %%S (tests/.$t/abcd )\n" 1 "interpolating %S: too big"
 
 # These require a buffer size of at least 12
-# (error on space when size is 11, error on backslash when size is 10)
-# echo .t02
-# echo abcd\ 
-test_cmdbufsize 13 "$rh -x 'echo %S' $d" ".$t\nabcd \n" ""                                                       0 "interpolating %S: small"
-test_cmdbufsize 12 "$rh -x 'echo %S' $d" ".$t\nabcd \n" ""                                                       0 "interpolating %S: max"
-test_cmdbufsize 11 "$rh -x 'echo %S' $d" ".$t\n"        "./rh: command is too big: echo %%S (tests/.$t/abcd )\n" 1 "interpolating %S: too big (at meta character)"
-test_cmdbufsize 10 "$rh -x 'echo %S' $d" ".$t\n"        "./rh: command is too big: echo %%S (tests/.$t/abcd )\n" 1 "interpolating %S: too big (at backslash before meta character)"
-
-# These require a buffer size of at least 25
-# echo tests/.t02 %
-# echo tests/.t02/abcd\  %
-test_cmdbufsize 26 "$rh -x 'echo %s %%' $d" "tests/.$t %%\ntests/.$t/abcd  %%\n" ""                                                            0 "interpolating %%: small"
-test_cmdbufsize 25 "$rh -x 'echo %s %%' $d" "tests/.$t %%\ntests/.$t/abcd  %%\n" ""                                                            0 "interpolating %%: max"
-test_cmdbufsize 24 "$rh -x 'echo %s %%' $d" "tests/.$t %%\n"                     "./rh: command is too big: echo %%s %%%% (tests/.$t/abcd )\n" 1 "interpolating %%: too big"
+# echo "$1" %
+test_cmdbufsize 13 "$rh -x 'echo %s %%' $d" "tests/.$t %%\ntests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: small"
+test_cmdbufsize 12 "$rh -x 'echo %s %%' $d" "tests/.$t %%\ntests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: max"
+test_cmdbufsize 11 "$rh -x 'echo %s %%' $d" ""                                   "./rh: command is too big: echo %%s %%%% (tests/.$t)\n./rh: command is too big: echo %%s %%%% (tests/.$t/abcd )\n" 1 "interpolating %%: too big"
 
 label2="-X"
 
@@ -90,30 +80,23 @@ test_cmdbufsize 20 "$rh -X 'echo 6789012345678' $d" "6789012345678\n678901234567
 test_cmdbufsize 19 "$rh -X 'echo 6789012345678' $d" "6789012345678\n6789012345678\n" ""                                                                                                                          0 "not interpolating: max"
 test_cmdbufsize 18 "$rh -X 'echo 6789012345678' $d" ""                              "./rh: command is too big: echo 6789012345678 (tests/.$t)\n./rh: command is too big: echo 6789012345678 (tests/.$t/abcd )\n" 1 "not interpolating: too big"
 
-# These require a buffer size of at least 23
-# (error on space when size is 22, error on backslash when size is 21)
-# echo tests/.t02
-# echo tests/.t02/abcd\ 
-test_cmdbufsize 24 "$rh -X 'echo %s' $d" "tests/.$t\ntests/.$t/abcd \n" ""                                                       0 "interpolating %s: small"
-test_cmdbufsize 23 "$rh -X 'echo %s' $d" "tests/.$t\ntests/.$t/abcd \n" ""                                                       0 "interpolating %s: max"
-test_cmdbufsize 22 "$rh -X 'echo %s' $d" "tests/.$t\n"                  "./rh: command is too big: echo %%s (tests/.$t/abcd )\n" 1 "interpolating %s: too big (at meta character)"
-test_cmdbufsize 21 "$rh -X 'echo %s' $d" "tests/.$t\n"                  "./rh: command is too big: echo %%s (tests/.$t/abcd )\n" 1 "interpolating %s: too big (at backslash before meta character)"
+# These require a buffer size of at least 10
+# echo "$1"
+test_cmdbufsize 11 "$rh -X 'echo %s' $d" "tests/.$t\ntests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: small"
+test_cmdbufsize 10 "$rh -X 'echo %s' $d" "tests/.$t\ntests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: max"
+test_cmdbufsize  9 "$rh -X 'echo %s' $d" ""                             "./rh: command is too big: echo %%s (tests/.$t)\n./rh: command is too big: echo %%s (tests/.$t/abcd )\n" 1 "interpolating %s: too big"
+
+# These require a buffer size of at least 10
+# echo "$2"
+test_cmdbufsize 11 "$rh -X 'echo %S' $d" ".$t\nabcd \n" ""                                                                                                       0 "interpolating %S: small"
+test_cmdbufsize 10 "$rh -X 'echo %S' $d" ".$t\nabcd \n" ""                                                                                                       0 "interpolating %S: max"
+test_cmdbufsize 09 "$rh -X 'echo %S' $d" ""             "./rh: command is too big: echo %%S (tests/.$t)\n./rh: command is too big: echo %%S (tests/.$t/abcd )\n" 1 "interpolating %S: too big"
 
 # These require a buffer size of at least 12
-# (error on space when size is 11, error on backslash when size is 10)
-# echo .t02
-# echo abcd\ 
-test_cmdbufsize 13 "$rh -X 'echo %S' $d" ".$t\nabcd \n" ""                                                       0 "interpolating %S: small"
-test_cmdbufsize 12 "$rh -X 'echo %S' $d" ".$t\nabcd \n" ""                                                       0 "interpolating %S: max"
-test_cmdbufsize 11 "$rh -X 'echo %S' $d" ".$t\n"        "./rh: command is too big: echo %%S (tests/.$t/abcd )\n" 1 "interpolating %S: too big (at meta character)"
-test_cmdbufsize 10 "$rh -X 'echo %S' $d" ".$t\n"        "./rh: command is too big: echo %%S (tests/.$t/abcd )\n" 1 "interpolating %S: too big (at backslash before meta character)"
-
-# These require a buffer size of at least 25
-# echo tests/.t02 %
-# echo tests/.t02/abcd\  %
-test_cmdbufsize 26 "$rh -X 'echo %s %%' $d" "tests/.$t %%\ntests/.$t/abcd  %%\n" ""                                                            0 "interpolating %%: small"
-test_cmdbufsize 25 "$rh -X 'echo %s %%' $d" "tests/.$t %%\ntests/.$t/abcd  %%\n" ""                                                            0 "interpolating %%: max"
-test_cmdbufsize 24 "$rh -X 'echo %s %%' $d" "tests/.$t %%\n"                     "./rh: command is too big: echo %%s %%%% (tests/.$t/abcd )\n" 1 "interpolating %%: too big"
+# echo "$1" %
+test_cmdbufsize 13 "$rh -X 'echo %s %%' $d" "tests/.$t %%\ntests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: small"
+test_cmdbufsize 12 "$rh -X 'echo %s %%' $d" "tests/.$t %%\ntests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: max"
+test_cmdbufsize 11 "$rh -X 'echo %s %%' $d" ""                                   "./rh: command is too big: echo %%s %%%% (tests/.$t)\n./rh: command is too big: echo %%s %%%% (tests/.$t/abcd )\n" 1 "interpolating %%: too big"
 
 finish
 

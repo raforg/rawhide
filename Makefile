@@ -128,7 +128,7 @@ RAWHIDE_DEFINES = \
 #DEBUG_DEFINES = -DNDEBUG
 
 # Test coverage (gcov): Uncomment this, run tests (as non-root and as root),
-# then run gcov *.c then examine *.c.gcov or run gcov_summary (97.13% on Linux)
+# then run gcov *.c then examine *.c.gcov or run gcov_summary (97.16% on Linux)
 #GCOV_CFLAGS = -fprofile-arcs -ftest-coverage
 
 # Undefined behaviour sanitizer: Uncomment this, run tests (as non-root and as root)
@@ -330,7 +330,7 @@ help:
 	@echo "  make vg=1 test    - Run tests and produce valgrind.out analysis (~40m)"
 	@echo "  vim valgrind.out  - Examine the results (delete the noise, check the rest)"
 	@echo 
-	@echo "To run tests for test coverage analysis (97.13% on Linux):"
+	@echo "To run tests for test coverage analysis (97.16% on Linux):"
 	@echo
 	@echo "  ./configure --enable-gcov"
 	@echo "  make"
@@ -360,8 +360,9 @@ help:
 	@echo "  make quiet=1 test"
 	@echo "  sudo make quiet=1 asan=1 RAWHIDE_TEST_MULTIBYTE_USER_GROUP=1 test"
 	@echo
-	@echo "The asan=1 variable suppresses a setuid test that would trigger a fatal"
-	@echo "error for the LeakSanitizer which doesn't work with setuid programs."
+	@echo "The asan=1 variable suppresses setuid/setgid tests that would trigger a"
+	@echo "fatal error for the LeakSanitizer which doesn't work with setuid/setgid"
+	@echo "programs."
 	@echo "Note: Do not install the resulting binary."
 	@echo
 	@echo "Other make targets:"
