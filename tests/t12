@@ -27,7 +27,7 @@
 label="parser error messages"
 
 rh="$builtin_rh"
-test_rawhide "$rh -e 'mtime { 1 }'"               "" "./rh: command line: -e 'mtime { 1 }': line 1 byte 7: expected ';' or EOF after final condition expression, found '{' (possible attempt to redefine an existing function)\n"   1 "redefine func without parenthese"
+test_rawhide "$rh -e 'mtime { 1 }'"               "" "./rh: command line: -e 'mtime { 1 }': line 1 byte 11: expected ';' or EOF after final condition expression, found string \" 1 \" (possible attempt to redefine an existing function)\n"   1 "redefine func without parentheses"
 test_rawhide "$rh -e 'mtime() { 1 }'"             "" "./rh: command line: -e 'mtime() { 1 }': line 1 byte 6: expected ';' or EOF after final condition expression, found '(' (possible attempt to redefine an existing function)\n" 1 "redefine func with parentheses"
 test_rawhide "$rh -e 'newtestfunc() 1'"           "" "./rh: command line: -e 'newtestfunc() 1': line 1 byte 15: expected '{' to start a function body, found number 1\n"                                                            1 "func definition without opening brace"
 test_rawhide "$rh -e 'newtestfunc() { 1'"         "" "./rh: command line: -e 'newtestfunc() { 1': line 1 byte 18: expected '}' to end a function body, found eof\n"                                                                 1 "func definition without closing brace"
@@ -105,6 +105,11 @@ test_rawhide "$rh -e '0xh'"                                    "" "./rh: command
 test_rawhide "$rh -e '\"'"                                     "" "./rh: command line: -e '\"': line 1 byte 2: invalid string literal (missing closing double quote)\n"                                          1 "invalid glob '\"'"
 test_rawhide "$rh -e '\"\\'"                                   "" "./rh: command line: -e '\"\\\\': line 1 byte 3: invalid character quoting in string\n"                                                        1 "invalid glob character quoting '\"\\'"
 test_rawhide "$rh -e '\"\\\"'"                                 "" "./rh: command line: -e '\"\\\\\"': line 1 byte 4: invalid string literal (missing closing double quote)\n"                                    1 "invalid glob '\"\\\"'"
+test_rawhide "$rh -e '{'"                                      "" "./rh: command line: -e '{': line 1 byte 2: invalid string literal (missing closing curly brace)\n"                                            1 "invalid glob '{'"
+test_rawhide "$rh -e '{\\'"                                    "" "./rh: command line: -e '{\\\\': line 1 byte 3: invalid character quoting in string\n"                                                         1 "invalid glob character quoting '{\\'"
+test_rawhide "$rh -e '{\\}'"                                   "" "./rh: command line: -e '{\\\\}': line 1 byte 4: invalid string literal (missing closing curly brace)\n"                                         1 "invalid glob '{\\}'"
+test_rawhide "$rh -e '{ { }'"                                  "" "./rh: command line: -e '{ { }': line 1 byte 6: invalid string literal (missing closing curly brace)\n"                                        1 "invalid glob '{ { }'"
+test_rawhide "$rh -e '{ } }'"                                  "" "./rh: command line: -e '{ } }': line 1 byte 5: expected ';' or EOF after final condition expression, found '}'\n"                             1 "invalid glob '{ } }'"
 test_rawhide "$rh -e '\$please-tell.me_this-isnt.a_real-user'" "" "./rh: command line: -e '\$please-tell.me_this-isnt.a_real-user': line 1 byte 37: no such user: please-tell.me_this-isnt.a_real-user\n"        1 "no such user"
 test_rawhide "$rh -e '@please-tell.me_this-isnt.a_real-group'" "" "./rh: command line: -e '@please-tell.me_this-isnt.a_real-group': line 1 byte 38: no such group: please-tell.me_this-isnt.a_real-group\n"      1 "no such group"
 test_rawhide "$rh -e '\$+'"                                    "" "./rh: command line: -e '\$+': line 1 byte 1: no such user: \n"                                                                                1 "no such user (empty name)"
@@ -187,7 +192,7 @@ echo "f101 { \"0\" }" >> $f
 test_rawhide "$rh -f $f -e 'f101' $d" "" "./rh: $f: line 101 byte 10: no more string space\n" 1 "not enough glob string space (just)"
 rm $f
 
-# Test that backslash is only special before \ and " (i.e. \\ and \" are one byte but \d is two bytes)
+# Test that in double quote string literals backslash is only special before \ and " (i.e. \\ and \" are one byte but \d is two bytes)
 
 z2019=000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 f=tests/$t.f
@@ -211,6 +216,38 @@ test_rawhide "$rh -f $f -e '\"ab\\\"\"' $d" "" "./rh: command line: -e '\"ab\\\\
 test_rawhide "$rh -f $f -e '\"\\d\"' $d"   "" ""                                                                                0 "enough glob string space (just) with \\d = 2+nul"
 test_rawhide "$rh -f $f -e '\"a\\d\"' $d"  "" "./rh: command line: -e '\"a\\\\d\"': line 1 byte 4: no more string space\n"        1 "not enough glob string space (just) with a\\d = 3+nul"
 test_rawhide "$rh -f $f -e '\"ab\\d\"' $d" "" "./rh: command line: -e '\"ab\\\\d\"': line 1 byte 4: no more string space\n"       1 "not enough glob string space with ab\\d = 4+nul"
+rm $f
+
+# Test that in curly brace string literals backslash is only special before \ and " (i.e. \\ and \" are one byte but \d is two bytes)
+
+z2019=000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+f=tests/$t.f
+touch $f
+i=1
+while [ $i -le 99 ]
+do
+	echo "f$i { {$z2019} }" >> $f
+	i="`expr $i + 1`"
+done
+
+echo "f100 { {0000000000000000} }" >> $f # Leaves 3 bytes for a 2 byte string
+
+test_rawhide "$rh -f $f -e '{12}' $d"     "" ""                                                                             0 "enough glob string space (just) before backslash tests"
+test_rawhide "$rh -f $f -e '{\\\\}' $d"   "" ""                                                                             0 "enough glob string space (just) with \\\\ = 1+nul"
+test_rawhide "$rh -f $f -e '{a\\\\}' $d"  "" ""                                                                             0 "enough glob string space (just) with a\\\\ = 2+nul"
+test_rawhide "$rh -f $f -e '{ab\\\\}' $d" "" "./rh: command line: -e '{ab\\\\\\\\}': line 1 byte 4: no more string space\n" 1 "not enough glob string space with ab\\\\ = 3+nul"
+test_rawhide "$rh -f $f -e '{\\\"}' $d"   "" ""                                                                             0 "enough glob string space (just) with \\\" = 2+nul"
+test_rawhide "$rh -f $f -e '{\\{}' $d"    "" ""                                                                             0 "enough glob string space (just) with \\{ = 1+nul"
+test_rawhide "$rh -f $f -e '{a\\{}' $d"   "" ""                                                                             0 "enough glob string space (just) with a\\{ = 2+nul"
+test_rawhide "$rh -f $f -e '{ab\\{}' $d"  "" "./rh: command line: -e '{ab\\\\{}': line 1 byte 4: no more string space\n"    1 "not enough glob string space with ab\\{ = 3+nul"
+test_rawhide "$rh -f $f -e '{\\}}' $d"    "" ""                                                                             0 "enough glob string space (just) with \\} = 1+nul"
+test_rawhide "$rh -f $f -e '{a\\}}' $d"   "" ""                                                                             0 "enough glob string space (just) with a\\} = 2+nul"
+test_rawhide "$rh -f $f -e '{ab\\}}' $d"  "" "./rh: command line: -e '{ab\\\\}}': line 1 byte 4: no more string space\n"      1 "not enough glob string space with ab\\} = 3+nul"
+test_rawhide "$rh -f $f -e '{a\\\"}' $d"  "" "./rh: command line: -e '{a\\\\\"}': line 1 byte 4: no more string space\n"    1 "not enough glob string space with a\\\" = 3+nul"
+test_rawhide "$rh -f $f -e '{ab\\\"}' $d" "" "./rh: command line: -e '{ab\\\\\"}': line 1 byte 4: no more string space\n"   1 "not enough glob string space with ab\\\" = 3+nul"
+test_rawhide "$rh -f $f -e '{\\d}' $d"    "" ""                                                                             0 "enough glob string space (just) with \\d = 2+nul"
+test_rawhide "$rh -f $f -e '{a\\d}' $d"   "" "./rh: command line: -e '{a\\\\d}': line 1 byte 4: no more string space\n"     1 "not enough glob string space (just) with a\\d = 3+nul"
+test_rawhide "$rh -f $f -e '{ab\\d}' $d"  "" "./rh: command line: -e '{ab\\\\d}': line 1 byte 4: no more string space\n"    1 "not enough glob string space with ab\\d = 4+nul"
 rm $f
 
 # Test (temporary) reference file field name space limit (same storage as glob pattern strings)
@@ -249,6 +286,7 @@ test_rawhide "$rh -e '\"/\". mtime' $d" "" "./rh: command line: -e '\"/\". mtime
 # Test implicit empty string "" reference file error
 
 test_rawhide "$rh -e '\"\".exists' $d" "" "./rh: command line: -e '\"\".exists': line 1 byte 9: invalid implicit reference file path: \"\".exists (no preceding reference file path to refer to)\n" 1 "invalid implicit reference file path"
+test_rawhide "$rh -e '{}.exists' $d"   "" "./rh: command line: -e '{}.exists': line 1 byte 9: invalid implicit reference file path: \"\".exists (no preceding reference file path to refer to)\n" 1 "invalid implicit reference file path"
 
 # Exercise show_token() in error messages
 

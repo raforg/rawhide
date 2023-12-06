@@ -53,10 +53,11 @@
 
 #define isaleph(c) ((c) != EOF && (isalpha(c) || (c) & 0x80))
 
-static int cpos;         /* Current byte position */
-static int lineno;       /* Current line number */
-static int decimal_mode; /* Only decimal, not octal */
-static int last_reffile; /* Most recent reference file */
+static int cpos;             /* Current byte position */
+static int lineno;           /* Current line number */
+static int decimal_mode;     /* Only decimal, not octal */
+static int last_reffile;     /* Most recent reference file */
+static int expect_block = 0; /* Expecting { to start a function block? */
 static char *saved_expstr;
 
 static void parse_function(void);
@@ -272,7 +273,7 @@ void parse_program(void)
 
 	if (token != ';' && token != EOF)
 	{
-		if (token == '{' || token == '(')
+		if (token == '{' || token == '(' || token == STRING)
 			parser_error("expected ';' or EOF after final condition expression, found %s (possible attempt to redefine an existing function)", show_token());
 		else
 			parser_error("expected ';' or EOF after final condition expression, found %s", show_token());
@@ -309,6 +310,7 @@ static void parse_function(void)
 	tokensym->type = FUNCTION;
 	tokensym->func = c_func;
 
+	expect_block = 1;
 	token = get_token();
 
 	add_instruction(NULL, parse_parameters()); /* Save number of parameters for function */
@@ -316,6 +318,7 @@ static void parse_function(void)
 	if (token != '{')
 		parser_error("expected '{' to start a function body, found %s", show_token());
 
+	expect_block = 0;
 	token = get_token();
 
 	if (token == RETURN)
@@ -1210,6 +1213,17 @@ Tokens look like:
 
 And single-letter operators.
 
+There are two alternative syntaxes for string literals. Strings can be
+double quote-quoted strings where the backslash character is used to only
+quote backslashes and double quotes. Strings can also be curly brace-quoted
+strings where the backslash character is used to only quote backslashes and
+curly braces. Unquoted curly braces can exist in matching (nested) pairs
+within these string literals. This is particularly useful for shell commands
+that require double quotes so that those double quotes don't need to be
+backslash-quoted. But any unmatched curly braces that are quoted in the
+shell command (i.e., not meta characters), must be backslash-quoted in the
+string literal as well.
+
 */
 
 static int _get_token(void);
@@ -1381,38 +1395,80 @@ static int _get_token(void)
 
 	/* Glob/regex pattern / Reference file / Shell command */
 
-	if (c == '"')
+	if (c == '"' || (c == '{' && !expect_block))
 	{
 		llong reffield, refstrfree, i, stripped = 0;
 
 		tokenval = strfree;
 
-		while ((c = getch()) != '"' && c != EOF)
+		if (c == '"')
 		{
-			if (strfree >= MAX_DATA_SIZE - 1)
-				parser_error("no more string space");
-
-			if (c == '\\')
+			while ((c = getch()) != '"' && c != EOF)
 			{
-				if ((c = getch()) == EOF)
-					parser_error("invalid character quoting in string");
+				if (strfree >= MAX_DATA_SIZE - 1)
+					parser_error("no more string space");
 
-				/* Backslash is only special before \ or " */
-
-				if (!(c == '\\' || c == '"'))
+				if (c == '\\')
 				{
-					if (strfree >= MAX_DATA_SIZE - 2)
-						parser_error("no more string space");
+					if ((c = getch()) == EOF)
+						parser_error("invalid character quoting in string");
 
-					Strbuf[strfree++] = '\\';
+					/* Backslash is only special before \ or " */
+
+					if (!(c == '\\' || c == '"'))
+					{
+						if (strfree >= MAX_DATA_SIZE - 2)
+							parser_error("no more string space");
+
+						Strbuf[strfree++] = '\\';
+					}
 				}
+
+				Strbuf[strfree++] = c;
 			}
 
-			Strbuf[strfree++] = c;
+			if (c != '"')
+				parser_error("invalid string literal (missing closing double quote)");
 		}
+		else
+		{
+			int brace_level = 0;
 
-		if (c != '"')
-			parser_error("invalid string literal (missing closing double quote)");
+			while (!((c = getch()) == '}' && brace_level == 0) && c != EOF)
+			{
+				if (strfree >= MAX_DATA_SIZE - 1)
+					parser_error("no more string space");
+
+				if (c == '\\')
+				{
+					if ((c = getch()) == EOF)
+						parser_error("invalid character quoting in string");
+
+					/* Backslash is only special before \ or { or } */
+
+					if (!(c == '\\' || c == '{' || c == '}'))
+					{
+						if (strfree >= MAX_DATA_SIZE - 2)
+							parser_error("no more string space");
+
+						Strbuf[strfree++] = '\\';
+					}
+				}
+				else if (c == '{')
+				{
+					++brace_level;
+				}
+				else if (c == '}')
+				{
+					--brace_level;
+				}
+
+				Strbuf[strfree++] = c;
+			}
+
+			if (c != '}')
+				parser_error("invalid string literal (missing closing curly brace)");
+		}
 
 		Strbuf[strfree++] = '\0';
 

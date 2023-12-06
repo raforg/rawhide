@@ -319,12 +319,20 @@ test_rawhide "$rh -e '[09/09/09 09:09:09] != [2009/9/9 9:9:9]'       $d" "" "" 0
 test_rawhide "$rh '\"*\"'          $d" "$d\n$d/e\n" "" 0 "glob str simple"
 test_rawhide "$rh '\"abc\\\"def\"' $d" ""           "" 0 "glob str quoted char"
 
+test_rawhide "$rh '{*}'          $d" "$d\n$d/e\n" "" 0 "glob str simple"
+test_rawhide "$rh '{abc\\\"def}' $d" ""           "" 0 "glob str quoted char"
+
 # Reference file stat fields (and aliases)
 
 test_rawhide "$rh -e '\"/\".exists'                        $d" "$d\n$d/e\n" ""                                                                                    0 "reference file exists function"
 test_rawhide "$rh -e '\"/\".mtime != 0'                    $d" "$d\n$d/e\n" ""                                                                                    0 "reference file mtime field for existing file"
 test_rawhide "$rh -e '\"/this-does-not-exist\".exists'     $d" ""           ""                                                                                    0 "reference file exists function"
 test_rawhide "$rh -e '\"/this-does-not-exist\".mtime == 0' $d" ""           "./rh: invalid reference \"/this-does-not-exist\".mtime: No such file or directory\n" 1 "reference file mtime function for non-existent file"
+
+test_rawhide "$rh -e '{/}.exists'                        $d" "$d\n$d/e\n" ""                                                                                    0 "reference file exists function"
+test_rawhide "$rh -e '{/}.mtime != 0'                    $d" "$d\n$d/e\n" ""                                                                                    0 "reference file mtime field for existing file"
+test_rawhide "$rh -e '{/this-does-not-exist}.exists'     $d" ""           ""                                                                                    0 "reference file exists function"
+test_rawhide "$rh -e '{/this-does-not-exist}.mtime == 0' $d" ""           "./rh: invalid reference \"/this-does-not-exist\".mtime: No such file or directory\n" 1 "reference file mtime function for non-existent file"
 
 test_rawhide "$rh -e 'dev == \"rh\".dev'                   $d" "$d\n$d/e\n" "" 0 "reference file dev field"
 test_rawhide "$rh -e 'major == \"rh\".major'               $d" "$d\n$d/e\n" "" 0 "reference file major field"
@@ -351,18 +359,56 @@ test_rawhide "$rh -e 'atime != \"rh\".atime - 3600'        $d" "$d\n$d/e\n" "" 0
 test_rawhide "$rh -e 'mtime != \"rh\".mtime - 3600'        $d" "$d\n$d/e\n" "" 0 "reference file mtime field"
 test_rawhide "$rh -e 'ctime != \"rh\".ctime - 3600'        $d" "$d\n$d/e\n" "" 0 "reference file ctime field"
 
+test_rawhide "$rh -e 'dev == {rh}.dev'                   $d" "$d\n$d/e\n" "" 0 "reference file dev field"
+test_rawhide "$rh -e 'major == {rh}.major'               $d" "$d\n$d/e\n" "" 0 "reference file major field"
+test_rawhide "$rh -e 'minor == {rh}.minor'               $d" "$d\n$d/e\n" "" 0 "reference file minor field"
+test_rawhide "$rh -e 'ino != {rh}.ino'                   $d" "$d\n$d/e\n" "" 0 "reference file ino field"
+test_rawhide "$rh -e 'mode & {rh}.mode'                  $d" "$d\n$d/e\n" "" 0 "reference file mode field"
+# Note: directories on btrfs can have only 1 hardlink(!)
+[ `$rh -e 'dir && nlink == 1' $d | wc -l` != 0 ] && btrfs=1 || btrfs=0
+[ $btrfs = 0 ] && test_rawhide "$rh -e 'nlink == {rh}.nlink' $d" "$d/e\n"     "" 0 "reference file nlink field"
+[ $btrfs = 1 ] && test_rawhide "$rh -e 'nlink == {rh}.nlink' $d" "$d\n$d/e\n" "" 0 "reference file nlink field"
+test_rawhide "$rh -e 'uid == {$d}.uid'                   $d" "$d\n$d/e\n" "" 0 "reference file uid field"
+test_rawhide "$rh -e 'gid == {$d}.gid'                   $d" "$d\n$d/e\n" "" 0 "reference file gid field"
+[ "`uname`" != OpenBSD ] && test_rawhide "$rh -e 'rdev == {rh}.rdev'         $d" "$d\n$d/e\n" "" 0 "reference file rdev field"
+[ "`uname`" != OpenBSD ] && test_rawhide "$rh -e 'rmajor == {rh}.rmajor'     $d" "$d\n$d/e\n" "" 0 "reference file rmajor field"
+[ "`uname`" != OpenBSD ] && test_rawhide "$rh -e 'rminor == {rh}.rminor'     $d" "$d\n$d/e\n" "" 0 "reference file rminor field"
+[ "`uname`" = OpenBSD ]  && test_rawhide "$rh -e 'rdev == {rh}.rdev'         $d" ""           "" 0 "reference file rdev field"
+[ "`uname`" = OpenBSD ]  && test_rawhide "$rh -e 'rmajor == {rh}.rmajor'     $d" ""           "" 0 "reference file rmajor field"
+[ "`uname`" = OpenBSD ]  && test_rawhide "$rh -e 'rminor == {rh}.rminor'     $d" ""           "" 0 "reference file rminor field"
+test_rawhide "$rh -e 'size == {rh}.size'                 $d" ""           "" 0 "reference file size field"
+test_rawhide "$rh -e 'f && size == {$d/e}.size'          $d" "$d/e\n"     "" 0 "reference file size field"
+test_rawhide "$rh -e 'blksize == {rh}.blksize'           $d" "$d\n$d/e\n" "" 0 "reference file blksize field"
+test_rawhide "$rh -e 'blocks != {rh}.blocks'             $d" "$d\n$d/e\n" "" 0 "reference file blocks field"
+test_rawhide "$rh -e 'atime != {rh}.atime - 3600'        $d" "$d\n$d/e\n" "" 0 "reference file atime field"
+test_rawhide "$rh -e 'mtime != {rh}.mtime - 3600'        $d" "$d\n$d/e\n" "" 0 "reference file mtime field"
+test_rawhide "$rh -e 'ctime != {rh}.ctime - 3600'        $d" "$d\n$d/e\n" "" 0 "reference file ctime field"
+
 test_rawhide "$rh -e 'type == \"rh\".type'                 $d" "$d/e\n"     "" 0 "reference file type alias"
 test_rawhide "$rh -e 'perm & \"rh\".perm'                  $d" "$d\n$d/e\n" "" 0 "reference file perm alias"
+
+test_rawhide "$rh -e 'type == {rh}.type'                 $d" "$d/e\n"     "" 0 "reference file type alias"
+test_rawhide "$rh -e 'perm & {rh}.perm'                  $d" "$d\n$d/e\n" "" 0 "reference file perm alias"
 
 test_rawhide "$rh -e '\"rh\".strlen == 2'                  $d" "$d\n$d/e\n" "" 0 "reference file strlen function \"rh\" == 2"
 test_rawhide "$rh -e '\"/\".strlen == 0'                   $d" "$d\n$d/e\n" "" 0 "reference file strlen function \"/\" == 0"
 test_rawhide "$rh -e '\"./rh\".strlen == 2'                $d" "$d\n$d/e\n" "" 0 "reference file strlen function \"./rh\" == 2"
 test_rawhide "$rh -e '\"$d\".strlen == 4'                  $d" "$d\n$d/e\n" "" 0 "reference file strlen function \"$d\" == 4"
 
+test_rawhide "$rh -e '{rh}.strlen == 2'                  $d" "$d\n$d/e\n" "" 0 "reference file strlen function {rh} == 2"
+test_rawhide "$rh -e '{/}.strlen == 0'                   $d" "$d\n$d/e\n" "" 0 "reference file strlen function {/} == 0"
+test_rawhide "$rh -e '{./rh}.strlen == 2'                $d" "$d\n$d/e\n" "" 0 "reference file strlen function {./rh} == 2"
+test_rawhide "$rh -e '{$d}.strlen == 4'                  $d" "$d\n$d/e\n" "" 0 "reference file strlen function {$d} == 4"
+
 test_rawhide "$rh -e '\"rh///\".strlen == 2'               $d" "$d\n$d/e\n" "" 0 "reference file strlen function \"rh///\" == 2 (trailing / removal)"
 test_rawhide "$rh -e '\"////\".strlen == 0'                $d" "$d\n$d/e\n" "" 0 "reference file strlen function \"////\" == 0 (trailing / removal)"
 test_rawhide "$rh -e '\"./rh///\".strlen == 2'             $d" "$d\n$d/e\n" "" 0 "reference file strlen function \"./rh///\" == 2 (trailing / removal)"
 test_rawhide "$rh -e '\"$d///\".strlen == 4'               $d" "$d\n$d/e\n" "" 0 "reference file strlen function \"$d///\" == 4 (trailing / removal)"
+
+test_rawhide "$rh -e '{rh///}.strlen == 2'               $d" "$d\n$d/e\n" "" 0 "reference file strlen function {rh///} == 2 (trailing / removal)"
+test_rawhide "$rh -e '{////}.strlen == 0'                $d" "$d\n$d/e\n" "" 0 "reference file strlen function {////} == 0 (trailing / removal)"
+test_rawhide "$rh -e '{./rh///}.strlen == 2'             $d" "$d\n$d/e\n" "" 0 "reference file strlen function {./rh///} == 2 (trailing / removal)"
+test_rawhide "$rh -e '{$d///}.strlen == 4'               $d" "$d\n$d/e\n" "" 0 "reference file strlen function {$d///} == 4 (trailing / removal)"
 
 test_rawhide "$rh -e '\"rh\".len == 2'                     $d" "$d\n$d/e\n" "" 0 "reference file len alias"
 test_rawhide "$rh -e '\"rh\".len == 2'                     $d" "$d\n$d/e\n" "" 0 "reference file len alias \"rh\" == 2"
@@ -370,8 +416,17 @@ test_rawhide "$rh -e '\"/\".len == 0'                      $d" "$d\n$d/e\n" "" 0
 test_rawhide "$rh -e '\"./rh\".len == 2'                   $d" "$d\n$d/e\n" "" 0 "reference file len alias \"./rh\" == 2"
 test_rawhide "$rh -e '\"$d\".len == 4'                     $d" "$d\n$d/e\n" "" 0 "reference file len alias \"$d\" == 4"
 
+test_rawhide "$rh -e '{rh}.len == 2'                     $d" "$d\n$d/e\n" "" 0 "reference file len alias"
+test_rawhide "$rh -e '{rh}.len == 2'                     $d" "$d\n$d/e\n" "" 0 "reference file len alias {rh} == 2"
+test_rawhide "$rh -e '{/}.len == 0'                      $d" "$d\n$d/e\n" "" 0 "reference file len alias {/} == 0"
+test_rawhide "$rh -e '{./rh}.len == 2'                   $d" "$d\n$d/e\n" "" 0 "reference file len alias {./rh} == 2"
+test_rawhide "$rh -e '{$d}.len == 4'                     $d" "$d\n$d/e\n" "" 0 "reference file len alias {$d} == 4"
+
 test_rawhide "$rh -e 'size == \"rh\".sz'                   $d" ""           "" 0 "reference file sz alias"
 test_rawhide "$rh -e 'f && size == \"$d/e\".sz'            $d" "$d/e\n"     "" 0 "reference file size field"
+
+test_rawhide "$rh -e 'size == {rh}.sz'                   $d" ""           "" 0 "reference file sz alias"
+test_rawhide "$rh -e 'f && size == {$d/e}.sz'            $d" "$d/e\n"     "" 0 "reference file size field"
 
 test_rawhide "$rh -e 'inode != \"rh\".inode'               $d" "$d\n$d/e\n" "" 0 "reference file inode alias"
 # Note: directories on btrfs can have only 1 hardlink(!) so exclude directories
@@ -383,10 +438,23 @@ test_rawhide "$rh -e 'accessed != \"rh\".accessed - 3600'  $d" "$d\n$d/e\n" "" 0
 test_rawhide "$rh -e 'modified != \"rh\".modified - 3600'  $d" "$d\n$d/e\n" "" 0 "reference file modified alias"
 test_rawhide "$rh -e 'changed != \"rh\".changed - 3600'    $d" "$d\n$d/e\n" "" 0 "reference file changed alias"
 
+test_rawhide "$rh -e 'inode != {rh}.inode'               $d" "$d\n$d/e\n" "" 0 "reference file inode alias"
+# Note: directories on btrfs can have only 1 hardlink(!) so exclude directories
+[ $btrfs = 0 ] && test_rawhide "$rh -e 'nlinks == {rh}.nlinks' $d" "$d/e\n"     "" 0 "reference file nlinks alias"
+[ $btrfs = 1 ] && test_rawhide "$rh -e 'nlinks == {rh}.nlinks' $d" "$d\n$d/e\n" "" 0 "reference file nlinks alias"
+test_rawhide "$rh -e 'user == {$d}.user'                 $d" "$d\n$d/e\n" "" 0 "reference file user alias"
+test_rawhide "$rh -e 'group == {$d}.group'               $d" "$d\n$d/e\n" "" 0 "reference file group alias"
+test_rawhide "$rh -e 'accessed != {rh}.accessed - 3600'  $d" "$d\n$d/e\n" "" 0 "reference file accessed alias"
+test_rawhide "$rh -e 'modified != {rh}.modified - 3600'  $d" "$d\n$d/e\n" "" 0 "reference file modified alias"
+test_rawhide "$rh -e 'changed != {rh}.changed - 3600'    $d" "$d\n$d/e\n" "" 0 "reference file changed alias"
+
 # Implicit reference file path
 
 test_rawhide "$rh -e 'f && \"rh\".exists && \"rh\".size && \"rh\".mtime' $d" "$d/e\n" "" 0 "explicit reference file path reuse"
 test_rawhide "$rh -e 'f && \"rh\".exists && \"\".size && \"\".mtime' $d" "$d/e\n" "" 0 "implicit reference file path reuse"
+
+test_rawhide "$rh -e 'f && {rh}.exists && {rh}.size && {rh}.mtime' $d" "$d/e\n" "" 0 "explicit reference file path reuse"
+test_rawhide "$rh -e 'f && {rh}.exists && {}.size && {}.mtime' $d" "$d/e\n" "" 0 "implicit reference file path reuse"
 
 # Reference file fields for Linux ext2-style file attributes: attr proj gen (requires e2fsprogs (libe2p and chattr))
 
@@ -407,6 +475,11 @@ then
 			test_rawhide "$rh -e 'd && attr == \"$d/d\".attr      && proj == \"\".proj    && gen == \"\".gen'        $d" "$d/d\n" "" 0 "reference file field d attr proj gen"
 			test_rawhide "$rh -e 'f && attr == \"$d/f\".attribute && proj == \"\".project && gen == \"\".generation' $d" "$d/f\n" "" 0 "reference file field f attribute project generation"
 			test_rawhide "$rh -e 'd && attr == \"$d/d\".attribute && proj == \"\".project && gen == \"\".generation' $d" "$d/d\n" "" 0 "reference file field d attribute project generation"
+
+			test_rawhide "$rh -e 'f && attr == {$d/f}.attr      && proj == {}.proj    && gen == {}.gen'        $d" "$d/f\n" "" 0 "reference file field f attr proj gen"
+			test_rawhide "$rh -e 'd && attr == {$d/d}.attr      && proj == {}.proj    && gen == {}.gen'        $d" "$d/d\n" "" 0 "reference file field d attr proj gen"
+			test_rawhide "$rh -e 'f && attr == {$d/f}.attribute && proj == {}.project && gen == {}.generation' $d" "$d/f\n" "" 0 "reference file field f attribute project generation"
+			test_rawhide "$rh -e 'd && attr == {$d/d}.attribute && proj == {}.project && gen == {}.generation' $d" "$d/d\n" "" 0 "reference file field d attribute project generation"
 
 			chattr -a $d/d
 			chattr -a $d/f
@@ -431,6 +504,12 @@ then
 						test_rawhide "$rh -e 'd && attr == \"$d/d\".attr'      $d" "$d/d\n" "" 0 "reference file field d attr"
 						test_rawhide "$rh -e 'f && attr == \"$d/f\".attribute' $d" "$d/f\n" "" 0 "reference file field f attribute"
 						test_rawhide "$rh -e 'd && attr == \"$d/d\".attribute' $d" "$d/d\n" "" 0 "reference file field d attribute"
+
+						test_rawhide "$rh -e 'f && attr == {$d/f}.attr'      $d" "$d/f\n" "" 0 "reference file field f attr"
+						test_rawhide "$rh -e 'd && attr == {$d/d}.attr'      $d" "$d/d\n" "" 0 "reference file field d attr"
+						test_rawhide "$rh -e 'f && attr == {$d/f}.attribute' $d" "$d/f\n" "" 0 "reference file field f attribute"
+						test_rawhide "$rh -e 'd && attr == {$d/d}.attribute' $d" "$d/d\n" "" 0 "reference file field d attribute"
+
 						chflags nouappnd $d/d $d/f
 					elif chflags sappend $d/d $d/f
 					then
@@ -438,6 +517,12 @@ then
 						test_rawhide "$rh -e 'd && attr == \"$d/d\".attr'      $d" "$d/d\n" "" 0 "reference file field d attr"
 						test_rawhide "$rh -e 'f && attr == \"$d/f\".attribute' $d" "$d/f\n" "" 0 "reference file field f attribute"
 						test_rawhide "$rh -e 'd && attr == \"$d/d\".attribute' $d" "$d/d\n" "" 0 "reference file field d attribute"
+
+						test_rawhide "$rh -e 'f && attr == {$d/f}.attr'      $d" "$d/f\n" "" 0 "reference file field f attr"
+						test_rawhide "$rh -e 'd && attr == {$d/d}.attr'      $d" "$d/d\n" "" 0 "reference file field d attr"
+						test_rawhide "$rh -e 'f && attr == {$d/f}.attribute' $d" "$d/f\n" "" 0 "reference file field f attribute"
+						test_rawhide "$rh -e 'd && attr == {$d/d}.attribute' $d" "$d/d\n" "" 0 "reference file field d attribute"
+
 						chflags nosappnd $d/d $d/f
 					else
 						echo "$t: Skipping chflags tests (chflags uappnd/sappend failed)"

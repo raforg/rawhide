@@ -70,7 +70,7 @@ test_rawhide "$rh '@' $d"  "" "./rh: command line: -e '@': line 1 byte 1: no suc
 test_rawhide "$rh '\"' $d" "" "./rh: command line: -e '\"': line 1 byte 2: invalid string literal (missing closing double quote)\n" 1 "has non-pathy chars '\"' expr"
 test_rawhide "$rh '[' $d"  "" "./rh: command line: -e '[': line 1 byte 2: expected year number, found eof\n"                        1 "has non-pathy chars '[' expr"
 test_rawhide "$rh ']' $d"  "" "./rh: command line: -e ']': line 1 byte 1: syntax error: ']'\n"                                      1 "has non-pathy chars ']' expr"
-test_rawhide "$rh '{' $d"  "" "./rh: command line: -e '{': line 1 byte 1: syntax error: '{'\n"                                      1 "has non-pathy chars '{' expr"
+test_rawhide "$rh '{' $d"  "" "./rh: command line: -e '{': line 1 byte 2: invalid string literal (missing closing curly brace)\n"   1 "has non-pathy chars '{' expr"
 test_rawhide "$rh '}' $d"  "" "./rh: command line: -e '}': line 1 byte 1: syntax error: '}'\n"                                      1 "has non-pathy chars '}' expr"
 test_rawhide "$rh ';' $d"  "" "./rh: command line: -e ';': line 1 byte 1: syntax error: ';'\n"                                      1 "has non-pathy chars ';' expr"
 

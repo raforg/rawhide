@@ -51,9 +51,11 @@ case "`uname`" in
 	SunOS)
 		# Note: Solaris find incorrectly excludes .* for *
 		test_rawhide_find "$rh -e '\"*\" && !\".*\"' $d" "find $d -name '*' -print"       "*"
+		test_rawhide_find "$rh -e '{*} && !{.*}' $d" "find $d -name '*' -print"       "*"
 		;;
 	*)
 		test_rawhide_find "$rh -e '\"*\"' $d"         "find $d -name '*' -print"       "*"
+		test_rawhide_find "$rh -e '{*}' $d"         "find $d -name '*' -print"       "*"
 esac
 
 test_rawhide_find "$rh -e '\"*.c\"' $d"     "find $d -name '*.c' -print"     "*.c"
@@ -64,6 +66,15 @@ test_rawhide_find "$rh -e '\"*.[ab]\"' $d"  "find $d -name '*.[ab]' -print"  "*.
 test_rawhide_find "$rh -e '\"*.[!ab]\"' $d" "find $d -name '*.[!ab]' -print" "*.[!ab]"
 test_rawhide_find "$rh -e '\"*.[a-c]\"' $d" "find $d -name '*.[a-c]' -print" "*.[a-c]"
 test_rawhide_find "$rh -e '\".*\"' $d"      "find $d -name '.*' -print"      ".*"
+
+test_rawhide_find "$rh -e '{*.c}' $d"     "find $d -name '*.c' -print"     "*.c"
+test_rawhide_find "$rh -e '{*.*}' $d"     "find $d -name '*.*' -print"     "*.*"
+test_rawhide_find "$rh -e '{?.*}' $d"     "find $d -name '?.*' -print"     "?.*"
+test_rawhide_find "$rh -e '{*.?}' $d"     "find $d -name '*.?' -print"     "*.?"
+test_rawhide_find "$rh -e '{*.[ab]}' $d"  "find $d -name '*.[ab]' -print"  "*.[ab]"
+test_rawhide_find "$rh -e '{*.[!ab]}' $d" "find $d -name '*.[!ab]' -print" "*.[!ab]"
+test_rawhide_find "$rh -e '{*.[a-c]}' $d" "find $d -name '*.[a-c]' -print" "*.[a-c]"
+test_rawhide_find "$rh -e '{.*}' $d"      "find $d -name '.*' -print"      ".*"
 
 # Test ksh extglob (GNU extension to fnmatch)
 # GNU find doesn't do this so we can't compare against it so we have to sort stdout
@@ -84,6 +95,11 @@ then
 	test_rawhide "$rh -e '\"?(a.c|def)\"' ."         "./a.c\n"                                                                                                "" 0 "?(a.c|def)"
 	test_rawhide "$rh -e '\"!(*.a|*.c)\"' ."         ".\n./a.b\n./ale\n./aple\n./apple\n./appple\n./b.b\n./ba\n./bana\n./banana\n./bananana\n./c.b\n./pear\n" "" 0 "!(*.a|*.c)"
 	test_rawhide "$rh -e '\"@(ba*(na)|a+(p)le)\"' ." "./aple\n./apple\n./appple\n./ba\n./bana\n./banana\n./bananana\n"                                        "" 0 "@(ba*(na)|a+(p)le)"
+
+	test_rawhide "$rh -e '{?(*.a|*.c)}' ."         "./a.a\n./a.c\n./b.a\n./b.c\n./c.a\n./c.c\n"                                                             "" 0 "?(*.a|*.c)"
+	test_rawhide "$rh -e '{?(a.c|def)}' ."         "./a.c\n"                                                                                                "" 0 "?(a.c|def)"
+	test_rawhide "$rh -e '{!(*.a|*.c)}' ."         ".\n./a.b\n./ale\n./aple\n./apple\n./appple\n./b.b\n./ba\n./bana\n./banana\n./bananana\n./c.b\n./pear\n" "" 0 "!(*.a|*.c)"
+	test_rawhide "$rh -e '{@(ba*(na)|a+(p)le)}' ." "./aple\n./apple\n./appple\n./ba\n./bana\n./banana\n./bananana\n"                                        "" 0 "@(ba*(na)|a+(p)le)"
 fi
 
 finish

@@ -54,12 +54,38 @@ test_rawhide "$rh -e '\"*F\"'        $d" ""                                     
 test_rawhide "$rh -e '\"*F\".path'   $d" ""                                         "" 0 "\"*F\".path"
 test_rawhide "$rh -e '\"*F\".link'   $d" ""                                         "" 0 "\"*F\".link"
 
+test_rawhide "$rh -e '{*}'         $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}"
+test_rawhide "$rh -e '{*}.path'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.path"
+test_rawhide "$rh -e '{*}.link'    $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{*}.link"
+test_rawhide "$rh -e '{$d*}'       $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{$d*} (assumes .path)"
+test_rawhide "$rh -e '{$d*}.path'  $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{$d*}.path"
+test_rawhide "$rh -e '{*$d*}.link' $d" "$d/linkabs\n"                             "" 0 "{*$d*}.link"
+test_rawhide "$rh -e '{f}'         $d" "$d/f\n"                                   "" 0 "{f}"
+test_rawhide "$rh -e '{f}.path'    $d" ""                                         "" 0 "{f}.path"
+test_rawhide "$rh -e '{f}.link'    $d" "$d/linkrel\n"                             "" 0 "{f}.link"
+test_rawhide "$rh -e '{*f}'        $d" "$d/f\n"                                   "" 0 "{*f}"
+test_rawhide "$rh -e '{*f}.path'   $d" "$d/f\n"                                   "" 0 "{*f}.path"
+test_rawhide "$rh -e '{*f}.link'   $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{*f}.link"
+test_rawhide "$rh -e '{F}'         $d" ""                                         "" 0 "{F}"
+test_rawhide "$rh -e '{F}.path'    $d" ""                                         "" 0 "{F}.path"
+test_rawhide "$rh -e '{F}.link'    $d" ""                                         "" 0 "{F}.link"
+test_rawhide "$rh -e '{*F}'        $d" ""                                         "" 0 "{*F}"
+test_rawhide "$rh -e '{*F}.path'   $d" ""                                         "" 0 "{*F}.path"
+test_rawhide "$rh -e '{*F}.link'   $d" ""                                         "" 0 "{*F}.link"
+
 test_rawhide "$rh -e '\"*\".pat'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"*\".pat (abbrev)"
 test_rawhide "$rh -e '\"*\".pa'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"*\".pa (abbrev)"
 test_rawhide "$rh -e '\"*\".p'       $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"*\".p (abbrev)"
 test_rawhide "$rh -e '\"*\".lin'     $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"*\".lin (abbrev)"
 test_rawhide "$rh -e '\"*\".li'      $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"*\".li (abbrev)"
 test_rawhide "$rh -e '\"*\".l'       $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"*\".l (abbrev)"
+
+test_rawhide "$rh -e '{*}.pat'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.pat (abbrev)"
+test_rawhide "$rh -e '{*}.pa'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.pa (abbrev)"
+test_rawhide "$rh -e '{*}.p'       $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.p (abbrev)"
+test_rawhide "$rh -e '{*}.lin'     $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{*}.lin (abbrev)"
+test_rawhide "$rh -e '{*}.li'      $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{*}.li (abbrev)"
+test_rawhide "$rh -e '{*}.l'       $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{*}.l (abbrev)"
 
 # Test what mime if available
 
@@ -72,12 +98,26 @@ then
 	test_rawhide "$rh -e '\"*sym*\".what'    $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"*sym*\".what"
 	test_rawhide "$rh -e '\"*sym*\".mime'    $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"*sym*\".mime"
 
+	test_rawhide "$rh -e '{*}.what'        $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.what"
+	test_rawhide "$rh -e '{*}.mime'        $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.mime"
+	test_rawhide "$rh -e '{*empty}.what'   $d" "$d/f\n"                                   "" 0 "{*empty}.what"
+	test_rawhide "$rh -e '{*empty*}.mime'  $d" "$d/f\n"                                   "" 0 "{*empty*}.mime"
+	test_rawhide "$rh -e '{*sym*}.what'    $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{*sym*}.what"
+	test_rawhide "$rh -e '{*sym*}.mime'    $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{*sym*}.mime"
+
 	test_rawhide "$rh -e '\"*\".wha'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"*\".wha (abbrev)"
 	test_rawhide "$rh -e '\"*\".wh'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"*\".wh (abbrev)"
 	test_rawhide "$rh -e '\"*\".w'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"*\".w (abbrev)"
 	test_rawhide "$rh -e '\"*\".mim'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"*\".mim (abbrev)"
 	test_rawhide "$rh -e '\"*\".mi'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"*\".mi (abbrev)"
 	test_rawhide "$rh -e '\"*\".m'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"*\".m (abbrev)"
+
+	test_rawhide "$rh -e '{*}.wha'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.wha (abbrev)"
+	test_rawhide "$rh -e '{*}.wh'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.wh (abbrev)"
+	test_rawhide "$rh -e '{*}.w'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.w (abbrev)"
+	test_rawhide "$rh -e '{*}.mim'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.mim (abbrev)"
+	test_rawhide "$rh -e '{*}.mi'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.mi (abbrev)"
+	test_rawhide "$rh -e '{*}.m'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.m (abbrev)"
 
 	test_rawhide "$rh -Ye '\"*\".what'        $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \"*\".what"
 	test_rawhide "$rh -Ye '\"*\".mime'        $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \"*\".mime"
@@ -86,27 +126,50 @@ then
 	test_rawhide "$rh -Ye '\"*sym*\".what'    $d" ""                                         "" 0 "-Y \"*sym*\".what"
 	test_rawhide "$rh -Ye '\"*sym*\".mime'    $d" ""                                         "" 0 "-Y \"*sym*\".mime"
 
+	test_rawhide "$rh -Ye '{*}.what'        $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {*}.what"
+	test_rawhide "$rh -Ye '{*}.mime'        $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {*}.mime"
+	test_rawhide "$rh -Ye '{*empty}.what'   $d" "$d/f\n$d/linkabs\n$d/linkrel\n"           "" 0 "-Y {*empty}.what"  # why not linkabs as well?
+	test_rawhide "$rh -Ye '{*empty*}.mime'  $d" "$d/f\n$d/linkabs\n$d/linkrel\n"           "" 0 "-Y {*empty*}.mime" # why noy linkabs as well?
+	test_rawhide "$rh -Ye '{*sym*}.what'    $d" ""                                         "" 0 "-Y {*sym*}.what"
+	test_rawhide "$rh -Ye '{*sym*}.mime'    $d" ""                                         "" 0 "-Y {*sym*}.mime"
+
 	test_rawhide "$rh -Ye '\"*\".wha'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \"*\".wha (abbrev)"
 	test_rawhide "$rh -Ye '\"*\".wh'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \"*\".wh (abbrev)"
 	test_rawhide "$rh -Ye '\"*\".w'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \"*\".w (abbrev)"
 	test_rawhide "$rh -Ye '\"*\".mim'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \"*\".mim (abbrev)"
 	test_rawhide "$rh -Ye '\"*\".mi'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \"*\".mi (abbrev)"
 	test_rawhide "$rh -Ye '\"*\".m'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \"*\".m (abbrev)"
+
+	test_rawhide "$rh -Ye '{*}.wha'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {*}.wha (abbrev)"
+	test_rawhide "$rh -Ye '{*}.wh'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {*}.wh (abbrev)"
+	test_rawhide "$rh -Ye '{*}.w'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {*}.w (abbrev)"
+	test_rawhide "$rh -Ye '{*}.mim'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {*}.mim (abbrev)"
+	test_rawhide "$rh -Ye '{*}.mi'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {*}.mi (abbrev)"
+	test_rawhide "$rh -Ye '{*}.m'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {*}.m (abbrev)"
 fi
 
 # Test body
 
 printf '\nXXX\n\n' > $d/body
+
 test_rawhide "$rh -e '\"*xxx*\".body' $d" ""          "" 0 "\"*xxx*\".body"
 test_rawhide "$rh -e '\"*XXX*\".body' $d" "$d/body\n" "" 0 "\"*XXX*\".body"
 test_rawhide "$rh -e '\"*XXX*\".bod'  $d" "$d/body\n" "" 0 "\"*XXX*\".bod"
 test_rawhide "$rh -e '\"*XXX*\".bo'   $d" "$d/body\n" "" 0 "\"*XXX*\".bo"
 test_rawhide "$rh -e '\"*XXX*\".b'    $d" "$d/body\n" "" 0 "\"*XXX*\".b"
+
+test_rawhide "$rh -e '{*xxx*}.body' $d" ""          "" 0 "{*xxx*}.body"
+test_rawhide "$rh -e '{*XXX*}.body' $d" "$d/body\n" "" 0 "{*XXX*}.body"
+test_rawhide "$rh -e '{*XXX*}.bod'  $d" "$d/body\n" "" 0 "{*XXX*}.bod"
+test_rawhide "$rh -e '{*XXX*}.bo'   $d" "$d/body\n" "" 0 "{*XXX*}.bo"
+test_rawhide "$rh -e '{*XXX*}.b'    $d" "$d/body\n" "" 0 "{*XXX*}.b"
+
 rm $d/body
 
 printf '\nXXX\n\n' > $d/body2
 chmod 0 $d/body2
 [ "`whoami`" != root ] && test_rawhide "$rh -e '\"*XXX*\".body' $d" "" "./rh: $d/body2: Permission denied\n" 1 "\"*XXX*\".body with unreadable file"
+[ "`whoami`" != root ] && test_rawhide "$rh -e '{*XXX*}.body' $d" "" "./rh: $d/body2: Permission denied\n" 1 "{*XXX*}.body with unreadable file"
 rm -f $d/body2
 
 # Test i ipath ilink if available
@@ -132,12 +195,38 @@ then
 	test_rawhide "$rh -e '\"*F\".ipath'   $d" "$d/f\n"                                   "" 0 "\"*F\".ipath"
 	test_rawhide "$rh -e '\"*F\".ilink'   $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"*F\".ilink"
 
+	test_rawhide "$rh -e '{*}.i'        $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.i"
+	test_rawhide "$rh -e '{*}.ipath'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.ipath"
+	test_rawhide "$rh -e '{*}.ilink'    $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{*}.ilink"
+	test_rawhide "$rh -e '{$d*}.i'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{$d*}.i (assumes .ipath)"
+	test_rawhide "$rh -e '{$d*}.ipath'  $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{$d*}.ipath"
+	test_rawhide "$rh -e '{*$d*}.ilink' $d" "$d/linkabs\n"                             "" 0 "{*$d*}.ilink"
+	test_rawhide "$rh -e '{f}.i'        $d" "$d/f\n"                                   "" 0 "{f}.i"
+	test_rawhide "$rh -e '{f}.ipath'    $d" ""                                         "" 0 "{f}.ipath"
+	test_rawhide "$rh -e '{f}.ilink'    $d" "$d/linkrel\n"                             "" 0 "{f}.ilink"
+	test_rawhide "$rh -e '{*f}.i'       $d" "$d/f\n"                                   "" 0 "{*f}.i"
+	test_rawhide "$rh -e '{*f}.ipath'   $d" "$d/f\n"                                   "" 0 "{*f}.ipath"
+	test_rawhide "$rh -e '{*f}.ilink'   $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{*f}.ilink"
+	test_rawhide "$rh -e '{F}.i'        $d" "$d/f\n"                                   "" 0 "{F}.i"
+	test_rawhide "$rh -e '{F}.ipath'    $d" ""                                         "" 0 "{F}.ipath"
+	test_rawhide "$rh -e '{F}.ilink'    $d" "$d/linkrel\n"                             "" 0 "{F}.ilink"
+	test_rawhide "$rh -e '{*F}.i'       $d" "$d/f\n"                                   "" 0 "{*F}.i"
+	test_rawhide "$rh -e '{*F}.ipath'   $d" "$d/f\n"                                   "" 0 "{*F}.ipath"
+	test_rawhide "$rh -e '{*F}.ilink'   $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{*F}.ilink"
+
 	test_rawhide "$rh -e '\"*\".ipat'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"*\".ipat (abbrev)"
 	test_rawhide "$rh -e '\"*\".ipa'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"*\".ipa (abbrev)"
 	test_rawhide "$rh -e '\"*\".ip'       $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"*\".ip (abbrev)"
 	test_rawhide "$rh -e '\"*\".ilin'     $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"*\".ilin (abbrev)"
 	test_rawhide "$rh -e '\"*\".ili'      $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"*\".ili (abbrev)"
 	test_rawhide "$rh -e '\"*\".il'       $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"*\".il (abbrev)"
+
+	test_rawhide "$rh -e '{*}.ipat'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.ipat (abbrev)"
+	test_rawhide "$rh -e '{*}.ipa'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.ipa (abbrev)"
+	test_rawhide "$rh -e '{*}.ip'       $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.ip (abbrev)"
+	test_rawhide "$rh -e '{*}.ilin'     $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{*}.ilin (abbrev)"
+	test_rawhide "$rh -e '{*}.ili'      $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{*}.ili (abbrev)"
+	test_rawhide "$rh -e '{*}.il'       $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{*}.il (abbrev)"
 fi
 
 # Test iwhat imime if available
@@ -149,6 +238,11 @@ then
 	test_rawhide "$rh -e '\"*SYM*\".iwhat'   $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"*SYM*\".iwhat"
 	test_rawhide "$rh -e '\"*SYM*\".imime'   $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"*SYM*\".imime"
 
+	test_rawhide "$rh -e '{*EMPTY}.iwhat'  $d" "$d/f\n"                                   "" 0 "{*EMPTY}.iwhat"
+	test_rawhide "$rh -e '{*EMPTY*}.imime' $d" "$d/f\n"                                   "" 0 "{*EMPTY*}.imime"
+	test_rawhide "$rh -e '{*SYM*}.iwhat'   $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{*SYM*}.iwhat"
+	test_rawhide "$rh -e '{*SYM*}.imime'   $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{*SYM*}.imime"
+
 	test_rawhide "$rh -e '\"*\".iwha'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"*\".iwha (abbrev)"
 	test_rawhide "$rh -e '\"*\".iwh'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"*\".iwh (abbrev)"
 	test_rawhide "$rh -e '\"*\".iw'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"*\".iw (abbrev)"
@@ -156,10 +250,22 @@ then
 	test_rawhide "$rh -e '\"*\".imi'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"*\".imi (abbrev)"
 	test_rawhide "$rh -e '\"*\".im'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"*\".im (abbrev)"
 
+	test_rawhide "$rh -e '{*}.iwha'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.iwha (abbrev)"
+	test_rawhide "$rh -e '{*}.iwh'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.iwh (abbrev)"
+	test_rawhide "$rh -e '{*}.iw'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.iw (abbrev)"
+	test_rawhide "$rh -e '{*}.imim'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.imim (abbrev)"
+	test_rawhide "$rh -e '{*}.imi'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.imi (abbrev)"
+	test_rawhide "$rh -e '{*}.im'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{*}.im (abbrev)"
+
 	test_rawhide "$rh -Ye '\"*EMPTY\".iwhat'  $d" "$d/f\n$d/linkabs\n$d/linkrel\n"           "" 0 "-Y \"*EMPTY\".iwhat"
 	test_rawhide "$rh -Ye '\"*EMPTY*\".imime' $d" "$d/f\n$d/linkabs\n$d/linkrel\n"           "" 0 "-Y \"*EMPTY*\".imime"
 	test_rawhide "$rh -Ye '\"*SYM*\".iwhat'   $d" ""                                         "" 0 "-Y \"*SYM*\".iwhat"
 	test_rawhide "$rh -Ye '\"*SYM*\".imime'   $d" ""                                         "" 0 "-Y \"*SYM*\".imime"
+
+	test_rawhide "$rh -Ye '{*EMPTY}.iwhat'  $d" "$d/f\n$d/linkabs\n$d/linkrel\n"           "" 0 "-Y {*EMPTY}.iwhat"
+	test_rawhide "$rh -Ye '{*EMPTY*}.imime' $d" "$d/f\n$d/linkabs\n$d/linkrel\n"           "" 0 "-Y {*EMPTY*}.imime"
+	test_rawhide "$rh -Ye '{*SYM*}.iwhat'   $d" ""                                         "" 0 "-Y {*SYM*}.iwhat"
+	test_rawhide "$rh -Ye '{*SYM*}.imime'   $d" ""                                         "" 0 "-Y {*SYM*}.imime"
 
 	test_rawhide "$rh -Ye '\"*\".iwha'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \"*\".iwha (abbrev)"
 	test_rawhide "$rh -Ye '\"*\".iwh'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \"*\".iwh (abbrev)"
@@ -167,6 +273,13 @@ then
 	test_rawhide "$rh -Ye '\"*\".imim'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \"*\".imim (abbrev)"
 	test_rawhide "$rh -Ye '\"*\".imi'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \"*\".imi (abbrev)"
 	test_rawhide "$rh -Ye '\"*\".im'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \"*\".im (abbrev)"
+
+	test_rawhide "$rh -Ye '{*}.iwha'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {*}.iwha (abbrev)"
+	test_rawhide "$rh -Ye '{*}.iwh'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {*}.iwh (abbrev)"
+	test_rawhide "$rh -Ye '{*}.iw'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {*}.iw (abbrev)"
+	test_rawhide "$rh -Ye '{*}.imim'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {*}.imim (abbrev)"
+	test_rawhide "$rh -Ye '{*}.imi'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {*}.imi (abbrev)"
+	test_rawhide "$rh -Ye '{*}.im'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {*}.im (abbrev)"
 fi
 
 # Test ibody if available
@@ -174,11 +287,19 @@ fi
 if $rh -h | grep -q '\.ibody'
 then
 	printf '\nXXX\n\n' > $d/body
+
 	test_rawhide "$rh -e '\"*xxx*\".ibody'    $d" "$d/body\n" "" 0 "\"*xxx*\".ibody"
 	test_rawhide "$rh -e '\"*XXX*\".ibody'    $d" "$d/body\n" "" 0 "\"*XXX*\".ibody"
 	test_rawhide "$rh -e '\"*XXX*\".ibod'     $d" "$d/body\n" "" 0 "\"*XXX*\".ibod"
 	test_rawhide "$rh -e '\"*XXX*\".ibo'      $d" "$d/body\n" "" 0 "\"*XXX*\".ibo"
 	test_rawhide "$rh -e '\"*XXX*\".ib'       $d" "$d/body\n" "" 0 "\"*XXX*\".ib"
+
+	test_rawhide "$rh -e '{*xxx*}.ibody'    $d" "$d/body\n" "" 0 "{*xxx*}.ibody"
+	test_rawhide "$rh -e '{*XXX*}.ibody'    $d" "$d/body\n" "" 0 "{*XXX*}.ibody"
+	test_rawhide "$rh -e '{*XXX*}.ibod'     $d" "$d/body\n" "" 0 "{*XXX*}.ibod"
+	test_rawhide "$rh -e '{*XXX*}.ibo'      $d" "$d/body\n" "" 0 "{*XXX*}.ibo"
+	test_rawhide "$rh -e '{*XXX*}.ib'       $d" "$d/body\n" "" 0 "{*XXX*}.ib"
+
 	rm $d/body
 fi
 
@@ -188,6 +309,9 @@ if $rh -h | grep -q '\.repath'
 then
 	test_rawhide "$rh -e '\"\\w+\".re'           $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"\\w+\".re"
 	test_rawhide "$rh -e '\"+\".re'              $d" "" "./rh: invalid regex + at offset 0: quantifier does not follow a repeatable item\n" 1 "\"+\".re with invalid re and error message"
+
+	test_rawhide "$rh -e '{\\w+}.re'           $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{\\w+}.re"
+	test_rawhide "$rh -e '{+}.re'              $d" "" "./rh: invalid regex + at offset 0: quantifier does not follow a repeatable item\n" 1 "{+}.re with invalid re and error message"
 
 	test_rawhide "$rh -e '\"^.*\$\".re'          $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"^.*\$\".re"
 	test_rawhide "$rh -e '\"^.*\$\".repath'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"^.*\$\".repath"
@@ -208,12 +332,38 @@ then
 	test_rawhide "$rh -e '\"^.*F\$\".repath'     $d" ""                                         "" 0 "\"^.*F\$\".repath"
 	test_rawhide "$rh -e '\"^.*F\$\".relink'     $d" ""                                         "" 0 "\"^.*F\$\".relink"
 
+	test_rawhide "$rh -e '{^.*\$}.re'          $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{^.*\$}.re"
+	test_rawhide "$rh -e '{^.*\$}.repath'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{^.*\$}.repath"
+	test_rawhide "$rh -e '{^.*\$}.relink'      $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{^.*\$}.relink"
+	test_rawhide "$rh -e '{^.*$d.*$}.re'       $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{^.*$d.*\$}.re (assumes .repath)"
+	test_rawhide "$rh -e '{^.*$d.*\$}.repath'  $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{^.*$d.*\$}.repath"
+	test_rawhide "$rh -e '{^.*$d.*\$}.relink'  $d" "$d/linkabs\n"                             "" 0 "{^.*$d.*\$}.relink"
+	test_rawhide "$rh -e '{^f\$}.re'           $d" "$d/f\n"                                   "" 0 "{^f\$}.re"
+	test_rawhide "$rh -e '{^f\$}.repath'       $d" ""                                         "" 0 "{^f\$}.repath"
+	test_rawhide "$rh -e '{^f\$}.relink'       $d" "$d/linkrel\n"                             "" 0 "{^f\$}.relink"
+	test_rawhide "$rh -e '{^.*f\$}.re'         $d" "$d/f\n"                                   "" 0 "{^.*f\$}.re"
+	test_rawhide "$rh -e '{^.*f\$}.repath'     $d" "$d/f\n"                                   "" 0 "{^.*f\$}.repath"
+	test_rawhide "$rh -e '{^.*f\$}.relink'     $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{^.*f\$}.relink"
+	test_rawhide "$rh -e '{^F\$}.re'           $d" ""                                         "" 0 "{^F\$}.re"
+	test_rawhide "$rh -e '{^F\$}.repath'       $d" ""                                         "" 0 "{^F\$}.repath"
+	test_rawhide "$rh -e '{^F\$}.relink'       $d" ""                                         "" 0 "{^F\$}.relink"
+	test_rawhide "$rh -e '{^.*F\$}.re'         $d" ""                                         "" 0 "{^.*F\$}.re"
+	test_rawhide "$rh -e '{^.*F\$}.repath'     $d" ""                                         "" 0 "{^.*F\$}.repath"
+	test_rawhide "$rh -e '{^.*F\$}.relink'     $d" ""                                         "" 0 "{^.*F\$}.relink"
+
 	test_rawhide "$rh -e '\"^.*\$\".repat'       $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"^.*\$\".repat (abbrev)"
 	test_rawhide "$rh -e '\"^.*\$\".repa'        $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"^.*\$\".repa (abbrev)"
 	test_rawhide "$rh -e '\"^.*\$\".rep'         $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"^.*\$\".rep (abbrev)"
 	test_rawhide "$rh -e '\"^.*\$\".relin'       $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"^.*\$\".relin (abbrev)"
 	test_rawhide "$rh -e '\"^.*\$\".reli'        $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"^.*\$\".reli (abbrev)"
 	test_rawhide "$rh -e '\"^.*\$\".rel'         $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"^.*\$\".rel (abbrev)"
+
+	test_rawhide "$rh -e '{^.*\$}.repat'       $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{^.*\$}.repat (abbrev)"
+	test_rawhide "$rh -e '{^.*\$}.repa'        $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{^.*\$}.repa (abbrev)"
+	test_rawhide "$rh -e '{^.*\$}.rep'         $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{^.*\$}.rep (abbrev)"
+	test_rawhide "$rh -e '{^.*\$}.relin'       $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{^.*\$}.relin (abbrev)"
+	test_rawhide "$rh -e '{^.*\$}.reli'        $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{^.*\$}.reli (abbrev)"
+	test_rawhide "$rh -e '{^.*\$}.rel'         $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{^.*\$}.rel (abbrev)"
 
 	test_rawhide "$rh -e '\"^.*\$\".rei'         $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"^.*\$\".rei"
 	test_rawhide "$rh -e '\"^.*\$\".reipath'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"^.*\$\".reipath"
@@ -234,6 +384,25 @@ then
 	test_rawhide "$rh -e '\"^.*F\$\".reipath'    $d" "$d/f\n"                                   "" 0 "\"^.*F\$\".reipath"
 	test_rawhide "$rh -e '\"^.*F\$\".reilink'    $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"^.*F\$\".reilink"
 
+	test_rawhide "$rh -e '{^.*\$}.rei'         $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{^.*\$}.rei"
+	test_rawhide "$rh -e '{^.*\$}.reipath'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{^.*\$}.reipath"
+	test_rawhide "$rh -e '{^.*\$}.reilink'     $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{^.*\$}.reilink"
+	test_rawhide "$rh -e '{^.*$d.*\$}.rei'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{^$d.*\$}.rei (assumes .reipath)"
+	test_rawhide "$rh -e '{^.*$d.*\$}.reipath' $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{^$d.*\$}.reipath"
+	test_rawhide "$rh -e '{^.*$d.*\$}.reilink' $d" "$d/linkabs\n"                             "" 0 "{^$d.*\$}.reilink"
+	test_rawhide "$rh -e '{^f\$}.rei'          $d" "$d/f\n"                                   "" 0 "{^f\$}.rei"
+	test_rawhide "$rh -e '{^f\$}.reipath'      $d" ""                                         "" 0 "{^f\$}.reipath"
+	test_rawhide "$rh -e '{^f\$}.reilink'      $d" "$d/linkrel\n"                             "" 0 "{^f\$}.reilink"
+	test_rawhide "$rh -e '{^.*f\$}.rei'        $d" "$d/f\n"                                   "" 0 "{^.*f\$}.rei"
+	test_rawhide "$rh -e '{^.*f\$}.reipath'    $d" "$d/f\n"                                   "" 0 "{^.*f\$}.reipath"
+	test_rawhide "$rh -e '{^.*f\$}.reilink'    $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{^.*f\$}.reilink"
+	test_rawhide "$rh -e '{^F\$}.rei'          $d" "$d/f\n"                                   "" 0 "{^F\$}.rei"
+	test_rawhide "$rh -e '{^F\$}.reipath'      $d" ""                                         "" 0 "{^F\$}.reipath"
+	test_rawhide "$rh -e '{^F\$}.reilink'      $d" "$d/linkrel\n"                             "" 0 "{^F\$}.reilink"
+	test_rawhide "$rh -e '{^.*F\$}.rei'        $d" "$d/f\n"                                   "" 0 "{^.*F\$}.rei"
+	test_rawhide "$rh -e '{^.*F\$}.reipath'    $d" "$d/f\n"                                   "" 0 "{^.*F\$}.reipath"
+	test_rawhide "$rh -e '{^.*F\$}.reilink'    $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{^.*F\$}.reilink"
+
 	test_rawhide "$rh -e '\"^.*\$\".reipat'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"^.*\$\".reipat (abbrev)"
 	test_rawhide "$rh -e '\"^.*\$\".reipa'       $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"^.*\$\".reipa (abbrev)"
 	test_rawhide "$rh -e '\"^.*\$\".reip'        $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\"^.*\$\".reip (abbrev)"
@@ -241,21 +410,38 @@ then
 	test_rawhide "$rh -e '\"^.*\$\".reili'       $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"^.*\$\".reili (abbrev)"
 	test_rawhide "$rh -e '\"^.*\$\".reil'        $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"^.*\$\".reil (abbrev)"
 
+	test_rawhide "$rh -e '{^.*\$}.reipat'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{^.*\$}.reipat (abbrev)"
+	test_rawhide "$rh -e '{^.*\$}.reipa'       $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{^.*\$}.reipa (abbrev)"
+	test_rawhide "$rh -e '{^.*\$}.reip'        $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{^.*\$}.reip (abbrev)"
+	test_rawhide "$rh -e '{^.*\$}.reilin'      $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{^.*\$}.reilin (abbrev)"
+	test_rawhide "$rh -e '{^.*\$}.reili'       $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{^.*\$}.reili (abbrev)"
+	test_rawhide "$rh -e '{^.*\$}.reil'        $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{^.*\$}.reil (abbrev)"
+
 	# Test RAWHIDE_PCRE2_MULTILINE_ALWAYS
 
 	mkdir $d/m
 	touch $d/m/foo.txt
 	touch "$d/m/$(printf 'foo.txt\nbar.exe')"
+
 	test_rawhide "                                 $rh -e '\"\\.txt\$\".re' $d/m" "$d/m/foo.txt\n" "" 0 "\"\\.txt\$\".re with a mid-name newline without RAWHIDE_PCRE2_MULTILINE_ALWAYS=1 (good)"
 	test_rawhide "RAWHIDE_PCRE2_MULTILINE_ALWAYS=1 $rh -e '\"\\.txt\$\".re' $d/m" "bar.exe\n$d/m/foo.txt\n$d/m/foo.txt\n" "" 0 "\"\\.txt\$\".re with a mid-name newline with RAWHIDE_PCRE2_MULTILINE_ALWAYS=1 (not good)"
+
+	test_rawhide "                                 $rh -e '{\\.txt\$}.re' $d/m" "$d/m/foo.txt\n" "" 0 "{\\.txt\$}.re with a mid-name newline without RAWHIDE_PCRE2_MULTILINE_ALWAYS=1 (good)"
+	test_rawhide "RAWHIDE_PCRE2_MULTILINE_ALWAYS=1 $rh -e '{\\.txt\$}.re' $d/m" "bar.exe\n$d/m/foo.txt\n$d/m/foo.txt\n" "" 0 "{\\.txt\$}.re with a mid-name newline with RAWHIDE_PCRE2_MULTILINE_ALWAYS=1 (not good)"
+
 	rm -r $d/m
 
 	# Test RAWHIDE_PCRE2_DOTALL_ALWAYS
 
 	mkdir $d/m
 	printf 'abc\ndef\n' >  $d/m/f
+
 	test_rawhide "                              $rh -e '\"a.*f\".rebody' $d/m" ""         "" 0 "\"a.*f\".rebody across multiple lines without RAWHIDE_PCRE2_DOTALL_ALWAYS=1 (no match)"
 	test_rawhide "RAWHIDE_PCRE2_DOTALL_ALWAYS=1 $rh -e '\"a.*f\".rebody' $d/m" "$d/m/f\n" "" 0 "\"a.*f\".rebody across multiple lines with RAWHIDE_PCRE2_DOTALL_ALWAYS=1 (match)"
+
+	test_rawhide "                              $rh -e '{a.*f}.rebody' $d/m" ""         "" 0 "{a.*f}.rebody across multiple lines without RAWHIDE_PCRE2_DOTALL_ALWAYS=1 (no match)"
+	test_rawhide "RAWHIDE_PCRE2_DOTALL_ALWAYS=1 $rh -e '{a.*f}.rebody' $d/m" "$d/m/f\n" "" 0 "{a.*f}.rebody across multiple lines with RAWHIDE_PCRE2_DOTALL_ALWAYS=1 (match)"
+
 	rm -r $d/m
 fi
 
@@ -270,12 +456,26 @@ then
 	test_rawhide "$rh -e '\"sym\".rewhat'   $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"sym\".rewhat"
 	test_rawhide "$rh -e '\"sym\".remime'   $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"sym\".remime"
 
+	test_rawhide "$rh -e '{.*}.rewhat'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{.*}.rewhat"
+	test_rawhide "$rh -e '{.*}.remime'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{.*}.remime"
+	test_rawhide "$rh -e '{empty}.rewhat' $d" "$d/f\n"                                   "" 0 "{empty}.rewhat"
+	test_rawhide "$rh -e '{empty}.remime' $d" "$d/f\n"                                   "" 0 "{empty}.remime"
+	test_rawhide "$rh -e '{sym}.rewhat'   $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{sym}.rewhat"
+	test_rawhide "$rh -e '{sym}.remime'   $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{sym}.remime"
+
 	test_rawhide "$rh -e '\".*\".rewha'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\".*\".rewha (abbrev)"
 	test_rawhide "$rh -e '\".*\".rewh'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\".*\".rewh (abbrev)"
 	test_rawhide "$rh -e '\".*\".rew'       $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\".*\".rew (abbrev)"
 	test_rawhide "$rh -e '\".*\".remim'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\".*\".remim (abbrev)"
 	test_rawhide "$rh -e '\".*\".remi'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\".*\".remi (abbrev)"
 	test_rawhide "$rh -e '\".*\".rem'       $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\".*\".rem (abbrev)"
+
+	test_rawhide "$rh -e '{.*}.rewha'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{.*}.rewha (abbrev)"
+	test_rawhide "$rh -e '{.*}.rewh'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{.*}.rewh (abbrev)"
+	test_rawhide "$rh -e '{.*}.rew'       $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{.*}.rew (abbrev)"
+	test_rawhide "$rh -e '{.*}.remim'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{.*}.remim (abbrev)"
+	test_rawhide "$rh -e '{.*}.remi'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{.*}.remi (abbrev)"
+	test_rawhide "$rh -e '{.*}.rem'       $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{.*}.rem (abbrev)"
 
 	test_rawhide "$rh -Ye '\".*\".rewhat'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \".*\".rewhat"
 	test_rawhide "$rh -Ye '\".*\".remime'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \".*\".remime"
@@ -284,22 +484,41 @@ then
 	test_rawhide "$rh -Ye '\"sym\".rewhat'   $d" ""                                         "" 0 "-Y \"sym\".rewhat"
 	test_rawhide "$rh -Ye '\"sym\".remime'   $d" ""                                         "" 0 "-Y \"sym\".remime"
 
+	test_rawhide "$rh -Ye '{.*}.rewhat'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {.*}.rewhat"
+	test_rawhide "$rh -Ye '{.*}.remime'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {.*}.remime"
+	test_rawhide "$rh -Ye '{empty}.rewhat' $d" "$d/f\n$d/linkabs\n$d/linkrel\n"           "" 0 "-Y {empty}.rewhat"
+	test_rawhide "$rh -Ye '{empty}.remime' $d" "$d/f\n$d/linkabs\n$d/linkrel\n"           "" 0 "-Y {empty}.remime"
+	test_rawhide "$rh -Ye '{sym}.rewhat'   $d" ""                                         "" 0 "-Y {sym}.rewhat"
+	test_rawhide "$rh -Ye '{sym}.remime'   $d" ""                                         "" 0 "-Y {sym}.remime"
+
 	test_rawhide "$rh -Ye '\".*\".rewha'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \".*\".rewha (abbrev)"
 	test_rawhide "$rh -Ye '\".*\".rewh'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \".*\".rewh (abbrev)"
 	test_rawhide "$rh -Ye '\".*\".rew'       $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \".*\".rew (abbrev)"
 	test_rawhide "$rh -Ye '\".*\".remim'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \".*\".remim (abbrev)"
 	test_rawhide "$rh -Ye '\".*\".remi'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \".*\".remi (abbrev)"
 	test_rawhide "$rh -Ye '\".*\".rem'       $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \".*\".rem (abbrev)"
+
+	test_rawhide "$rh -Ye '{.*}.rewha'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {.*}.rewha (abbrev)"
+	test_rawhide "$rh -Ye '{.*}.rewh'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {.*}.rewh (abbrev)"
+	test_rawhide "$rh -Ye '{.*}.rew'       $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {.*}.rew (abbrev)"
+	test_rawhide "$rh -Ye '{.*}.remim'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {.*}.remim (abbrev)"
+	test_rawhide "$rh -Ye '{.*}.remi'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {.*}.remi (abbrev)"
+	test_rawhide "$rh -Ye '{.*}.rem'       $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {.*}.rem (abbrev)"
 fi
 
 # Test reiwhat reiwhat if available
 
 if $rh -h | grep -q '\.reiwhat'
 then
-	test_rawhide "$rh -e '\"EMPTY\".reiwhat' $d" "$d/f\n"                                  "" 0 "\"*empty\".reiwhat"
+	test_rawhide "$rh -e '\"EMPTY\".reiwhat' $d" "$d/f\n"                                   "" 0 "\"*empty\".reiwhat"
 	test_rawhide "$rh -e '\"EMPTY\".reimime' $d" "$d/f\n"                                   "" 0 "\"*empty*\".reimime"
 	test_rawhide "$rh -e '\"SYM\".reiwhat'   $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"*sym*\".reiwhat"
 	test_rawhide "$rh -e '\"SYM\".reimime'   $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "\"*sym*\".reimime"
+
+	test_rawhide "$rh -e '{EMPTY}.reiwhat' $d" "$d/f\n"                                   "" 0 "{*empty}.reiwhat"
+	test_rawhide "$rh -e '{EMPTY}.reimime' $d" "$d/f\n"                                   "" 0 "{*empty*}.reimime"
+	test_rawhide "$rh -e '{SYM}.reiwhat'   $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{*sym*}.reiwhat"
+	test_rawhide "$rh -e '{SYM}.reimime'   $d" "$d/linkabs\n$d/linkrel\n"                 "" 0 "{*sym*}.reimime"
 
 	test_rawhide "$rh -e '\".*\".reiwha'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\".*\".reiwha (abbrev)"
 	test_rawhide "$rh -e '\".*\".reiwh'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\".*\".reiwh (abbrev)"
@@ -308,10 +527,22 @@ then
 	test_rawhide "$rh -e '\".*\".reimi'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\".*\".reimi (abbrev)"
 	test_rawhide "$rh -e '\".*\".reim'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "\".*\".reim (abbrev)"
 
+	test_rawhide "$rh -e '{.*}.reiwha'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{.*}.reiwha (abbrev)"
+	test_rawhide "$rh -e '{.*}.reiwh'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{.*}.reiwh (abbrev)"
+	test_rawhide "$rh -e '{.*}.reiw'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{.*}.reiw (abbrev)"
+	test_rawhide "$rh -e '{.*}.reimim'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{.*}.reimim (abbrev)"
+	test_rawhide "$rh -e '{.*}.reimi'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{.*}.reimi (abbrev)"
+	test_rawhide "$rh -e '{.*}.reim'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "{.*}.reim (abbrev)"
+
 	test_rawhide "$rh -Ye '\"EMPTY\".reiwhat' $d" "$d/f\n$d/linkabs\n$d/linkrel\n"           "" 0 "-Y \"*empty\".reiwhat"
 	test_rawhide "$rh -Ye '\"EMPTY\".reimime' $d" "$d/f\n$d/linkabs\n$d/linkrel\n"           "" 0 "-Y \"*empty*\".reimime"
 	test_rawhide "$rh -Ye '\"SYM\".reiwhat'   $d" ""                                         "" 0 "-Y \"*sym*\".reiwhat"
 	test_rawhide "$rh -Ye '\"SYM\".reimime'   $d" ""                                         "" 0 "-Y \"*sym*\".reimime"
+
+	test_rawhide "$rh -Ye '{EMPTY}.reiwhat' $d" "$d/f\n$d/linkabs\n$d/linkrel\n"           "" 0 "-Y {*empty}.reiwhat"
+	test_rawhide "$rh -Ye '{EMPTY}.reimime' $d" "$d/f\n$d/linkabs\n$d/linkrel\n"           "" 0 "-Y {*empty*}.reimime"
+	test_rawhide "$rh -Ye '{SYM}.reiwhat'   $d" ""                                         "" 0 "-Y {*sym*}.reiwhat"
+	test_rawhide "$rh -Ye '{SYM}.reimime'   $d" ""                                         "" 0 "-Y {*sym*}.reimime"
 
 	test_rawhide "$rh -Ye '\".*\".reiwha'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \".*\".reiwha (abbrev)"
 	test_rawhide "$rh -Ye '\".*\".reiwh'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \".*\".reiwh (abbrev)"
@@ -319,6 +550,13 @@ then
 	test_rawhide "$rh -Ye '\".*\".reimim'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \".*\".reimim (abbrev)"
 	test_rawhide "$rh -Ye '\".*\".reimi'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \".*\".reimi (abbrev)"
 	test_rawhide "$rh -Ye '\".*\".reim'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y \".*\".reim (abbrev)"
+
+	test_rawhide "$rh -Ye '{.*}.reiwha'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {.*}.reiwha (abbrev)"
+	test_rawhide "$rh -Ye '{.*}.reiwh'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {.*}.reiwh (abbrev)"
+	test_rawhide "$rh -Ye '{.*}.reiw'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {.*}.reiw (abbrev)"
+	test_rawhide "$rh -Ye '{.*}.reimim'    $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {.*}.reimim (abbrev)"
+	test_rawhide "$rh -Ye '{.*}.reimi'     $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {.*}.reimi (abbrev)"
+	test_rawhide "$rh -Ye '{.*}.reim'      $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 "-Y {.*}.reim (abbrev)"
 fi
 
 # Test rebody if available
@@ -326,11 +564,19 @@ fi
 if $rh -h | grep -q '\.rebody'
 then
 	printf '\nXXX\n\n' > $d/body
+
 	test_rawhide "$rh -e '\"xxx\".rebody' $d" ""          "" 0 "\"xxx\".rebody"
 	test_rawhide "$rh -e '\"XXX\".rebody' $d" "$d/body\n" "" 0 "\"XXX\".rebody"
 	test_rawhide "$rh -e '\"XXX\".rebod'  $d" "$d/body\n" "" 0 "\"XXX\".rebod"
 	test_rawhide "$rh -e '\"XXX\".rebo'   $d" "$d/body\n" "" 0 "\"XXX\".rebo"
 	test_rawhide "$rh -e '\"XXX\".reb'    $d" "$d/body\n" "" 0 "\"XXX\".reb"
+
+	test_rawhide "$rh -e '{xxx}.rebody' $d" ""          "" 0 "{xxx}.rebody"
+	test_rawhide "$rh -e '{XXX}.rebody' $d" "$d/body\n" "" 0 "{XXX}.rebody"
+	test_rawhide "$rh -e '{XXX}.rebod'  $d" "$d/body\n" "" 0 "{XXX}.rebod"
+	test_rawhide "$rh -e '{XXX}.rebo'   $d" "$d/body\n" "" 0 "{XXX}.rebo"
+	test_rawhide "$rh -e '{XXX}.reb'    $d" "$d/body\n" "" 0 "{XXX}.reb"
+
 	rm $d/body
 fi
 
@@ -339,11 +585,19 @@ fi
 if $rh -h | grep -q '\.reibody'
 then
 	printf '\nXXX\n\n' > $d/body
+
 	test_rawhide "$rh -e '\"xxx\".reibody' $d" "$d/body\n" "" 0 "\"xxx\".reibody"
 	test_rawhide "$rh -e '\"XXX\".reibody' $d" "$d/body\n" "" 0 "\"XXX\".reibody"
 	test_rawhide "$rh -e '\"XXX\".reibod'  $d" "$d/body\n" "" 0 "\"XXX\".reibod"
 	test_rawhide "$rh -e '\"XXX\".reibo'   $d" "$d/body\n" "" 0 "\"XXX\".reibo"
 	test_rawhide "$rh -e '\"XXX\".reib'    $d" "$d/body\n" "" 0 "\"XXX\".reib"
+
+	test_rawhide "$rh -e '{xxx}.reibody' $d" "$d/body\n" "" 0 "{xxx}.reibody"
+	test_rawhide "$rh -e '{XXX}.reibody' $d" "$d/body\n" "" 0 "{XXX}.reibody"
+	test_rawhide "$rh -e '{XXX}.reibod'  $d" "$d/body\n" "" 0 "{XXX}.reibod"
+	test_rawhide "$rh -e '{XXX}.reibo'   $d" "$d/body\n" "" 0 "{XXX}.reibo"
+	test_rawhide "$rh -e '{XXX}.reib'    $d" "$d/body\n" "" 0 "{XXX}.reib"
+
 	rm $d/body
 fi
 
@@ -355,27 +609,57 @@ test_rawhide "$rh -e '\"[ str = other ]\".sh' $d" ""                            
 test_rawhide "$rh -e '\"[ str = str ]\".sh'   $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 ".sh [ str = str ]"
 test_rawhide "$rh -e '\"unexpected-executable 2>/dev/null\".sh' $d" "" "" 0 ".sh unexpected executable"
 
+test_rawhide "$rh -e '{false}.sh'           $d" ""                                         "" 0 ".sh false"
+test_rawhide "$rh -e '{true}.sh'            $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 ".sh true"
+test_rawhide "$rh -e '{[ str = other ]}.sh' $d" ""                                         "" 0 ".sh [ str = other ]"
+test_rawhide "$rh -e '{[ str = str ]}.sh'   $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 ".sh [ str = str ]"
+test_rawhide "$rh -e '{unexpected-executable 2>/dev/null}.sh' $d" "" "" 0 ".sh unexpected executable"
+
 test_rawhide "$rh 'd && \"[ \`$explicit_rh -m1 -M1 -ed -q %S | wc -l\` = 0 ]\".sh' $d" "$d/d\n" "" 0 ".sh directories with no sub-directories"
 test_rawhide "$rh 'd && \"[ \`$explicit_rh -m1 -M1     -q %S | wc -l\` = 0 ]\".sh' $d" "$d/d\n" "" 0 ".sh empty directories"
 
+test_rawhide "$rh 'd && {[ \`$explicit_rh -m1 -M1 -ed -q %S | wc -l\` = 0 ]}.sh' $d" "$d/d\n" "" 0 ".sh directories with no sub-directories"
+test_rawhide "$rh 'd && {[ \`$explicit_rh -m1 -M1     -q %S | wc -l\` = 0 ]}.sh' $d" "$d/d\n" "" 0 ".sh empty directories"
+
 test_rawhide_post_hook() { true; }
+
 test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".sh' /"         "/ ././.\n/\n"                    "" 0 ".sh in / root directory"
 test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".sh' /etc"      "/ ./etc.etc.\n/etc\n"            "" 0 ".sh in /etc directory (no trailing /)"
 test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".sh' /etc/"     "/ ./etc.etc.\n/etc\n"            "" 0 ".sh in /etc/ directory (with trailing /)"
 test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".sh' /usr/bin"  "/usr ./usr/bin.bin.\n/usr/bin\n" "" 0 ".sh in /usr/bin directory (no trailing /)"
 test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".sh' /usr/bin/" "/usr ./usr/bin.bin.\n/usr/bin\n" "" 0 ".sh in /usr/bin/ directory (with trailing /)"
 
+test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s.%S.}.sh' /"         "/ ././.\n/\n"                    "" 0 ".sh in / root directory"
+test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s.%S.}.sh' /etc"      "/ ./etc.etc.\n/etc\n"            "" 0 ".sh in /etc directory (no trailing /)"
+test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s.%S.}.sh' /etc/"     "/ ./etc.etc.\n/etc\n"            "" 0 ".sh in /etc/ directory (with trailing /)"
+test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s.%S.}.sh' /usr/bin"  "/usr ./usr/bin.bin.\n/usr/bin\n" "" 0 ".sh in /usr/bin directory (no trailing /)"
+test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s.%S.}.sh' /usr/bin/" "/usr ./usr/bin.bin.\n/usr/bin\n" "" 0 ".sh in /usr/bin/ directory (with trailing /)"
+
 test_rawhide "$rh -e '\"false\".s'            $d" "" ""                                                                                                                                        0 ".s (abbrev)"
 test_rawhide "$rh -e '\"invalid\".r'          $d" "" "./rh: command line: -e '\"invalid\".r': line 1 byte 11: invalid string suffix: .r (expected pattern modifier or reference file field)\n" 1 ".r (invalid abbrev)"
+
+test_rawhide "$rh -e '{false}.s'              $d" "" ""                                                                                                                                        0 ".s (abbrev)"
+test_rawhide "$rh -e '{invalid}.r'            $d" "" "./rh: command line: -e '{invalid}.r': line 1 byte 11: invalid string suffix: .r (expected pattern modifier or reference file field)\n" 1 ".r (invalid abbrev)"
+
+test_rawhide "$rh -e '{ { false; } }.sh'                     $d" "" ""                                                                                                                         0 "{ { false; } }.sh (nested curly braces)"
+test_rawhide "$rh -e '{ { { false; } } }.sh'                 $d" "" ""                                                                                                                         0 "{ { { false; } } }.sh (nested curly braces)"
+test_rawhide "$rh -e '{ { { { false; } } } }.sh'             $d" "" ""                                                                                                                         0 "{ { { { false; } } } }.sh (nested curly braces)"
+test_rawhide "$rh -e '{ { { false \"\\{\" \"\\{\"; } } }.sh' $d" "" ""                                                                                                                         0 "{ { { false; \\{ \\{ } } }.sh (nested curly braces with quoted opening curly braces)"
+test_rawhide "$rh -e '{ { { false \"\\}\" \"\\}\"; } } }.sh' $d" "" ""                                                                                                                         0 "{ { { false; \\} \\} } } }.sh (nested curly braces with quoted closing curly braces)"
 
 # Test the pcre compiled pattern cache
 
 if $rh -h | grep -q '\.re'
 then
 	touch $d/abcdefghi $d/1 $d/2 $d/3 $d/4 $d/5 $d/6 $d/7 $d/8 $d/9
+
 	test_rawhide "$rh -e '\"abc\".re'                             $d" "$d/abcdefghi\n" "" 0 "pcre cache 1 pattern"
 	test_rawhide "$rh -e '\"abc\".re && \"def\".re'               $d" "$d/abcdefghi\n" "" 0 "pcre cache 2 patterns"
 	test_rawhide "$rh -e '\"abc\".re && \"def\".re && \"ghi\".re' $d" "$d/abcdefghi\n" "" 0 "pcre cache 3 patterns"
+
+	test_rawhide "$rh -e '{abc}.re'                               $d" "$d/abcdefghi\n" "" 0 "pcre cache 1 pattern"
+	test_rawhide "$rh -e '{abc}.re && {def}.re'                   $d" "$d/abcdefghi\n" "" 0 "pcre cache 2 patterns"
+	test_rawhide "$rh -e '{abc}.re && {def}.re && {ghi}.re'       $d" "$d/abcdefghi\n" "" 0 "pcre cache 3 patterns"
 fi
 
 finish

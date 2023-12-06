@@ -137,7 +137,7 @@ static void help_message(void)
 	printf("  ?:  ||  &&  |  ^  &  == !=  < > <= >=  << >>  + -  * / %%  - ~ !\n");
 
 	printf("\nRawhide tokens:\n");
-	printf("  \"pattern\"  \"pattern\".modifier  \"/path\".field  \"cmd\".sh\n");
+	printf("  \"pattern\"  \"pattern\".modifier  \"/path\".field  \"cmd\".sh  {cmd}.sh\n");
 	printf("  123 0777 0xffff  1K 2M 3G  1k 2m 3g  $user @group  $$ @@\n");
 	printf("  [yyyy/mm/dd] [yyyy/mm/dd hh:mm:ss]\n");
 
