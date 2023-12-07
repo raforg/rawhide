@@ -172,8 +172,8 @@ id4="f${z198}0b"
 
 test_rawhide "$rh -e '$id1() { 0 } $id1' $d" "" ""                                                                                                                                               0 "max length ident ok"
 test_rawhide "$rh -e '$id1() { 0 } $id2' $d" "" "./rh: command line: -e '$id1() { 0 } $id2': line 1 byte 410: expected '(' or '{', found eof (possible attempt to call an undefined function)\n" 1 "max length ident mismatch"
-test_rawhide "$rh -e '$id3() { 0 } $id3' $d" "" ""                                                                                                                                               0 "longer than max length ident correct but silently truncated"
-test_rawhide "$rh -e '$id3() { 0 } $id4' $d" "" ""                                                                                                                                               0 "longer than max length ident incorrect but silently truncated"
+test_rawhide "$rh -e '$id3() { 0 } $id3' $d" "" "./rh: command line: -e '$id3() { 0 } $id3': line 1 byte 201: identifier too long: $id3\n"                                                       1 "longer than max length ident"
+test_rawhide "$rh -e '$id3() { 0 } $id4' $d" "" "./rh: command line: -e '$id3() { 0 } $id4': line 1 byte 201: identifier too long: $id3\n"                                                       1 "longer than max length ident"
 
 # Test glob string space limit
 

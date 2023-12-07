@@ -1369,11 +1369,10 @@ static int _get_token(void)
 	{
 		do
 		{
-			/* Identifiers are silently truncated */
+			if (bufp - buf >= MAX_IDENT_LENGTH)
+				parser_error("identifier too long: %.*s%c", (int)(bufp - buf), buf, c);
 
-			if (bufp - buf < MAX_IDENT_LENGTH)
-				*bufp++ = c;
-
+			*bufp++ = c;
 			c = getch();
 		}
 		while (isaleph(c) || isdigit(c) || c == '_');
