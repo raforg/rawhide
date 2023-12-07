@@ -99,7 +99,7 @@ static void help_message(void)
 	printf("  -a           - Include atime rather than mtime column, implies -l\n");
 	printf("  -u           - Same as -a (like ls(1))\n");
 	printf("  -c           - Include ctime rather than mtime column, implies -l\n");
-	printf("  -v           - Verbose: All columns, implies -ldiBsSac (unless -xXU0L)\n");
+	printf("  -v           - Verbose: All columns, implies -ldiBsSac unless -xXU0Lj\n");
 	printf("  -0           - Output null chars instead of newlines (for xargs -0)\n");
 	printf("  -L format    - Output matching entries in a user-supplied format\n");
 	printf("  -j           - Output matching entries as JSON (same as -L \"%%j\\n\")\n");
