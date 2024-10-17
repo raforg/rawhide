@@ -516,6 +516,11 @@ To see what other things the `Makefile` can do:
 
         make help
 
+# PACKAGING
+
+To build a package on rpm-based distributions:
+        rpmbuild -ta rawhide-3.3.tar.gz
+
 # REQUIREMENTS
 
 *Rawhide* should compile and work on any recent *POSIX* system (post-2008)
