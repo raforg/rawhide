@@ -6,7 +6,7 @@ Release:        %{?dist}1
 Summary:        find files using pretty C expressions
 License:        GPL-3.0-or-later
 URL:            https://raf.org/rawhide
-Group:        File tools
+Group:          File tools
 Source:         https://github.com/raforg/rawhide/releases/download/v%{version}/%{name}-%{version}.tar.gz
 BuildRequires:  gcc
 BuildRequires:  make
