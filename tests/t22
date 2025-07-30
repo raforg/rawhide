@@ -77,6 +77,15 @@ test_rawhide "$rh ';' $d"  "" "./rh: command line: -e ';': line 1 byte 1: syntax
 test_rawhide "$rh file $d" ""     "" 0 "file: no expr chars and no non-pathy chars and not path - assume expr"
 test_rawhide "$rh dir  $d" "$d\n" "" 0 "dir: no expr chars and no non-pathy chars and not path - assume expr"
 
+test_rawhide "RAWHIDE_NO_IMPLICIT_EXPR_HEURISTIC=1 $rh $d"                 "$d\n" ""                                                              0 "no heuristic - an existing path"
+test_rawhide "RAWHIDE_NO_IMPLICIT_EXPR_HEURISTIC=1 $rh $d/abc"             ""     "./rh: fstatat $d/abc: No such file or directory\n"             1 "no heuristic - parent is a path"
+test_rawhide "RAWHIDE_NO_IMPLICIT_EXPR_HEURISTIC=1 $rh $d/abc/def"         ""     "./rh: fstatat $d/abc/def: No such file or directory\n"         1 "no heuristic - grand parent is a path"
+test_rawhide "RAWHIDE_NO_IMPLICIT_EXPR_HEURISTIC=1 $rh $d/abc/def/ghi"     ""     "./rh: fstatat $d/abc/def/ghi: No such file or directory\n"     1 "no heuristic - great grand parent is a path"
+test_rawhide "RAWHIDE_NO_IMPLICIT_EXPR_HEURISTIC=1 $rh $d/abc/def/ghi/jkl" ""     "./rh: fstatat $d/abc/def/ghi/jkl: No such file or directory\n" 1 "no heuristic - great great grand parent is a path - too far up - assuming expression"
+test_rawhide "RAWHIDE_NO_IMPLICIT_EXPR_HEURISTIC=1 $rh '$d/?'"             ""     "./rh: fstatat $d/?: No such file or directory\n"               1 "no heuristic - parent is a path but has non-pathy char '?'"
+test_rawhide "RAWHIDE_NO_IMPLICIT_EXPR_HEURISTIC=1 $rh ' ' $d"             "$d\n" "./rh: fstatat  : No such file or directory\n"                  1 "no heuristic - has non-pathy chars ' ' - expr - ok"
+test_rawhide "RAWHIDE_NO_IMPLICIT_EXPR_HEURISTIC=1 $rh '?' $d"             "$d\n" "./rh: fstatat ?: No such file or directory\n"                  1 "no heuristic - has non-pathy chars '?' expr"
+
 finish
 
 exit $errors

@@ -166,6 +166,7 @@ struct runtime_t
 	llong fea_size;         /* Non-default size to allocate for extended attributes? */
 	int fea_solaris_no_sunwattr; /* Suppress ubiquitous SUNWattr_ro/SUNWattr_rw EAs on Solaris? */
 	int fea_solaris_no_statinfo; /* Suppress artificial stat(2) info EAs on Solaris? */
+	int no_implicit_expr_heuristic; /* Suppress implicit search criteria expression heuristic */
 
 	#ifdef HAVE_MAGIC
 	magic_t what_cookie;        /* Libmagic data for file type searches */

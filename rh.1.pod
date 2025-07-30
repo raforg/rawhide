@@ -334,6 +334,24 @@ provides more flexible command line option parsing.
 If no file test expression is supplied anywhere, the default file test
 expression is C<1>, which matches all filesystem entries.
 
+B<Warning:> The fact that an implicit search criteria expression can be
+heuristically identified among the command line arguments when there is no
+explicit C<-e> option can be very convenient, but it is also very dangerous.
+It means that, when a shell file name glob pattern is used to generate
+command line arguments, a malicious file name could be interpreted as a
+search criteria expression. If you are unwilling to accept this risk, you
+can always explicitly use the C<-e> option. Alternatively, this behaviour
+can be suppressed by setting the environment variable
+C<RAWHIDE_NO_IMPLICIT_EXPR_HEURISTIC=1>. Doing so will cause I<rh> to always
+default to the search criteria C<"1">, matching all filesystem entries, when
+no C<-e> option has been supplied on the command line. It effectively makes
+it mandatory to specify search criteria explicitly via the C<-e> option
+unless you want to match everything (the default). Also note that, when you
+want to match all filesystem entries, and so do not need an explicit C<-e>
+option, you should include C<--> on the command line before the glob
+pattern, so as to prevent a malicious file name that starts with C<-e> from
+being interpreted as an explicit search criteria expression.
+
 =back
 
 =head2 Traversal options
@@ -2723,6 +2741,21 @@ I<Solaris>, the default buffer size is 64KiB. This can be used to increase
 the buffer size if needed to prevent extended attributes from being silently
 truncated. This affects extended attribute searching (C<ea>) (see
 I<rawhide.conf(5)>), and the S<C<-L %x>> format conversion (see above).
+
+Setting the environment variable C<RAWHIDE_NO_IMPLICIT_EXPR_HEURISTIC=1>
+suppresses the behaviour of heuristically looking for an implicit search
+criteria expression among the command line arguments when there is no
+explicit C<-e> option. This eliminates the risk that the use of a shell file
+name glob pattern might encounter a malicious file name and add it to the
+command line, and that malicious file name being interpreted as an implicit
+search criteria expression. To completely eliminate this risk, you need to
+also include C<--> on the command line before the glob pattern because a
+malicious file name might start with C<-e> and be interpreted as an explicit
+search criteria expression. But this additional precaution is only necessary
+when there is no explicit C<-e> option on the command line. An alternative
+to the use of this environment variable is to just always include an
+explicit C<-e> option on the command line, even when you want the default
+behaviour of matching all filesystem entries (i.e., C<-e1>).
 
 =head1 FILES
 
