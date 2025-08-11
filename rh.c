@@ -486,7 +486,7 @@ int main(int argc, char *argv[])
 			fatalsys("failed to revoke unexpected setgid privileges");
 
 	if (geteuid() != (uid = getuid()))
-		if (setuid(gid) == -1 || geteuid() != getuid() || env_flag("RAWHIDE_TEST_SETUID_FAILURE"))
+		if (setuid(uid) == -1 || geteuid() != getuid() || env_flag("RAWHIDE_TEST_SETUID_FAILURE"))
 			fatalsys("failed to revoke unexpected setuid privileges");
 
 	/* Defaults */
