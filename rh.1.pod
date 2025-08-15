@@ -26,7 +26,7 @@ I<rh> - (I<rawhide>) find files using pretty I<C> expressions
 
 =head1 SYNOPSIS
 
- usage: rh [options] [path...]
+ usage: rh [options] [--] [path...]
  options:
    -h --help    - Show this help message, then exit
    -V --version - Show the version message, then exit

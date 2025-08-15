@@ -64,7 +64,7 @@ a high-level interface to the built-in symbols mentioned above, and makes
 
 # SYNOPSIS
 
-     usage: rh [options] [path...]
+     usage: rh [options] [--] [path...]
      options:
        -h --help    - Show this help message, then exit
        -V --version - Show the version message, then exit

@@ -30,10 +30,10 @@ touch $d/abc
 
 test_rawhide_post_hook() { test_rh_first_line_post_hook; }
 
-test_rawhide      "./rh -h"        "usage: rh [options] [path...]\n" "" 0 "-h option"
-test_rawhide      "./rh --help"    "usage: rh [options] [path...]\n" "" 0 "--help option"
-test_rawhide_grep "./rh -V"        "^rh-[0-9.]+[a-z]?$"              "" 0 "-V option"
-test_rawhide_grep "./rh --version" "^rh-[0-9.]+[a-z]?$"              "" 0 "--version option"
+test_rawhide      "./rh -h"        "usage: rh [options] [--] [path...]\n" "" 0 "-h option"
+test_rawhide      "./rh --help"    "usage: rh [options] [--] [path...]\n" "" 0 "--help option"
+test_rawhide_grep "./rh -V"        "^rh-[0-9.]+[a-z]?$"                   "" 0 "-V option"
+test_rawhide_grep "./rh --version" "^rh-[0-9.]+[a-z]?$"                   "" 0 "--version option"
 
 test_rawhide "./rh -!" "" "./rh: invalid option: -! (see ./rh -h for help)\n" 1 "invalid option"
 

@@ -63,7 +63,7 @@ static void help_message(void)
 	symbol_t *s;
 	int i;
 
-	printf("usage: %s [options] [path...]\n", RAWHIDE_PROG_NAME);
+	printf("usage: %s [options] [--] [path...]\n", RAWHIDE_PROG_NAME);
 	printf("options:\n");
 	printf("  -h --help    - Show this help message, then exit\n");
 	printf("  -V --version - Show the version message, then exit\n");
