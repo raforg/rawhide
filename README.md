@@ -138,7 +138,8 @@ a high-level interface to the built-in symbols mentioned above, and makes
        ?:  ||  &&  |  ^  &  == !=  < > <= >=  << >>  + -  * / %  - ~ !
 
      Rawhide tokens:
-       "pattern"  "pattern".modifier  "/path".field  "cmd".sh  {cmd}.sh
+       "pattern"  "pattern".modifier  "/path".field  "cmd".sh
+       {pattern}  {pattern}.modifier  {/path}.field  {cmd}.sh
        123 0777 0xffff  1K 2M 3G  1k 2m 3g  $user @group  $$ @@
        [yyyy/mm/dd] [yyyy/mm/dd hh:mm:ss]
 
@@ -326,7 +327,7 @@ The same, but works for *btrfs* (slow-ish, but demonstrates shell commands):
 
         $ rh 'd && "[ $(rh -red -- %S | wc -l) = 0 ]".sh'
         $ rh 'd && "[ -z \"$(rh -red -- %S)\" ]".sh'
-        $ rh 'd && { [ -z "$(rh -red -- %S)" ] }.sh'
+        $ rh 'd && {[ -z "$(rh -red -- %S)" ]}.sh'
 
 Find empty (readable) directories (fast-ish, and works for *btrfs*):
 
@@ -336,7 +337,7 @@ Find symlinks whose immediate targets are also symlinks:
 
         $ rh -l 'l && "[ -L \"$(rh -L%%l -- %S)\" ]".sh'
         $ rh -l 'l && "[ -L \"$(readlink -- %S)\" ]".sh'
-        $ rh -l 'l && { [ -L "$(readlink -- %S)" ] }.sh'
+        $ rh -l 'l && {[ -L "$(readlink -- %S)" ]}.sh'
 
 Find all hard links to all regular files that have multiple hard links (very
 slow):

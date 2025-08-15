@@ -377,12 +377,12 @@ file to use for comparison purposes. See the B<Reference file fields>
 section below for details.
 
 As an alternative syntax, string literals can instead be enclosed by curly
-braces (C<{> and C<}>). Matching pairs of curly braces can appear unquoted
-in the string (even nested), but they can be quoted if necessary with a
-preceding backslash character (C<"\">). Backslashes can also be quoted with
-a preceding backslash. Any backslashes that do not precede a curly brace or
-another backslash are treated as normal characters, and are included in the
-string.
+braces (C<"{"> and C<"}">). Matching pairs of curly braces can appear
+unquoted in the string (even nested), but they can be quoted if necessary
+with a preceding backslash character (C<"\">). Backslashes can also be
+quoted with a preceding backslash. Any backslashes that do not precede a
+curly brace or another backslash are treated as normal characters, and are
+included in the string.
 
 This alternative syntax is particularly useful for shell commands that
 contain double quotes, because it makes it unnecessary to quote them with
