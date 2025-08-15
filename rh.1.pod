@@ -1945,7 +1945,7 @@ least on I<Solaris>).
 Find files on I<macOS> with ACLs that grant write access to the user
 C<drew>:
 
-    $ rh '(uid == $drew) ? uw : "user:[^:\n]+:drew:\d+:allow:write".reacl'
+    $ rh '(uid == $drew) ? uw : "user:[^:\n]+:drew:\d+:allow:write".rea'
 
 Find files with non-trivial access control lists (ACL):
 
