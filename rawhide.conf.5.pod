@@ -1709,7 +1709,7 @@ Like the C<reea> modifier, but apply the regex without case-sensitivity.
 =item C<sh> (or C<s>)
 
 This interprets the string literal, not as a pattern at all, but as an
-external shell command to execute via I<system(3)> (i.e., via
+external shell command to execute as if via I<system(3)> (i.e., via
 C</bin/sh>). It evaluates to the exit success status of the external shell command. If
 its exit status is zero, then the value is true (i.e., non-zero). Otherwise,
 it is false (i.e., zero).
@@ -1730,10 +1730,17 @@ C<%S> would be replaced with C<"/etc/passwd"> and C<"passwd">,
 respectively. To include a literal per cent sign (C<"%">) in the shell command, use
 C<%%>. It is an error if C<%> is not followed by C<s>, C<S>, or C<%>.
 
-Any shell meta-characters in the interpolated path or base name are quoted
-with preceding backslash characters (C<"\">) to prevent shell command
-injection, so there is no need to place any quote characters around C<%s> or
-C<%S>.
+There is generally no need to place any quote characters around C<%s> or
+C<%S>. To prevent shell command injection, they are replaced with C<"$1">
+and C<"$2">, respectively, and the corresponding full path and base name are
+passed to C</bin/sh> as separate positional arguments. This avoids the
+problem that there is no single way to quote data in a shell command that
+works correctly in all syntactic contexts.
+
+This will usually be fine, but if the double quote quoting used when
+interpolating C<%s> and C<%S> as C<"$1"> and C<"$2"> is inappropriate for a
+particular command, you can instead use C<$1> and C<$2> directly, including
+via the shell's B<Parameter Expansion> syntax.
 
 Every shell command is executed after safely changing the current working
 directory to the directory containing each candidate file. This minimizes

@@ -478,8 +478,8 @@ mutually exclusive.
 
 =item C<-x> C<'>I<cmd>C<'>
 
-Execute the shell command specified by I<cmd> via I<system(3)> (i.e., via
-C</bin/sh>) for each matching entry. It is an error to supply the C<-x>
+Execute the shell command specified by I<cmd> as if via I<system(3)> (i.e.,
+via C</bin/sh>) for each matching entry. It is an error to supply the C<-x>
 option more than once.
 
 The I<cmd> argument can contain C<%s> which represents the matching entry's
@@ -491,16 +491,16 @@ C<"/etc/passwd"> and C<"passwd">, respectively. To include a literal per
 cent sign (C<"%">) in the shell command, use C<%%>. It is an error if C<%>
 is not followed by C<s>, C<S>, or C<%>.
 
-There is no reason to place any quote characters around C<%s> or C<%S>. To
-prevent shell command injection, they are replaced with C<"$1"> or C<"$2">,
-respectively, and the corresponding full path and base name are passed to
-the C</bin/sh> command as separate positional arguments. This avoids the
+There is generally no need to place any quote characters around C<%s> or
+C<%S>. To prevent shell command injection, they are replaced with C<"$1">
+and C<"$2">, respectively, and the corresponding full path and base name are
+passed to C</bin/sh> as separate positional arguments. This avoids the
 problem that there is no single way to quote data in a shell command that
 works correctly in all syntactic contexts.
 
 This will usually be fine, but if the double quote quoting used when
 interpolating C<%s> and C<%S> as C<"$1"> and C<"$2"> is inappropriate for a
-particular command, you can instead use C<$1> and C<$2> directly, possibly
+particular command, you can instead use C<$1> and C<$2> directly, including
 via the shell's B<Parameter Expansion> syntax.
 
 For this option, the C<%s> interpolation is more likely to be useful than
@@ -530,8 +530,8 @@ are all mutually exclusive.
 
 =item C<-X> C<'>I<cmd>C<'>
 
-Execute the shell command specified by I<cmd> via I<system(3)> (i.e., via
-C</bin/sh>) for each matching entry. It is an error to supply the C<-X>
+Execute the shell command specified by I<cmd> as if via I<system(3)> (i.e.,
+via C</bin/sh>) for each matching entry. It is an error to supply the C<-X>
 option more than once.
 
 This is like the C<-x> option (see above), except that the shell command is
@@ -548,16 +548,16 @@ C<"/etc/passwd"> and C<"passwd">, respectively. To include a literal per
 cent sign (C<"%">) in the shell command, use C<%%>. It is an error if C<%>
 is not followed by C<s>, C<S>, or C<%>.
 
-There is no reason to place any quote characters around C<%s> or C<%S>. To
-prevent shell command injection, they are replaced with C<"$1"> or C<"$2">,
-respectively, and the corresponding full path and base name are passed to
-the C</bin/sh> command as separate positional arguments. This avoids the
+There is generally no need to place any quote characters around C<%s> or
+C<%S>. To prevent shell command injection, they are replaced with C<"$1">
+and C<"$2">, respectively, and the corresponding full path and base name are
+passed to C</bin/sh> as separate positional arguments. This avoids the
 problem that there is no single way to quote data in a shell command that
 works correctly in all syntactic contexts.
 
 This will usually be fine, but if the double quote quoting used when
 interpolating C<%s> and C<%S> as C<"$1"> and C<"$2"> is inappropriate for a
-particular command, you can instead use C<$1> and C<$2> directly, possibly
+particular command, you can instead use C<$1> and C<$2> directly, including
 via the shell's B<Parameter Expansion> syntax.
 
 For this option, the C<%S> interpolation is more likely to be useful than
