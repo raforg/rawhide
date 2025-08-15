@@ -66,18 +66,26 @@ then
 				test_rawhide "$rh -Y -L '%z\n' $d/symboth" "user::rw-,user:root:rwx,group::r--,mask::rwx,other::r--\n" "" 0 "-Y -L %z (symlink to acl+ea)"
 
 				test_rawhide "$rh    '\"*user:root:rwx*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".acl"
+				test_rawhide "$rh    '\"*user:root:rwx*\".ac'      $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".acl as .ac"
+				test_rawhide "$rh    '\"*user:root:rwx*\".a'       $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".acl as .a"
 				test_rawhide "$rh -y '\"*user:root:rwx*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .acl"
 				test_rawhide "$rh -Y '\"*user:root:rwx*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .acl"
 				if $rh -h | grep -q '\.iacl'
 				then
 					test_rawhide "$rh    '\"*user:ROOT:rwx*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".iacl"
+					test_rawhide "$rh    '\"*user:ROOT:rwx*\".iac'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".iacl as .iac"
+					test_rawhide "$rh    '\"*user:ROOT:rwx*\".ia'      $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".iacl as .ia"
 					test_rawhide "$rh -y '\"*user:ROOT:rwx*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .iacl"
 					test_rawhide "$rh -Y '\"*user:ROOT:rwx*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .iacl"
 				fi
 				if $rh -h | grep -q '\.reacl'
 				then
 					test_rawhide "$rh    '\"^user:root:rwx\$\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reacl"
+					test_rawhide "$rh    '\"^user:root:rwx\$\".reac'   $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reacl as .reac"
+					test_rawhide "$rh    '\"^user:root:rwx\$\".rea'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reacl as .rea"
 					test_rawhide "$rh    '\"^user:ROOT:rwx\$\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reiacl"
+					test_rawhide "$rh    '\"^user:ROOT:rwx\$\".reiac'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reiacl as .reiac"
+					test_rawhide "$rh    '\"^user:ROOT:rwx\$\".reia'   $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reiacl as .reia"
 					test_rawhide "$rh -y '\"^user:root:rwx\$\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .reacl"
 					test_rawhide "$rh -y '\"^user:ROOT:rwx\$\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .reiacl"
 					test_rawhide "$rh -Y '\"^user:root:rwx\$\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .reacl"
@@ -112,18 +120,26 @@ then
 			test_rawhide_grep "$rh -Y -L '%z\n' $d/symboth" "admin:[0-9]+:allow:write" "" 0 "-Y -L %z (symlink to acl+ea)"
 
 			test_rawhide      "$rh    '\"*group:*:allow:write*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".acl"
+			test_rawhide      "$rh    '\"*group:*:allow:write*\".ac'      $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".acl as .ac"
+			test_rawhide      "$rh    '\"*group:*:allow:write*\".a'       $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".acl as .a"
 			test_rawhide      "$rh -y '\"*group:*:allow:write*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .acl"
 			test_rawhide      "$rh -Y '\"*group:*:allow:write*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .acl"
 			if $rh -h | grep -q '\.iacl'
 			then
 				test_rawhide "$rh    '\"*group:*:ALLOW:write*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"  "" 0 ".iacl"
+				test_rawhide "$rh    '\"*group:*:ALLOW:write*\".iac'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"  "" 0 ".iacl as .iac"
+				test_rawhide "$rh    '\"*group:*:ALLOW:write*\".ia'      $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"  "" 0 ".iacl as .ia"
 				test_rawhide "$rh -y '\"*group:*:ALLOW:write*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"  "" 0 "-y .iacl"
 				test_rawhide "$rh -Y '\"*group:*:ALLOW:write*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"  "" 0 "-Y .iacl"
 			fi
 			if $rh -h | grep -q '\.reacl'
 			then
 				test_rawhide "$rh    '\"group:.*:allow:write\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"    "" 0 ".reacl"
+				test_rawhide "$rh    '\"group:.*:allow:write\".reac'   $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"    "" 0 ".reacl as  .reac"
+				test_rawhide "$rh    '\"group:.*:allow:write\".rea'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"    "" 0 ".reacl as .rea"
 				test_rawhide "$rh    '\"group:.*:ALLOW:write\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"    "" 0 ".reiacl"
+				test_rawhide "$rh    '\"group:.*:ALLOW:write\".reiac'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"    "" 0 ".reiacl as .reiac"
+				test_rawhide "$rh    '\"group:.*:ALLOW:write\".reia'   $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"    "" 0 ".reiacl as .reia"
 				test_rawhide "$rh -y '\"group:.*:allow:write\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"    "" 0 "-y .reacl"
 				test_rawhide "$rh -y '\"group:.*:ALLOW:write\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"    "" 0 "-y .reiacl"
 				test_rawhide "$rh -Y '\"group:.*:allow:write\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n"    "" 0 "-Y .reacl"
@@ -161,6 +177,8 @@ then
 				test_rawhide "$rh -v -L '%z\n' $d/both"    "         user:root:read_data/write_data/execute/append_data/read_attributes/write_attributes/read_xattr/write_xattr/read_acl/write_acl/write_owner/synchronize::allow,            owner@:read_data/write_data/append_data/read_attributes/write_attributes/read_xattr/write_xattr/read_acl/write_acl/write_owner/synchronize::allow,            group@:read_data/read_attributes/read_xattr/read_acl/synchronize::allow,         everyone@:read_data/read_attributes/read_xattr/read_acl/synchronize::allow\n" "" 0 "-v -L %z (acl+ea)"
 
 				test_rawhide "$rh    '\"*user:root:rwxp*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".acl"
+				test_rawhide "$rh    '\"*user:root:rwxp*\".ac'      $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".acl as .ac"
+				test_rawhide "$rh    '\"*user:root:rwxp*\".a'       $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".acl as .a"
 				test_rawhide "$rh -y '\"*user:root:rwxp*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .acl"
 				test_rawhide "$rh -Y '\"*user:root:rwxp*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .acl"
 
@@ -171,13 +189,19 @@ then
 				if $rh -h | grep -q '\.iacl'
 				then
 					test_rawhide "$rh    '\"*user:ROOT:rwxp*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".iacl"
+					test_rawhide "$rh    '\"*user:ROOT:rwxp*\".iac'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".iacl as .iac"
+					test_rawhide "$rh    '\"*user:ROOT:rwxp*\".ia'      $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".iacl as .ia"
 					test_rawhide "$rh -y '\"*user:ROOT:rwxp*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .iacl"
 					test_rawhide "$rh -Y '\"*user:ROOT:rwxp*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .iacl"
 				fi
 				if $rh -h | grep -q '\.reacl'
 				then
 					test_rawhide "$rh    '\"user:root:rwxp\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reacl"
+					test_rawhide "$rh    '\"user:root:rwxp\".reac'   $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reacl as .reac"
+					test_rawhide "$rh    '\"user:root:rwxp\".rea'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reacl as .rea"
 					test_rawhide "$rh    '\"user:ROOT:rwxp\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reiacl"
+					test_rawhide "$rh    '\"user:ROOT:rwxp\".reiac'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reiacl as .reiac"
+					test_rawhide "$rh    '\"user:ROOT:rwxp\".reia'   $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reiacl as .reia"
 					test_rawhide "$rh -y '\"user:root:rwxp\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .reacl"
 					test_rawhide "$rh -y '\"user:ROOT:rwxp\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .reiacl"
 					test_rawhide "$rh -Y '\"user:root:rwxp\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .reacl"
@@ -219,6 +243,8 @@ then
 				test_rawhide_grep "$rh -v -L '%z\n' $d/both"    "user:root:read_data/write_data.*:allow" "" 0 "-v -L %z (acl+ea)"
 
 				test_rawhide "$rh    '\"*user:root:rwxp*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".acl"
+				test_rawhide "$rh    '\"*user:root:rwxp*\".ac'      $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".acl as .ac"
+				test_rawhide "$rh    '\"*user:root:rwxp*\".a'       $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".acl as .a"
 				test_rawhide "$rh -y '\"*user:root:rwxp*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .acl"
 				test_rawhide "$rh -Y '\"*user:root:rwxp*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .acl"
 
@@ -229,13 +255,19 @@ then
 				if $rh -h | grep -q '\.iacl'
 				then
 					test_rawhide "$rh    '\"*user:ROOT:rwxp*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".iacl"
+					test_rawhide "$rh    '\"*user:ROOT:rwxp*\".iac'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".iacl as .iac"
+					test_rawhide "$rh    '\"*user:ROOT:rwxp*\".ia'      $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".iacl as .ia"
 					test_rawhide "$rh -y '\"*user:ROOT:rwxp*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .iacl"
 					test_rawhide "$rh -Y '\"*user:ROOT:rwxp*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .iacl"
 				fi
 				if $rh -h | grep -q '\.reacl'
 				then
 					test_rawhide "$rh    '\"user:root:rwxp\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reacl"
+					test_rawhide "$rh    '\"user:root:rwxp\".reac'   $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reacl as .reac"
+					test_rawhide "$rh    '\"user:root:rwxp\".rea'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reacl as .rea"
 					test_rawhide "$rh    '\"user:ROOT:rwxp\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reiacl"
+					test_rawhide "$rh    '\"user:ROOT:rwxp\".reiac'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reiacl as .reiac"
+					test_rawhide "$rh    '\"user:ROOT:rwxp\".reia'   $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reiacl as .reia"
 					test_rawhide "$rh -y '\"user:root:rwxp\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .reacl"
 					test_rawhide "$rh -y '\"user:ROOT:rwxp\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .reiacl"
 					test_rawhide "$rh -Y '\"user:root:rwxp\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .reacl"
@@ -281,18 +313,26 @@ then
 				test_rawhide_grep "$rh -Y -L '%z\n' $d/symboth" "user::rw-,user:$root:rwx,group::r--" "" 0 "-Y -L %z (symlink to acl+ea)"
 
 				test_rawhide "$rh    '\"*user:$root:rwx*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".acl"
+				test_rawhide "$rh    '\"*user:$root:rwx*\".ac'      $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".acl as .ac"
+				test_rawhide "$rh    '\"*user:$root:rwx*\".a'       $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".acl as .a"
 				test_rawhide "$rh -y '\"*user:$root:rwx*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .acl"
 				test_rawhide "$rh -Y '\"*user:$root:rwx*\".acl'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .acl"
 				if $rh -h | grep -q '\.iacl'
 				then
 					test_rawhide "$rh    '\"*user:$ROOT:rwx*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".iacl"
+					test_rawhide "$rh    '\"*user:$ROOT:rwx*\".iac'     $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".iacl as .iac"
+					test_rawhide "$rh    '\"*user:$ROOT:rwx*\".ia'      $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".iacl as .ia"
 					test_rawhide "$rh -y '\"*user:$ROOT:rwx*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .iacl"
 					test_rawhide "$rh -Y '\"*user:$ROOT:rwx*\".iacl'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .iacl"
 				fi
 				if $rh -h | grep -q '\.reacl'
 				then
 					test_rawhide "$rh    '\"^user:$root:rwx\$\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reacl"
+					test_rawhide "$rh    '\"^user:$root:rwx\$\".reac'   $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reacl as .reac"
+					test_rawhide "$rh    '\"^user:$root:rwx\$\".rea'    $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reacl as .rea"
 					test_rawhide "$rh    '\"^user:$ROOT:rwx\$\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reiacl"
+					test_rawhide "$rh    '\"^user:$ROOT:rwx\$\".reiac'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reiacl as .reiac"
+					test_rawhide "$rh    '\"^user:$ROOT:rwx\$\".reia'   $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 ".reiacl as .reia"
 					test_rawhide "$rh -y '\"^user:$root:rwx\$\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .reacl"
 					test_rawhide "$rh -y '\"^user:$ROOT:rwx\$\".reiacl' $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-y .reiacl"
 					test_rawhide "$rh -Y '\"^user:$root:rwx\$\".reacl'  $d" "$d/acl\n$d/both\n$d/symacl\n$d/symboth\n" "" 0 "-Y .reacl"
@@ -351,6 +391,7 @@ then
 				test_rawhide_grep "$rh -Y -L '%x\n' $d/symboth" "system\.posix_acl_access: "                                 "" 0 "-Y -L %x (symlink to acl+ea)"
 
 				test_rawhide      "$rh    '\"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n"                          "" 0 ".ea"
+				test_rawhide      "$rh    '\"*user.rawhide-attrtest: *\".e'  $d" "$d/both\n$d/ea\n"                          "" 0 ".ea as .e"
 				test_rawhide      "$rh -y '\"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n"                          "" 0 "-y .ea"
 				test_rawhide      "$rh -Y '\"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"    "" 0 "-Y .ea"
 
@@ -359,13 +400,16 @@ then
 				if $rh -h | grep -q '\.iea'
 				then
 					test_rawhide "$rh    '\"*user.rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n"                       "" 0 ".iea"
+					test_rawhide "$rh    '\"*user.rawhide-ATTRTEST: *\".ie'     $d" "$d/both\n$d/ea\n"                       "" 0 ".iea as .ie"
 					test_rawhide "$rh -y '\"*user.rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n"                       "" 0 "-y .iea"
 					test_rawhide "$rh -Y '\"*user.rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n" "" 0 "-Y .iea"
 				fi
 				if $rh -h | grep -q '\.reea'
 				then
 					test_rawhide "$rh    '\"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n"                         "" 0 ".reea"
+					test_rawhide "$rh    '\"^user.rawhide-attrtest:\s\".ree'   $d" "$d/both\n$d/ea\n"                         "" 0 ".reea as .ree"
 					test_rawhide "$rh    '\"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n"                         "" 0 ".reiea"
+					test_rawhide "$rh    '\"^user.rawhide-ATTRTEST:\s\".reie'  $d" "$d/both\n$d/ea\n"                         "" 0 ".reiea as .reie"
 					test_rawhide "$rh -y '\"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n"                         "" 0 "-y .reea"
 					test_rawhide "$rh -y '\"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n"                         "" 0 "-y .reiea"
 					test_rawhide "$rh -Y '\"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"   "" 0 "-Y .reea"
@@ -402,6 +446,7 @@ then
 			test_rawhide_grep "$rh -Y -L '%x\n' $d/symboth" "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80"   "" 0 "-Y -L %x (symlink to acl+ea)"
 
 			test_rawhide      "$rh    '\"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n"                        "" 0 ".ea"
+			test_rawhide      "$rh    '\"*user.rawhide-attrtest: *\".e'  $d" "$d/both\n$d/ea\n"                        "" 0 ".ea as .e"
 			test_rawhide      "$rh -y '\"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n"                        "" 0 "-y .ea"
 			test_rawhide      "$rh -Y '\"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"  "" 0 "-Y .ea"
 
@@ -410,13 +455,16 @@ then
 			if $rh -h | grep -q '\.iea'
 			then
 				test_rawhide "$rh    '\"*user.rawhide-ATTRTEST: *\".iea' $d" "$d/both\n$d/ea\n"                        "" 0 ".iea"
+				test_rawhide "$rh    '\"*user.rawhide-ATTRTEST: *\".ie'  $d" "$d/both\n$d/ea\n"                        "" 0 ".iea as .ie"
 				test_rawhide "$rh -y '\"*user.rawhide-ATTRTEST: *\".iea' $d" "$d/both\n$d/ea\n"                        "" 0 "-y .iea"
 				test_rawhide "$rh -Y '\"*user.rawhide-ATTRTEST: *\".iea' $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"  "" 0 "-Y .iea"
 			fi
 			if $rh -h | grep -q '\.reea'
 			then
 				test_rawhide "$rh    '\"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n"                       "" 0 ".reea"
+				test_rawhide "$rh    '\"^user.rawhide-attrtest:\s\".ree'   $d" "$d/both\n$d/ea\n"                       "" 0 ".reea as .ree"
 				test_rawhide "$rh    '\"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n"                       "" 0 ".reiea"
+				test_rawhide "$rh    '\"^user.rawhide-ATTRTEST:\s\".reie'  $d" "$d/both\n$d/ea\n"                       "" 0 ".reiea as .reie"
 				test_rawhide "$rh -y '\"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n"                       "" 0 "-y .reea"
 				test_rawhide "$rh -y '\"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n"                       "" 0 "-y .reiea"
 				test_rawhide "$rh -Y '\"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n" "" 0 "-Y .reea"
@@ -456,6 +504,7 @@ then
 				test_rawhide "$rh -Y -L '%x\n' $d/symlink" "\n"                                                               "" 0 "-Y -L %x (symlink to none but with its own ea)"
 
 				test_rawhide      "$rh    '\"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n$d/symlink\n"              "" 0 ".ea"
+				test_rawhide      "$rh    '\"*user.rawhide-attrtest: *\".e'  $d" "$d/both\n$d/ea\n$d/symlink\n"              "" 0 ".ea as .e"
 				test_rawhide      "$rh -y '\"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n$d/symlink\n"              "" 0 "-y .ea"
 				test_rawhide      "$rh -Y '\"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"    "" 0 "-Y .ea"
 
@@ -464,13 +513,16 @@ then
 				if $rh -h | grep -q '\.iea'
 				then
 					test_rawhide "$rh    '\"*user.rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n$d/symlink\n"           "" 0 ".iea"
+					test_rawhide "$rh    '\"*user.rawhide-ATTRTEST: *\".ie'     $d" "$d/both\n$d/ea\n$d/symlink\n"           "" 0 ".iea as .ie"
 					test_rawhide "$rh -y '\"*user.rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n$d/symlink\n"           "" 0 "-y .iea"
 					test_rawhide "$rh -Y '\"*user.rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n" "" 0 "-Y .iea"
 				fi
 				if $rh -h | grep -q '\.reea'
 				then
 					test_rawhide "$rh    '\"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n$d/symlink\n"             "" 0 ".reea"
+					test_rawhide "$rh    '\"^user.rawhide-attrtest:\s\".ree'   $d" "$d/both\n$d/ea\n$d/symlink\n"             "" 0 ".reea as .ree"
 					test_rawhide "$rh    '\"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n$d/symlink\n"             "" 0 ".reiea"
+					test_rawhide "$rh    '\"^user.rawhide-ATTRTEST:\s\".reie'  $d" "$d/both\n$d/ea\n$d/symlink\n"             "" 0 ".reiea as .reie"
 					test_rawhide "$rh -y '\"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n$d/symlink\n"             "" 0 "-y .reea"
 					test_rawhide "$rh -y '\"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n$d/symlink\n"             "" 0 "-y .reiea"
 					test_rawhide "$rh -Y '\"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"   "" 0 "-Y .reea"
@@ -512,6 +564,7 @@ then
 				test_rawhide_grep "$rh -Y -L '%x\n' $d/symboth" "rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80" "" 0 "-Y -L %x (symlink to acl+ea)"
 
 				test_rawhide      "$rh    '\"*rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n"                          "" 0 ".ea"
+				test_rawhide      "$rh    '\"*rawhide-attrtest: *\".e'  $d" "$d/both\n$d/ea\n"                          "" 0 ".ea as .e"
 				test_rawhide      "$rh -y '\"*rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n"                          "" 0 "-y .ea"
 				test_rawhide      "$rh -Y '\"*rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"    "" 0 "-Y .ea"
 
@@ -520,13 +573,16 @@ then
 				if $rh -h | grep -q '\.iea'
 				then
 					test_rawhide "$rh    '\"*rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n"                       "" 0 ".iea"
+					test_rawhide "$rh    '\"*rawhide-ATTRTEST: *\".ie'     $d" "$d/both\n$d/ea\n"                       "" 0 ".iea as .ie"
 					test_rawhide "$rh -y '\"*rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n"                       "" 0 "-y .iea"
 					test_rawhide "$rh -Y '\"*rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n" "" 0 "-Y .iea"
 				fi
 				if $rh -h | grep -q '\.reea'
 				then
 					test_rawhide "$rh    '\"rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n"                         "" 0 ".reea"
+					test_rawhide "$rh    '\"rawhide-attrtest:\s\".ree'   $d" "$d/both\n$d/ea\n"                         "" 0 ".reea as .ree"
 					test_rawhide "$rh    '\"rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n"                         "" 0 ".reiea"
+					test_rawhide "$rh    '\"rawhide-ATTRTEST:\s\".reie'  $d" "$d/both\n$d/ea\n"                         "" 0 ".reiea as .reie"
 					test_rawhide "$rh -y '\"rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n"                         "" 0 "-y .reea"
 					test_rawhide "$rh -y '\"rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n"                         "" 0 "-y .reiea"
 					test_rawhide "$rh -Y '\"rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"   "" 0 "-Y .reea"
@@ -625,6 +681,7 @@ then
 
 				# listxattr() fails with symlinks (unless following), so # skip links
 				test_rawhide      "$rh    '!link && \"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n"                          "" 0 ".ea"
+				test_rawhide      "$rh    '!link && \"*user.rawhide-attrtest: *\".e'  $d" "$d/both\n$d/ea\n"                          "" 0 ".ea as .e"
 				test_rawhide      "$rh -y '!link && \"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n"                          "" 0 "-y .ea"
 				test_rawhide      "$rh -Y '         \"*user.rawhide-attrtest: *\".ea' $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"    "" 0 "-Y .ea"
 
@@ -633,13 +690,16 @@ then
 				if $rh -h | grep -q '\.iea'
 				then
 					test_rawhide "$rh    '!link && \"*user.rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n"                       "" 0 ".iea"
+					test_rawhide "$rh    '!link && \"*user.rawhide-ATTRTEST: *\".ie'     $d" "$d/both\n$d/ea\n"                       "" 0 ".iea as .ie"
 					test_rawhide "$rh -y '!link && \"*user.rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n"                       "" 0 "-y .iea"
 					test_rawhide "$rh -Y '         \"*user.rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n" "" 0 "-Y .iea"
 				fi
 				if $rh -h | grep -q '\.reea'
 				then
 					test_rawhide "$rh    '!link && \"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n"                         "" 0 ".reea"
+					test_rawhide "$rh    '!link && \"^user.rawhide-attrtest:\s\".ree'   $d" "$d/both\n$d/ea\n"                         "" 0 ".reea as .ree"
 					test_rawhide "$rh    '!link && \"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n"                         "" 0 ".reiea"
+					test_rawhide "$rh    '!link && \"^user.rawhide-ATTRTEST:\s\".reie'  $d" "$d/both\n$d/ea\n"                         "" 0 ".reiea as .reie"
 					test_rawhide "$rh -y '!link && \"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n"                         "" 0 "-y .reea"
 					test_rawhide "$rh -y '!link && \"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n"                         "" 0 "-y .reiea"
 					test_rawhide "$rh -Y '\"^user.rawhide-attrtest:\s\".reea'  $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"   "" 0 "-Y .reea"
