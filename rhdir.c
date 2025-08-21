@@ -1426,19 +1426,94 @@ void visitf_long(void)
 
 /*
 
-int interpolate_command(const char *srccmd, char *command, int cmdbufsize);
+static void init_user_shell();
+
+Call this the first time we need to interpolate a command to be executed
+via the user's login shell (or $RAWHIDE_USER_SHELL). It determines what
+the shell is so we know how to interpolate %s/%S, and it prepares to
+execute commands.
+
+*/
+
+static void init_user_shell()
+{
+	/* Obtain and store the user shell, and any options */
+
+	if (attr.user_shell && *attr.user_shell && geteuid())
+	{
+		char *start, *s;
+		struct stat statbuf[1];
+		int ac;
+
+		attr.user_shell_copy = strdup(attr.user_shell);
+
+		for (start = attr.user_shell_copy, ac = 0; ac < USER_SHELLV_SIZE - 1 && (s = strtok(start, "\t\n\v\r ")); start = NULL)
+			attr.user_shellv[ac++] = s;
+
+		attr.user_shellv[ac] = NULL;
+
+		if (ac == USER_SHELLV_SIZE - 1)
+			fatal("invalid $RAWHIDE_USER_SHELL value: %s (too many options)", ok(attr.user_shell));
+
+		if (*attr.user_shellv[0] != '/')
+			fatal("invalid $RAWHIDE_USER_SHELL value: %s (not an absolute path)", ok(attr.user_shell));
+
+		if (stat(attr.user_shellv[0], statbuf) == -1)
+			fatalsys("invalid $RAWHIDE_USER_SHELL value: %s", ok(attr.user_shell));
+	}
+	else
+	{
+		struct passwd *pwd = getpwuid(getuid());
+
+		attr.user_shellv[0] = (pwd && pwd->pw_shell && *pwd->pw_shell == '/') ? pwd->pw_shell : "/bin/sh";
+		attr.user_shellv[1] = NULL;
+	}
+
+	/* Prepare to execute the shell (different shells have different requirements) */
+
+	/* Mostly, sh accepts: -c -- command $0 $1 $2 (Explicitly stop parsing options ASAP, before command */
+	/* FreeBSD sh accepts: -c command -- $0 $1 $2 (Explicitly stop parsing options ASAP, after command */
+	/* csh/tcsh accept:    -c command $1 $2       (No -- at all, and no $0) */
+	/* fish accepts:       -c command -- $1 $2    (-- after command, and no $0) */
+
+	attr.ush_basename = strrchr(attr.user_shellv[0], '/') + 1;
+	attr.ush_like_csh = !strcmp(attr.ush_basename, "csh") || !strcmp(attr.ush_basename, "tcsh") || attr.user_shell_like_csh;
+	attr.ush_like_fish = !strcmp(attr.ush_basename, "fish");
+	attr.ush_command_is_optarg =
+	#ifdef HAVE_FREEBSD_EA
+		!strcmp(attr.user_shellv[0], "/bin/sh") ||
+	#endif
+		attr.ush_like_csh || attr.ush_like_fish;
+
+	attr.user_shell_init_done = 1;
+}
+
+/*
+
+int interpolate_command(const char *srccmd, char *command, int cmdbufsize, int for_user_shell);
 
 Interpolate the current file path/name into attr.command, storing the result
 in the given command buffer of size cmdbufsize. Return 0 on success, or -1
 on error after emitting an error message and setting attr.exit_status to
 EXIT_FAILURE.
 
+If for_user_shell is 1, the user's login shell (or $RAWHIDE_USER_SHELL) is
+checked in case interpolating %s/%S is affected, and preparations are made
+to execute the resulting command.
+
 */
 
-int interpolate_command(const char *srccmd, char *command, int cmdbufsize)
+int interpolate_command(const char *srccmd, char *command, int cmdbufsize, int for_user_shell)
 {
 	const char *src;
 	char *dst;
+	const char *rep, *r;
+	size_t len;
+
+	/* Determine the user's login shell (or $RAWHIDE_USER_SHELL) */
+
+	if (for_user_shell && !attr.user_shell_init_done)
+		init_user_shell();
 
 	src = srccmd;
 	dst = command;
@@ -1468,7 +1543,12 @@ int interpolate_command(const char *srccmd, char *command, int cmdbufsize)
 			{
 				/* Interpolate "$1" (for the file path %s) into the command */
 
-				if (dst + 4 - command >= cmdbufsize)
+				if (for_user_shell && attr.ush_like_fish) /* For fish, it's $argv[1] */
+					rep = "$argv[1]", len = 8;
+				else
+					rep = "\"$1\"", len = 4;
+
+				if (dst + len - command >= cmdbufsize)
 				{
 					error("command is too big: %s (%s)", ok(srccmd), ok2(attr.fpath));
 					attr.exit_status = EXIT_FAILURE;
@@ -1476,16 +1556,19 @@ int interpolate_command(const char *srccmd, char *command, int cmdbufsize)
 					return -1;
 				}
 
-				*dst++ = '"';
-				*dst++ = '$';
-				*dst++ = '1';
-				*dst++ = '"';
+				for (r = rep; *r; ++r)
+					*dst++ = *r;
 			}
 			else if (*src == 'S')
 			{
 				/* Interpolate "$2" (for the file base name (or / for /) %S) into the command */
 
-				if (dst + 4 - command >= cmdbufsize)
+				if (for_user_shell && attr.ush_like_fish) /* For fish, it's $argv[2] */
+					rep = "$argv[2]", len = 8;
+				else
+					rep = "\"$2\"", len = 4;
+
+				if (dst + len - command >= cmdbufsize)
 				{
 					error("command is too big: %s (%s)", ok(srccmd), ok2(attr.fpath));
 					attr.exit_status = EXIT_FAILURE;
@@ -1493,10 +1576,8 @@ int interpolate_command(const char *srccmd, char *command, int cmdbufsize)
 					return -1;
 				}
 
-				*dst++ = '"';
-				*dst++ = '$';
-				*dst++ = '2';
-				*dst++ = '"';
+				for (r = rep; *r; ++r)
+					*dst++ = *r;
 			}
 			else if (*src == '%')
 			{
@@ -1560,7 +1641,7 @@ void visitf_execute(void)
 {
 	static char command[CMDBUFSIZE];
 
-	if (interpolate_command(attr.command, command, CMDBUFSIZE) == -1)
+	if (interpolate_command(attr.command, command, CMDBUFSIZE, FOR_SH) == -1)
 		return;
 
 	debug(("command: %s", command));
@@ -1676,7 +1757,7 @@ void visitf_execute_local(void)
 
 	/* Prepare the command for this entry */
 
-	if (interpolate_command(attr.command, command, CMDBUFSIZE) == -1)
+	if (interpolate_command(attr.command, command, CMDBUFSIZE, FOR_SH) == -1)
 		return;
 
 	debug(("command: %s", command));
@@ -1729,45 +1810,8 @@ SIGQUIT will be ignored in the process that calls systeml().
 
 extern char **environ;
 
-static int systeml(const char *command, ...)
+static int spawn(const char **argv)
 {
-	/* Check if /bin/sh is available on this system */
-
-	#if 0 /* Unused here */
-	if (!command)
-		return system(NULL);
-	#endif
-
-	/* Build the /bin/sh -c command vector (support 64 positional arguments) */
-
-	#define MAX_ARGS 70
-	const char *argv[MAX_ARGS];
-	const char **av = argv;
-
-	*av++ = "/bin/sh";
-	*av++ = "-c";
-	#ifndef HAVE_FREEBSD_EA /* FreeBSD's /bin/sh doesn't doesn't work with -- here */
-	*av++ = "--";
-	#endif
-	*av++ = command;
-	#ifdef HAVE_FREEBSD_EA /* FreeBSD's /bin/sh works with -- here */
-	*av++ = "--";
-	#endif
-	*av++ = "sh"; /* $0 */
-
-	/* Append the variadic arguments */
-
-	va_list args;
-	va_start(args, command);
-	while (av < argv + MAX_ARGS && (*av = va_arg(args, char *)))
-		++av;
-	va_end(args);
-	#if 0 /* Unused here */
-	if (av == argv + MAX_ARGS)
-		return errno = ENOMEM, -1;
-	#endif
-	#undef MAX_ARGS
-
 	/* Ignore SIGINT and SIGQUIT, and block SIGCHLD */
 
 	struct sigaction action[1], saveint[1], savequit[1];
@@ -1815,6 +1859,51 @@ static int systeml(const char *command, ...)
 	return errno = spawn_errno, status;
 }
 
+static int systeml(const char *command, ...)
+{
+	/* Check if /bin/sh is available on this system */
+
+	#if 0 /* Unused here */
+	if (!command)
+		return system(NULL);
+	#endif
+
+	/* Build the /bin/sh -c command vector (support 64 positional arguments) */
+
+	#define ARGV_SIZE 70
+	const char *argv[ARGV_SIZE];
+	const char **av = argv;
+
+	*av++ = "/bin/sh";
+	*av++ = "-c";
+	#ifndef HAVE_FREEBSD_EA /* FreeBSD's /bin/sh doesn't work with -- here */
+	*av++ = "--";
+	#endif
+	*av++ = command;
+	#ifdef HAVE_FREEBSD_EA /* FreeBSD's /bin/sh works with -- here */
+	*av++ = "--";
+	#endif
+	*av++ = "sh"; /* $0 */
+
+	/* Append the variadic arguments */
+
+	va_list args;
+	va_start(args, command);
+
+	while (av < argv + ARGV_SIZE && (*av = va_arg(args, char *)))
+		++av;
+
+	va_end(args);
+
+	#if 0 /* Unused here */
+	if (av == argv + ARGV_SIZE)
+		return errno = ENOSPC, -1;
+	#endif
+	#undef ARGV_SIZE
+
+	return spawn(argv);
+}
+
 /* 
 
 int syscmd(const char *cmd);
@@ -1827,6 +1916,94 @@ arguments ($1=%s, $2=%S) to avoid the need to quote anything.
 int syscmd(const char *cmd)
 {
 	int rc = systeml(cmd, attr.fpath, get_basename(), (char *)NULL);
+
+	if (rc != -1 && WIFSIGNALED(rc) && (WTERMSIG(rc) == SIGINT || WTERMSIG(rc) == SIGQUIT))
+		kill(getpid(), WTERMSIG(rc));
+
+	return rc;
+}
+
+/* 
+
+int usysteml(const char *command, ...);
+
+Like system(), but uses the user's login shell, and takes additional
+arguments to pass to it after the -c option and command. The final argument
+must be (char *)NULL. The additional arguments can be referred to in the
+command as $1, $2, etc. You must not include an argument for $0. That is
+included automatically (e.g., "sh"). Only 64-ish such positional arguments
+are supported ($1..${64}).
+
+During execution of the command, SIGCHLD will be blocked, and SIGINT and
+SIGQUIT will be ignored in the process that calls usysteml().
+
+If $RAWHIDE_USER_SHELL is set (non-root users only), it specifies an
+alternative shell to use instead of the user's login shell. Additional
+options may be included.
+
+If the shell is csh or tcsh or fish, or if $RAWHIDE_USER_SHELL_LIKE_CSH=1
+then the argument that represents $0 is not included when invoking the shell,
+because not all shells take that argument.
+
+*/
+
+static int usysteml(const char *command, ...)
+{
+	#define ARGV_SIZE 70
+	const char *argv[ARGV_SIZE];
+	const char **av = argv;
+	int ac;
+
+	/* Build the shell -c command vector (support 64-ish positional arguments) */
+
+	for (ac = 0; attr.user_shellv[ac]; ++ac)
+		*av++ = attr.user_shellv[ac];
+
+	*av++ = "-c";
+
+	if (!attr.ush_command_is_optarg) /* Stop parsing options before command, when possible */
+		*av++ = "--";
+
+	*av++ = command;
+
+	if (attr.ush_command_is_optarg && !attr.ush_like_csh) /* Stop parsing options after command, when unavoidable */
+		*av++ = "--";
+
+	if (!attr.ush_like_csh && !attr.ush_like_fish)
+		*av++ = attr.ush_basename; /* $0 */
+
+	/* Append the variadic arguments */
+
+	va_list args;
+	va_start(args, command);
+
+	while (av < argv + ARGV_SIZE && (*av = va_arg(args, char *)))
+		++av;
+
+	va_end(args);
+
+	#if 0 /* Unused here */
+	if (av == argv + ARGV_SIZE)
+		return errno = ENOSPC, -1;
+	#endif
+	#undef ARGV_SIZE
+
+	return spawn(argv);
+}
+
+/* 
+
+int usyscmd(const char *cmd);
+
+Like syscmd(), but uses the user's login shell (or $RAWHIDE_USER_SHELL)
+rather than /bin/sh. Propagates SIGINT/SIGQUIT to rh. Also includes
+positional arguments ($1=%s, $2=%S) to avoid the need to quote anything.
+
+*/
+
+int usyscmd(const char *cmd)
+{
+	int rc = usysteml(cmd, attr.fpath, get_basename(), (char *)NULL);
 
 	if (rc != -1 && WIFSIGNALED(rc) && (WTERMSIG(rc) == SIGINT || WTERMSIG(rc) == SIGQUIT))
 		kill(getpid(), WTERMSIG(rc));

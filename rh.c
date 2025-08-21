@@ -137,8 +137,8 @@ static void help_message(void)
 	printf("  ?:  ||  &&  |  ^  &  == !=  < > <= >=  << >>  + -  * / %%  - ~ !\n");
 
 	printf("\nRawhide tokens:\n");
-	printf("  \"pattern\"  \"pattern\".modifier  \"/path\".field  \"cmd\".sh\n");
-	printf("  {pattern}  {pattern}.modifier  {/path}.field  {cmd}.sh\n");
+	printf("  \"pattern\"  \"pattern\".modifier  \"/path\".field  \"cmd\".sh  \"cmd\".ush\n");
+	printf("  {pattern}  {pattern}.modifier  {/path}.field  {cmd}.sh  {cmd}.ush\n");
 	printf("  123 0777 0xffff  1K 2M 3G  1k 2m 3g  $user @group  $$ @@\n");
 	printf("  [yyyy/mm/dd] [yyyy/mm/dd hh:mm:ss]\n");
 
@@ -560,6 +560,8 @@ int main(int argc, char *argv[])
 	attr.fea_solaris_no_statinfo = env_flag("RAWHIDE_SOLARIS_EA_NO_STATINFO");
 	attr.fea_size = env_int("RAWHIDE_EA_SIZE", 1, -1, 0);
 	attr.no_implicit_expr_heuristic = env_flag("RAWHIDE_NO_IMPLICIT_EXPR_HEURISTIC");
+	attr.user_shell = getenv("RAWHIDE_USER_SHELL");
+	attr.user_shell_like_csh = env_flag("RAWHIDE_USER_SHELL_LIKE_CSH");
 
 	attr.test_cmd_max = env_int("RAWHIDE_TEST_CMD_MAX", 1, -1, -1);
 	attr.test_attr_format = env_flag("RAWHIDE_TEST_ATTR_FORMAT");
@@ -1046,7 +1048,7 @@ int main(int argc, char *argv[])
 	if (opt_V)
 		version_message();
 
-	/* For -X and "cmd".sh, remove cwd from $PATH (after debug config), affects -x as well */
+	/* For -X, "cmd".sh, and "cmd".ush, remove cwd from $PATH (after debug config), affects -x as well */
 
 	if (remove_danger_from_path() == -1)
 		fatalsys("failed to remove cwd from path");
@@ -1336,6 +1338,8 @@ int main(int argc, char *argv[])
 	}
 
 	free(attr.search_stack);
+	if (attr.user_shell_copy)
+		free(attr.user_shell_copy);
 
 	exit(attr.exit_status);
 }

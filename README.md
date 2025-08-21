@@ -138,8 +138,8 @@ a high-level interface to the built-in symbols mentioned above, and makes
        ?:  ||  &&  |  ^  &  == !=  < > <= >=  << >>  + -  * / %  - ~ !
 
      Rawhide tokens:
-       "pattern"  "pattern".modifier  "/path".field  "cmd".sh
-       {pattern}  {pattern}.modifier  {/path}.field  {cmd}.sh
+       "pattern"  "pattern".modifier  "/path".field  "cmd".sh  "cmd".ush
+       {pattern}  {pattern}.modifier  {/path}.field  {cmd}.sh  {cmd}.ush
        123 0777 0xffff  1K 2M 3G  1k 2m 3g  $user @group  $$ @@
        [yyyy/mm/dd] [yyyy/mm/dd hh:mm:ss]
 
@@ -157,7 +157,7 @@ a high-level interface to the built-in symbols mentioned above, and makes
        .mime         .imime        .remime       .reimime
        .acl          .iacl         .reacl        .reiacl
        .ea           .iea          .reea         .reiea
-       .sh
+       .sh           .ush
        Case-insensitive glob matching is available here (i)
        Perl-compatible regular expressions are available here (re)
        File types and MIME types are available here (what, mime)

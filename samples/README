@@ -32,3 +32,14 @@ will consume half of the data space, but that's probably fine.
     make
     sudo make install
 
+perlsh
+------
+This is the wrapper script mentioned in rawhide.conf(5) that adapts perl for
+use with "cmd".ush. Perl doesn't match the standard login shell invocation
+convention, but this script does, so it can be used by rawhide as a user
+shell.
+
+	sudo cp -p samples/perlsh /usr/local/bin
+	RAWHIDE_USER_SHELL=/usr/local/bin/perlsh
+	export RAWHIDE_USER_SHELL
+

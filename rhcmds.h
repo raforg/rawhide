@@ -153,6 +153,7 @@ void c_reiea(llong i);
 #endif
 #endif
 void c_sh(llong i);
+void c_ush(llong i);
 
 void r_exists(llong i);
 void r_dev(llong i);

@@ -221,7 +221,7 @@ liberties taken):
       | "mime" | "imime  | "remime" | "reimime"
       | "acl"  | "iacl"  | "reacl"  | "reiacl"
       | "ea"   | "iea"   | "reea"   | "reiea"
-      | "sh"
+      | "sh"   | "ush"
 
   <reference-file> ::=
       STRING NOSPACE "." NOSPACE <reference-file-field>
@@ -332,8 +332,9 @@ necessary.
 
 This matters when using the C<prune>, C<trim>, or C<exit> built-ins (see
 below), because they have control flow side-effects when they are
-evaluated. It is also important when using the C<texists> built-in, the C<sh> "pattern"
-modifier, and the C<exists> reference file field (see below).
+evaluated. It is also important when using the C<texists> built-in, the
+C<sh> and C<ush> "pattern" modifiers, and the C<exists> reference file field
+(see below).
 
 All the other binary operators always evaluate both operands.
 
@@ -1236,7 +1237,7 @@ and limit the size of candidate files that this is applied to.
 This probably shouldn't be used with very large files. It would require a
 lot of memory or swap, and on 32-bit systems, the possible file size is also
 limited by the available address space. If this is an issue, you can always
-use I<grep(1)> (or similar) via the C<sh> "pattern" modifier instead.
+use I<grep(1)> via the C<sh> or C<ush> "pattern" modifiers instead.
 
 Also note that this only works with regular files that are readable to the
 current user.
@@ -1760,6 +1761,74 @@ working directory back to the initial working directory. Also note that
 C<%s> suffers from many path-based race conditions, which is insecure on
 hosts with malicious local actors that have write access to the directory
 tree being searched, and so should not generally be used.
+
+=item C<ush> (or C<u>)
+
+Like the C<sh> modifier (see above), except that the command string is
+executed by the user's login shell, as specified in the C</etc/passwd> file,
+rather than as if by I<system(3)> (i.e., C</bin/sh>).
+
+If the environment variable C<RAWHIDE_USER_SHELL> is set, its value must
+specify the absolute path to an alternative shell to use instead of the
+user's login shell. This is only available to non-C<root> users (as it could
+be dangerous for C<root>). The alternative shell will be invoked in the same
+way that the user's login shell would be, which is the same way that
+C</bin/sh> is invoked by the C<sh> modifier.
+
+The user's login shell (or alternative shell) must accept a C<-c> option
+which causes it to interpret its first non-option argument as a command
+string to execute. It must also accept additional command line arguments
+that represent the shell's base name, and the positional parameters for the
+command. An exception to this requirement is made for I<csh>, I<tcsh>, and
+I<fish>, whose first argument after the command is the command's first
+positional parameter, rather than the shell's base name. If the user's login
+shell (or alternative shell) isn't named C<csh> or C<tcsh> or C<fish>, and
+doesn't take an argument to represent the shell's base name, then you must
+set the environment variable C<RAWHIDE_USER_SHELL_LIKE_CSH=1> to cause I<rh>
+to invoke it without that argument. The user's login shell (or alternative
+shell) must also have command syntax such that C<"$1"> and C<"$2">
+represent, respectively, the first and second positional arguments passed to
+it on its command line. An exception to this requirement is made for
+I<fish>, whose corresponding syntax is C<$argv[1]> and C<$argv[2]>. Any
+other non-I<POSIX> shells can only be used if you promise to never use the
+C<%s> or C<%S> notation, but instead always use the shell's own notation for
+positional parameters, whatever that might be. Note that such shells will
+usually also require that you set the environment variable
+C<RAWHIDE_USER_SHELL_LIKE_CSH=1>.
+
+B<Note:> It is possible to invoke an alternative shell with command line
+options. If the value of the environment variable C<RAWHIDE_USER_SHELL>
+contains any ASCII whitespace characters, the command is split into the
+absolute path to the alternative shell, and its whitespace-separated command
+line options. No other parsing is done. The additional command line options
+cannot be quoted, and so cannot themselves contain any whitespace characters
+(nor can the path to the shell). No shell syntax is supported. It is just a
+vector of whitespace-separated strings.
+
+B<Warning:> Search criteria expressions that use the C<ush> "pattern"
+modifier are not portable.
+
+B<Warning:> This can be much slower than the C<sh> modifier, depending on
+the choice of shell. Based on a trivial test on I<Linux>, here are some
+timing comparisons against C</bin/sh>: I<ksh> is 1.64 times slower, I<bash>
+is 1.67 times slower, I<csh> is 5.48 times slower, I<tcsh> is 5.53 times
+slower, I<fish> is 7.10 times slower, and I<zsh> is 21.85 times slower. But
+the language features of these or other shells might make it worthwhile
+anyway.
+
+B<Warning>: Here be mighty dragons. With the use of a wrapper script, this
+even allows access to other languages that don't match the standard login
+shell invocation convention. For example, the following wrapper script would
+allow you to use I<perl> as the user shell:
+
+    #!/bin/sh
+    # usage (via rh .ush): perlsh -c -- $cmd $0 $1 $2
+    exec /usr/bin/perl -E "$3" "$5" "$6"
+
+But this is getting silly now. Although, it's only 2.73 times slower than
+C</bin/sh>, so maybe it's not so silly. The I<python3> equivalent (no
+wrapper script needed, just C<RAWHIDE_USER_SHELL_LIKE_CSH=1>) is 16.72 times
+slower than C</bin/sh>.
 
 =back
 

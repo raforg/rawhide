@@ -1440,7 +1440,7 @@ void c_reiea(llong i) { ea_re(i, PCRE2_CASELESS); }
 void c_sh(llong i)
 {
 	char command[CMDBUFSIZE];
-	int dot_fd = -1;
+	int dot_fd;
 
 	/* Change cwd to the file's directory (to avoid path-based race conditions) */
 
@@ -1448,7 +1448,33 @@ void c_sh(llong i)
 
 	/* Prepare the command for this entry and execute it */
 
-	Stack[SP++] = interpolate_command(&Strbuf[i], command, CMDBUFSIZE) != -1 && syscmd(command) == 0;
+	Stack[SP++] = interpolate_command(&Strbuf[i], command, CMDBUFSIZE, FOR_SH) != -1 && syscmd(command) == 0;
+
+	/* Change cwd back */
+
+	if (dot_fd != -1)
+	{
+		if (fchdir(dot_fd) == -1)
+			fatalsys("fchdir back");
+
+		close(dot_fd);
+	}
+}
+
+/*  Execute a shell command with usyscmd() */
+
+void c_ush(llong i)
+{
+	char command[CMDBUFSIZE];
+	int dot_fd;
+
+	/* Change cwd to the file's directory (to avoid path-based race conditions) */
+
+	dot_fd = chdir_local(0);
+
+	/* Prepare the command for this entry and execute it */
+
+	Stack[SP++] = interpolate_command(&Strbuf[i], command, CMDBUFSIZE, FOR_USH) != -1 && usyscmd(command) == 0;
 
 	/* Change cwd back */
 
@@ -1730,6 +1756,7 @@ char *instruction_name(void (*func)(llong))
 		#endif
 		#endif
 		(func == c_sh) ? "sh" :
+		(func == c_ush) ? "ush" :
 		(func == r_exists) ? "rexists" :
 		(func == r_dev) ? "rdev" :
 		(func == r_major) ? "rmajor" :

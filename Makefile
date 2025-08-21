@@ -385,6 +385,7 @@ help:
 	@echo "  samples/.rh.sh            - Shell functions/aliases to save keystrokes"
 	@echo "  samples/brevity.rh        - Extra concise aliases for some built-ins"
 	@echo "  samples/rawhide.conf-tiny - Small rawhide.conf for use with tiny static size"
+	@echo "  samples/perlsh            - Wrapper script to adapt perl for use with .ush"
 	@echo
 
 # vi:set ts=4 sw=4:

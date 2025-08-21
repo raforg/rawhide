@@ -24,7 +24,7 @@
 
 . tests/.common
 
-label="glob/pcre/sh pattern modifiers"
+label="glob/pcre/sh/ush pattern modifiers"
 
 touch $d/f
 mkdir $d/d
@@ -646,6 +646,109 @@ test_rawhide "$rh -e '{ { { false; } } }.sh'                 $d" "" ""          
 test_rawhide "$rh -e '{ { { { false; } } } }.sh'             $d" "" ""                                                                                                                         0 "{ { { { false; } } } }.sh (nested curly braces)"
 test_rawhide "$rh -e '{ { { false \"\\{\" \"\\{\"; } } }.sh' $d" "" ""                                                                                                                         0 "{ { { false; \\{ \\{ } } }.sh (nested curly braces with quoted opening curly braces)"
 test_rawhide "$rh -e '{ { { false \"\\}\" \"\\}\"; } } }.sh' $d" "" ""                                                                                                                         0 "{ { { false; \\} \\} } } }.sh (nested curly braces with quoted closing curly braces)"
+
+# Test ush (Note: This assumes that the current user's login shell is POSIX compatible!)
+
+test_rawhide_post_hook() { test_rh_sort_post_hook; }
+
+test_rawhide "$rh -e '\"false\".ush'           $d" ""                                         "" 0 ".ush false"
+test_rawhide "$rh -e '\"true\".ush'            $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 ".ush true"
+test_rawhide "$rh -e '\"[ str = other ]\".ush' $d" ""                                         "" 0 ".ush [ str = other ]"
+test_rawhide "$rh -e '\"[ str = str ]\".ush'   $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 ".ush [ str = str ]"
+if [ $(uname) != FreeBSD ] || [ $(id -u) != 0 ] # FreeBSD's root's login shell is csh
+then
+	test_rawhide "$rh -e '\"unexpected-executable 2>/dev/null\".ush' $d" "" "" 0 "\"\".ush unexpected executable"
+	test_rawhide "$rh -e '{unexpected-executable 2>/dev/null}.ush'   $d" "" "" 0 "{}.ush unexpected executable"
+fi
+
+test_rawhide "$rh -e '{false}.ush'           $d" ""                                         "" 0 ".ush false"
+test_rawhide "$rh -e '{true}.ush'            $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 ".ush true"
+test_rawhide "$rh -e '{[ str = other ]}.ush' $d" ""                                         "" 0 ".ush [ str = other ]"
+test_rawhide "$rh -e '{[ str = str ]}.ush'   $d" "$d\n$d/d\n$d/f\n$d/linkabs\n$d/linkrel\n" "" 0 ".ush [ str = str ]"
+
+test_rawhide "$rh 'd && \"[ \`$explicit_rh -m1 -M1 -ed -q %S | wc -l\` = 0 ]\".ush' $d" "$d/d\n" "" 0 "\"\".ush directories with no sub-directories"
+test_rawhide "$rh 'd && \"[ \`$explicit_rh -m1 -M1     -q %S | wc -l\` = 0 ]\".ush' $d" "$d/d\n" "" 0 "\"\".ush empty directories"
+
+test_rawhide "$rh 'd && {[ \`$explicit_rh -m1 -M1 -ed -q %S | wc -l\` = 0 ]}.ush' $d" "$d/d\n" "" 0 "{}.ush directories with no sub-directories"
+test_rawhide "$rh 'd && {[ \`$explicit_rh -m1 -M1     -q %S | wc -l\` = 0 ]}.ush' $d" "$d/d\n" "" 0 "{}.ush empty directories"
+
+test_rawhide_post_hook() { true; }
+
+test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".ush' /"         "/ ././.\n/\n"                    "" 0 ".ush in / root directory"
+test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".ush' /etc"      "/ ./etc.etc.\n/etc\n"            "" 0 ".ush in /etc directory (no trailing /)"
+test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".ush' /etc/"     "/ ./etc.etc.\n/etc\n"            "" 0 ".ush in /etc/ directory (with trailing /)"
+test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".ush' /usr/bin"  "/usr ./usr/bin.bin.\n/usr/bin\n" "" 0 ".ush in /usr/bin directory (no trailing /)"
+test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".ush' /usr/bin/" "/usr ./usr/bin.bin.\n/usr/bin\n" "" 0 ".ush in /usr/bin/ directory (with trailing /)"
+
+test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s.%S.}.ush' /"         "/ ././.\n/\n"                    "" 0 ".ush in / root directory"
+test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s.%S.}.ush' /etc"      "/ ./etc.etc.\n/etc\n"            "" 0 ".ush in /etc directory (no trailing /)"
+test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s.%S.}.ush' /etc/"     "/ ./etc.etc.\n/etc\n"            "" 0 ".ush in /etc/ directory (with trailing /)"
+test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s.%S.}.ush' /usr/bin"  "/usr ./usr/bin.bin.\n/usr/bin\n" "" 0 ".ush in /usr/bin directory (no trailing /)"
+test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s.%S.}.ush' /usr/bin/" "/usr ./usr/bin.bin.\n/usr/bin\n" "" 0 ".ush in /usr/bin/ directory (with trailing /)"
+
+test_rawhide "$rh -e '\"false\".u'            $d" "" ""                                                                                                                                        0 ".s (abbrev)"
+test_rawhide "$rh -e '\"false\".us'           $d" "" ""                                                                                                                                        0 ".s (abbrev)"
+
+test_rawhide "$rh -e '{false}.u'              $d" "" ""                                                                                                                                        0 ".s (abbrev)"
+test_rawhide "$rh -e '{false}.us'             $d" "" ""                                                                                                                                        0 ".s (abbrev)"
+
+if [ $(uname) != FreeBSD ] || [ $(id -u) != 0 ] # FreeBSD's root's login shell is csh
+then
+	test_rawhide "$rh -e '{ { false; } }.ush'                     $d" "" ""                                                                                                                         0 "{ { false; } }.ush (nested curly braces)"
+	test_rawhide "$rh -e '{ { { false; } } }.ush'                 $d" "" ""                                                                                                                         0 "{ { { false; } } }.ush (nested curly braces)"
+	test_rawhide "$rh -e '{ { { { false; } } } }.ush'             $d" "" ""                                                                                                                         0 "{ { { { false; } } } }.ush (nested curly braces)"
+	test_rawhide "$rh -e '{ { { false \"\\{\" \"\\{\"; } } }.ush' $d" "" ""                                                                                                                         0 "{ { { false; \\{ \\{ } } }.ush (nested curly braces with quoted opening curly braces)"
+	test_rawhide "$rh -e '{ { { false \"\\}\" \"\\}\"; } } }.ush' $d" "" ""                                                                                                                         0 "{ { { false; \\} \\} } } }.ush (nested curly braces with quoted closing curly braces)"
+fi
+
+if [ $(id -u) != 0 ]
+then
+	test_rawhide "RAWHIDE_USER_SHELL=                                     $rh -e '{false}.ush' $d" "" ""                                                                                                  0 ".ush with empty \$RAWHIDE_USER_SHELL"
+	test_rawhide "RAWHIDE_USER_SHELL='/bin/sh'                            $rh -e '{false}.ush' $d" "" ""                                                                                                  0 ".ush with \$RAWHIDE_USER_SHELL with no options"
+	test_rawhide "RAWHIDE_USER_SHELL='/bin/sh 	-C'                       $rh -e '{false}.ush' $d" "" ""                                                                                                  0 ".ush with \$RAWHIDE_USER_SHELL with 1 option"
+	test_rawhide "RAWHIDE_USER_SHELL='/bin/sh -C -C -C -C -C -C -C -C'    $rh -e '{false}.ush' $d" "" ""                                                                                                  0 ".ush with \$RAWHIDE_USER_SHELL with max options"
+	test_rawhide "RAWHIDE_USER_SHELL='/bin/sh -C -C -C -C -C -C -C -C -C' $rh -e '{false}.ush' $d" "" "./rh: invalid \$RAWHIDE_USER_SHELL value: /bin/sh -C -C -C -C -C -C -C -C -C (too many options)\n" 1 ".ush with invalid \$RAWHIDE_USER_SHELL with too many options"
+	test_rawhide "RAWHIDE_USER_SHELL='sh'                                 $rh -e '{false}.ush' $d" "" "./rh: invalid \$RAWHIDE_USER_SHELL value: sh (not an absolute path)\n"                             1 ".ush with invalid \$RAWHIDE_USER_SHELL not absolute"
+	test_rawhide "RAWHIDE_USER_SHELL='/bin/sh-not-there'                  $rh -e '{false}.ush' $d" "" "./rh: invalid \$RAWHIDE_USER_SHELL value: /bin/sh-not-there: No such file or directory\n"          1 ".ush with invalid \$RAWHIDE_USER_SHELL non-existent"
+
+	test_rawhide "RAWHIDE_USER_SHELL='/bin/sh'                            $rh -e '{[ -f asdasdasd ]; echo; false}.ush' $d" "\n\n\n\n\n" "" 0 ".ush with \$RAWHIDE_USER_SHELL /bin/sh"
+	test_rawhide "RAWHIDE_USER_SHELL='/bin/sh -e'                         $rh -e '{[ -f asdasdasd ]; echo}.ush'        $d" ""           "" 0 ".ush with \$RAWHIDE_USER_SHELL /bin/sh -e (test that option is actually passed to the shell)"
+
+	like_csh="$(pwd)/like_csh"
+	printf "#!/bin/sh\nexec /bin/sh \"\$1\" \"\$2\" sh \"\$3\" \"\$4\"\n" > $like_csh
+	chmod 700 $like_csh
+	test_rawhide "RAWHIDE_USER_SHELL=$like_csh RAWHIDE_USER_SHELL_LIKE_CSH=1 $rh -e 'f && {echo %s %S; false}.ush' $d" "$d/f f\n" "" 0 ".ush with RAWHIDE_USER_SHELL=like_csh and RAWHIDE_USER_SHELL_LIKE_CSH=1"
+	rm -f $like_csh
+	test_rawhide "RAWHIDE_USER_SHELL=/bin/sh RAWHIDE_USER_SHELL_LIKE_CSH=0 $rh -e 'f && {echo %s %S; false}.ush' $d" "$d/f f\n" "" 0 ".ush with RAWHIDE_USER_SHELL=/bin/sh and RAWHIDE_USER_SHELL_LIKE_CSH=0"
+	test_rawhide "RAWHIDE_USER_SHELL=/bin/sh                               $rh -e 'f && {echo %s %S; false}.ush' $d" "$d/f f\n" "" 0 ".ush with RAWHIDE_USER_SHELL=/bin/sh and no RAWHIDE_USER_SHELL_LIKE_CSH=1"
+
+	[ -x /usr/bin/fish ] && test_rawhide "                              RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e 'f && {echo \$argv[1] \$argv[2];false}.ush' $d" "$d/f f\n" "" 0 ".ush with supported non-posix shell fish, with \$argv[1] and \$argv[2] (without unnecessary RAWHIDE_USER_SHELL_LIKE_CSH=1)"
+	[ -x /usr/bin/fish ] && test_rawhide "RAWHIDE_USER_SHELL_LIKE_CSH=1 RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e 'f && {echo \$argv[1] \$argv[2];false}.ush' $d" "$d/f f\n" "" 0 ".ush with supported non-posix shell fish, with \$argv[1] and \$argv[2] (with unnecessary RAWHIDE_USER_SHELL_LIKE_CSH=1)"
+	[ -x /usr/bin/fish ] && test_rawhide "                              RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e 'f && {echo %s %S;false}.ush'               $d" "$d/f f\n" "" 0 ".ush with supported non-posix shell fish, with %s and %S (without unnecessary RAWHIDE_USER_SHELL_LIKE_CSH=1)"
+	[ -x /usr/bin/fish ] && test_rawhide "RAWHIDE_USER_SHELL_LIKE_CSH=1 RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e 'f && {echo %s %S;false}.ush'               $d" "$d/f f\n" "" 0 ".ush with supported non-posix shell fish, with %s and %S (with unnecessary RAWHIDE_USER_SHELL_LIKE_CSH=1)"
+else
+	test_rawhide "RAWHIDE_USER_SHELL=                                     $rh -e '{false}.ush' $d" "" ""                                                                                                  0 "root .ush with empty \$RAWHIDE_USER_SHELL"
+	test_rawhide "RAWHIDE_USER_SHELL='/bin/sh'                            $rh -e '{false}.ush' $d" "" ""                                                                                                  0 "root .ush with \$RAWHIDE_USER_SHELL with no options (ignored)"
+	test_rawhide "RAWHIDE_USER_SHELL='/bin/sh -C'                         $rh -e '{false}.ush' $d" "" ""                                                                                                  0 "root .ush with \$RAWHIDE_USER_SHELL with 1 option (ignored)"
+	test_rawhide "RAWHIDE_USER_SHELL='/bin/sh -C -C -C -C -C -C -C -C'    $rh -e '{false}.ush' $d" "" ""                                                                                                  0 "root .ush with \$RAWHIDE_USER_SHELL with max options (ignored)"
+	test_rawhide "RAWHIDE_USER_SHELL='/bin/sh -C -C -C -C -C -C -C -C -C' $rh -e '{false}.ush' $d" "" ""                                                                                                  0 "root .ush with invalid \$RAWHIDE_USER_SHELL with too many options (ignored)"
+	test_rawhide "RAWHIDE_USER_SHELL='sh'                                 $rh -e '{false}.ush' $d" "" ""                                                                                                  0 "root .ush with invalid \$RAWHIDE_USER_SHELL not absolute (ignored)"
+	test_rawhide "RAWHIDE_USER_SHELL='/bin/sh-not-there'                  $rh -e '{false}.ush' $d" "" ""                                                                                                  0 "root .ush with invalid \$RAWHIDE_USER_SHELL non-existent (ignored)"
+
+	test_rawhide "RAWHIDE_USER_SHELL='/bin/sh'                            $rh -e '{[ -f asdasdasd ]; echo; false}.ush' $d" "\n\n\n\n\n" "" 0 "root .ush with \$RAWHIDE_USER_SHELL /bin/sh (ignored)"
+	test_rawhide "RAWHIDE_USER_SHELL='/bin/sh -e'                         $rh -e '{[ -f asdasdasd ]; echo; false}.ush' $d" "\n\n\n\n\n" "" 0 "root .ush with \$RAWHIDE_USER_SHELL /bin/sh -e (test that option is actually passed to the shell) (ignored)"
+
+	if [ $(uname) != FreeBSD ] || [ $(id -u) != 0 ] # FreeBSD's root's login shell is csh
+	then
+		like_csh="$(pwd)/like_csh"
+		printf "#!/bin/sh\nexec /bin/sh \"\$1\" \"\$2\" sh \"\$3\" \"\$4\"\n" > $like_csh
+		chmod 700 $like_csh
+		test_rawhide "RAWHIDE_USER_SHELL=$like_csh RAWHIDE_USER_SHELL_LIKE_CSH=1 $rh -e 'f && {echo %s %S; false}.ush' $d" "f \n" "" 0 "root .ush with RAWHIDE_USER_SHELL=like_csh (ignored) and RAWHIDE_USER_SHELL_LIKE_CSH=1"
+		rm -f $like_csh
+	fi
+	test_rawhide "RAWHIDE_USER_SHELL=/bin/sh RAWHIDE_USER_SHELL_LIKE_CSH=0 $rh -e 'f && {echo %s %S; false}.ush' $d" "$d/f f\n" "" 0 "root .ush with RAWHIDE_USER_SHELL=/bin/sh (ignored) and RAWHIDE_USER_SHELL_LIKE_CSH=0"
+	test_rawhide "RAWHIDE_USER_SHELL=/bin/sh                               $rh -e 'f && {echo %s %S; false}.ush' $d" "$d/f f\n" "" 0 "root .ush with RAWHIDE_USER_SHELL=/bin/sh (ignored) and no RAWHIDE_USER_SHELL_LIKE_CSH=1"
+fi
 
 # Test the pcre compiled pattern cache
 

@@ -102,6 +102,12 @@ typedef long long unsigned int ullong;
 #define isdoor(statbuf) (0)
 #endif
 
+/* Define macros for user shell */
+
+#define USER_SHELLV_SIZE 11
+#define FOR_SH  0
+#define FOR_USH 1
+
 /* Structure of a rawhide assembly instruction */
 
 typedef struct instr_t instr_t;
@@ -167,6 +173,16 @@ struct runtime_t
 	int fea_solaris_no_sunwattr; /* Suppress ubiquitous SUNWattr_ro/SUNWattr_rw EAs on Solaris? */
 	int fea_solaris_no_statinfo; /* Suppress artificial stat(2) info EAs on Solaris? */
 	int no_implicit_expr_heuristic; /* Suppress implicit search criteria expression heuristic */
+
+	char *user_shell;        /* The value of $RAWHIDE_USER_SHELL to override the user's login shell, for .ush */
+	int user_shell_like_csh; /* The value of $RAWHIDE_USER_SHELL_LIKE_CSH (i.e., shell doesn't take $0 argument, or --) */
+	int user_shell_init_done;/* Have we obtained the user shell details? */
+	char *user_shell_copy;   /* A dynamic mutable copy of the user_shell, for splitting purposes */
+	char *user_shellv[USER_SHELLV_SIZE]; /* The user shell, possibly split into path and options */
+	char *ush_basename;        /* The user shell's basename, for $0 */
+	int ush_command_is_optarg; /* The user shell's -c option takes command string as its argument (so -- after command) */
+	int ush_like_csh;          /* Is the user shell like csh? (No -- at all, and no $0) */
+	int ush_like_fish;         /* Is the user shell like fish? (-- after command, no $0, %s=$argv[1] %S=$argv[2] */
 
 	#ifdef HAVE_MAGIC
 	magic_t what_cookie;        /* Libmagic data for file type searches */

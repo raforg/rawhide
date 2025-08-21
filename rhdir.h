@@ -36,8 +36,9 @@ void visitf_execute_local(void);
 void visitf_unlink(void);
 void visitf_format(void);
 int syscmd(const char *cmd);
+int usyscmd(const char *cmd);
 int remove_danger_from_path(void);
-int interpolate_command(const char *srccmd, char *command, int cmdbufsize);
+int interpolate_command(const char *srccmd, char *command, int cmdbufsize, int for_user_shell);
 int chdir_local(int do_debug);
 
 #define CMDBUFSIZE 8192

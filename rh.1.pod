@@ -100,8 +100,8 @@ I<rh> - (I<rawhide>) find files using pretty I<C> expressions
    ?:  ||  &&  |  ^  &  == !=  < > <= >=  << >>  + -  * / %  - ~ !
 
  Rawhide tokens:
-   "pattern"  "pattern".modifier  "/path".field  "cmd".sh
-   {pattern}  {pattern}.modifier  {/path}.field  {cmd}.sh
+   "pattern"  "pattern".modifier  "/path".field  "cmd".sh  "cmd".ush
+   {pattern}  {pattern}.modifier  {/path}.field  {cmd}.sh  {cmd}.ush
    123 0777 0xffff  1K 2M 3G  1k 2m 3g  $user @group  $$ @@
    [yyyy/mm/dd] [yyyy/mm/dd hh:mm:ss]
 
@@ -119,7 +119,7 @@ I<rh> - (I<rawhide>) find files using pretty I<C> expressions
    .mime         .imime        .remime       .reimime
    .acl          .iacl         .reacl        .reiacl
    .ea           .iea          .reea         .reiea
-   .sh
+   .sh           .ush
    Case-insensitive glob matching is available here (i)
    Perl-compatible regular expressions are available here (re)
    Access control lists are available here (acl)
@@ -520,10 +520,11 @@ also insecure in the same way.
 Note: If the user's C<$PATH> environment variable includes the current
 working directory, or any other non-absolute paths, they are automatically
 removed first. This is done for consistency with the C<-X> option (see next)
-and the C<">I<cmd>C<".sh> "pattern" modifier (see I<rawhide.conf(5)>), where
-this is needed for security. This means that you can't rely on C<$PATH> to
-find an executable that is in the current directory. An explicit path would
-be needed instead (e.g., S<C<-x './>I<cmd>C< %s'>>).
+and the C<">I<cmd>C<".sh> and C<">I<cmd>C<".ush> "pattern" modifiers (see
+I<rawhide.conf(5)>), where this is needed for security. This means that you
+can't rely on C<$PATH> to find an executable that is in the current
+directory. An explicit path would be needed instead (e.g.,
+S<C<-x './>I<cmd>C< %s'>>).
 
 This option, and the C<-l>, C<-0>, C<-L>, C<-j>, C<-X>, and C<-U> options,
 are all mutually exclusive.
@@ -1623,7 +1624,8 @@ There are special tokens to represent various things:
     "pattern"             - file glob pattern matches
     "pattern".modifier    - modified pattern matches
     "/path".field         - reference files for comparison
-    "cmd".sh              - external shell commands
+    "cmd".sh              - external shell commands (/bin/sh)
+    "cmd".ush             - external shell commands (user's login shell)
     $user @group          - user and group IDs
     $$ @@                 - current user's user ID and primary group ID
     [yyyy/mm/dd]          - dates
@@ -1636,6 +1638,7 @@ the string literals above:
     {pattern}.modifier
     {/path}.field
     {cmd}.sh
+    {cmd}.ush
 
 This alternate string syntax avoids the need to backslash-quote double quote
 characters in the string literal. This is probably mostly useful in shell
@@ -1698,9 +1701,13 @@ symlink target path, access control list, or extended attributes).
 
 There are other string literal suffixes that represent the inode metadata
 (i.e., I<stat(2)> structure fields) of arbitrary reference files
-(C<">I</path>C<".>I<field>) for comparison purposes. And the C<sh> string
-literal suffix lets you execute an arbitrary shell command
-(C<">I<cmd>C<".sh>), and use its exit success status in the search criteria.
+(C<">I</path>C<".>I<field>) for comparison purposes. And the C<sh> and
+C<ush> string literal suffixes let you execute an arbitrary shell command
+(C<">I<cmd>C<".sh> and C<">I<cmd>C<".ush>), and use its exit success status
+in the search criteria. The C<sh> suffix executes shell commands via
+C</bin/sh>. The C<ush> suffix executes shell commands via the user's login
+shell (or via the shell specified by the environment variable
+C<RAWHIDE_USER_SHELL>).
 
 See I<rawhide.conf(5)> for all the details. See below for some examples.
 
@@ -2565,13 +2572,13 @@ encoding characters.
 
 If the user's C<$PATH> environment variable includes the current working
 directory, or any other non-absolute paths, they are automatically
-removed. This is important for security when the C<-X> option is used, and when the
-C<">I<cmd>C<".sh> "pattern" modifier is used. But it isn't important when
-they are not used. But it always happens anyway, for consistency. So this
-affects the C<-x> option as well, whether or not the C<">I<cmd>C<".sh>
-"pattern" modifier is also used. This ensures that a change in the search
-criteria expression won't inadvertently change the behaviour of the C<-x>
-option command.
+removed. This is important for security when the C<-X> option is used, and
+when the C<">I<cmd>C<".sh> or C<">I<cmd>C<".ush> "pattern" modifiers are
+used. But it isn't important when they are not used. But it always happens
+anyway, for consistency. So this affects the C<-x> option as well, whether
+or not the C<">I<cmd>C<".sh> or C<">I<cmd>C<".ush> "pattern" modifiers are
+also used. This ensures that a change in the search criteria expression
+won't inadvertently change the behaviour of the C<-x> option command.
 
 When following symlinks with the C<-Y> option, it's possible to encounter
 filesystem cycles. When this happens, I<rh> will output an "error" message
@@ -2631,10 +2638,10 @@ directory; attempt to use a I<stat(2)> structure field of a reference file
 that does not exist or cannot be reached; failure to follow a symlink (but
 not by default); failure to obtain an access control list; failure to obtain
 extended attributes; traversing too deeply; a starting search path being too
-long for its filesystem; failure to allocate memory; C<-x>, C<-X>, or
-C<">I<cmd>C<".sh> commands being too large; attempt to divide by zero; too
-much code; too much data (i.e., patterns, reference file paths, and shell
-commands); stack overflow.
+long for its filesystem; failure to allocate memory; C<-x>, C<-X>,
+C<">I<cmd>C<".sh>, or C<">I<cmd>C<".ush> commands being too large; attempt
+to divide by zero; too much code; too much data (i.e., patterns, reference
+file paths, and shell commands); stack overflow.
 
 =head1 ENVIRONMENT
 
@@ -2769,6 +2776,43 @@ when there is no explicit C<-e> option on the command line. An alternative
 to the use of this environment variable is to just always include an
 explicit C<-e> option on the command line, even when you want the default
 behaviour of matching all filesystem entries (i.e., C<-e1>).
+
+The environment variable C<RAWHIDE_USER_SHELL> can be set to the absolute
+path to an alternative shell to be used by the C<">I<cmd>C<".ush> "pattern"
+modifier (instead of using the user's login shell) to execute shell
+commands. This is only available to non-C<root> users (as it could be
+dangerous for C<root>). The alternative shell will be invoked in the same
+way that the user's login shell would be, which is the same way that
+C</bin/sh> is invoked by the C<sh> "pattern" modifier.
+
+The alternative shell must accept a C<-c> option which causes it to
+interpret its first non-option argument as a command string to execute. It
+must also accept additional command line arguments that represent the
+shell's base name, and the positional parameters for the command. An
+exception to this requirement is made for I<csh>, I<tcsh>, and I<fish>,
+whose first argument after the command is the command's first positional
+parameter, rather than the shell's base name. If the alternative shell isn't
+named C<csh> or C<tcsh> or C<fish>, and doesn't take an argument to
+represent the shell's base name, then you must set the environment variable
+C<RAWHIDE_USER_SHELL_LIKE_CSH=1> to cause I<rh> to invoke it without that
+argument. The alternative shell must also have command syntax such that
+C<"$1"> and C<"$2"> represent, respectively, the first and second positional
+arguments passed to it on its command line. An exception to this requirement
+is made for I<fish>, whose corresponding syntax is C<$argv[1]> and
+C<$argv[2]>. Any other non-I<POSIX> shells can only be used if you promise
+to never use the C<%s> or C<%S> notation, but instead always use the shell's
+own notation for positional parameters, whatever that might be. Note that
+such shells will usually also require that you set the environment variable
+C<RAWHIDE_USER_SHELL_LIKE_CSH=1>.
+
+B<Note:> It is possible to invoke an alternative shell with command line
+options. If the value of the environment variable C<RAWHIDE_USER_SHELL>
+contains any ASCII whitespace characters, the command is split into the
+absolute path to the alternative shell, and its whitespace-separated command
+line options. No other parsing is done. The additional command line options
+cannot be quoted, and so cannot themselves contain any whitespace characters
+(nor can the path to the shell). No shell syntax is supported. It is just a
+vector of whitespace-separated strings.
 
 =head1 FILES
 

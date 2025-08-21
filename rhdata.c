@@ -306,6 +306,7 @@ static symbol_t init_syms[] =
 #endif
 #endif
 	{ ".sh",       PATMOD, 0, c_sh,      NULL },
+	{ ".ush",      PATMOD, 0, c_ush,     NULL },
 };
 
 /*
