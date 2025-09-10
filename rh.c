@@ -1133,7 +1133,7 @@ int main(int argc, char *argv[])
 			if (stat(opt_f_list[i], statbuf) == -1)
 				fatalsys("invalid -f option argument: %s", ok(opt_f_list[i]));
 
-			if (isreg(statbuf))
+			if (isreg(statbuf) || ischr(statbuf) || isfifo(statbuf))
 			{
 				if (!(expfile = fopen(opt_f_list[i], "r")))
 					fatalsys("%s", ok(opt_f_list[i]));
