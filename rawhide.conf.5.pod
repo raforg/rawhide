@@ -604,8 +604,8 @@ On I<Linux>, this is only available on systems with I<libe2p>. On I<Linux>
 systems without I<libe2p>, this is not a built-in symbol. Instead, this is a
 place-holder function that returns zero.
 
-This is also available on I<FreeBSD>, I<OpenBSD>, I<NetBSD>, and I<macOS>.
-The attributes/flags that are available vary from system to system. See
+This is also available on I<FreeBSD>, I<OpenBSD>, I<NetBSD>, and
+I<macOS>. The attributes/flags that are available vary from system to system. See
 I<chflags(1)> for details. See C</etc/rawhide.conf.d/attributes> for all the
 related predicate functions (e.g., C<uimmutable>, C<uappend>, C<nodump>,
 C<opaque>, ...).
@@ -1113,15 +1113,15 @@ The following I<POSIX> glob pattern notation is supported on all platforms:
 
 Matches any single character. A leading dot character (C<".">) is not
 treated as a special character. For example, C<?profile> would match
-C<.profile>. This is unlike C</bin/sh> behaviour, but it is like I<POSIX
-find(1)> behaviour.
+C<.profile>. This is unlike C</bin/sh> globbing behaviour, but it is like
+I<POSIX find(1)> behaviour.
 
 =item C<*>
 
 Matches any string of characters, including the empty string. A leading dot
 character (C<".">) is not treated as a special character. For example, C<*>
-would match C<.profile>. This is unlike C</bin/sh> behaviour, but it is like
-I<POSIX find(1)> behaviour.
+would match C<.profile>. This is unlike C</bin/sh> globbing behaviour, but
+it is like I<POSIX find(1)> behaviour.
 
 =item C<[abc]>
 
@@ -1144,11 +1144,14 @@ platforms (i.e., named character classes like C<[[:lower:]]>, collating
 symbols like C<[[.a-acute.]]>, and equivalence class expressions like
 C<[[=a=]]>), but not all locales support them all.
 
-The special meanings of C<?>, C<*> and C<[> can be removed by quoting them
-with a preceding backslash character (C<"\">).
+The special meanings of C<?>, C<*>, C<[>, C<!>, C<^>, C<->, C<]>, and C<\>
+can be removed by quoting them with a preceding backslash character
+(C<"\">). Note: When quoting a backslash in the pattern with a preceding
+backslash, both backslashes need to be quoted in the string literal with
+backslashes.
 
-The following I<Ksh> extended glob pattern notation is supported on
-platforms with I<GNU glibc> (i.e., I<Linux>):
+The following subset of I<ksh> extended glob pattern notation is supported
+on platforms with I<GNU glibc> (i.e., I<Linux>):
 
 =over 4
 
@@ -1178,11 +1181,13 @@ Matches if the text cannot be matched by any of the sub-patterns.
 
 =back
 
-The special meanings of C<?>, C<*>, C<+>, C<@>, C<!>, C<(>, C<|> and C<)>
-can be removed by quoting them with a preceding backslash character
-(C<"\">).
+The special meanings of C<?>, C<*>, C<+>, C<@>, C<!>, C<(>, C<|>, C<)>, and
+C<\> can be removed by quoting them with a preceding backslash character
+(C<"\">). Note: When quoting a backslash in the pattern with a preceding
+backslash, both backslashes need to be quoted in the string literal with
+backslashes.
 
-The output of S<C<rh --help>> states if I<Ksh> extended glob pattern
+The output of S<C<rh --help>> states if I<ksh> extended glob pattern
 notation is available on the local system.
 
 See I<fnmatch(3)> and I<glob(7)> for more details.
@@ -1263,8 +1268,8 @@ is at least partially read to determine its file type. It can be worthwhile
 preceding this with other predicates to reduce the number of candidate files
 that this is applied to.
 
-Also note that this only works with files that are readable to the current
-user.
+Also note that this only works well with regular files that are readable to
+the current user.
 
 Also note that any errors encountered result in an error message taking the
 place of the file type description being matched. To see these error
@@ -1285,8 +1290,8 @@ is at least partially read to determine its MIME type. It can be worthwhile
 preceding this with other predicates to reduce the number of candidate files
 that this is applied to.
 
-Also note that this only works with files that are readable to the current
-user.
+Also note that this only works well with regular files that are readable to
+the current user.
 
 Also note that any errors encountered result in an error message taking the
 place of the MIME type being matched. To see these error messages, you can
@@ -1373,7 +1378,9 @@ multiple lines. It can be enabled by default in all cases by setting the
 environment variable C<RAWHIDE_PCRE2_DOTALL_ALWAYS=1>. It can be enabled for
 individual matches by starting the regular expression with C<(?s)>. It can
 be disabled for individual matches by starting the regular expression with
-C<(?-s)>.
+C<(?-s)>. Note that, even when C<.> doesn't match a newline, there are other
+patterns that still match a newline (e.g., C<\s>, C<\v>, C<\H>, C<\W>,
+C<\D>, C<[^anything-that-does-not-include-newline]>).
 
 =item C<PCRE2_MULTILINE>
 
@@ -1431,8 +1438,8 @@ to be encoded as I<UTF-8>. If you need to suppress this assumption, set the
 environment variable C<RAWHIDE_PCRE2_NOT_UTF8_DEFAULT=1>. When this
 environment variable is set, individual regex patterns can still enable
 I<UTF-8> interpretation with a leading C<(*UTF)>. This I<UTF-8> assumption
-is made when the locale uses I<UTF-8> (i.e., when the C<$LANG> environment
-variable includes C<"UTF-8">). When the locale doesn't use I<UTF-8>, and you
+is made when the locale uses I<UTF-8> (i.e., when the environment variable
+C<LANG> includes C<"UTF-8">). When the locale doesn't use I<UTF-8>, and you
 want I<rh> to assume that everything is I<UTF-8> anyway, set the environment
 variable C<RAWHIDE_PCRE2_UTF8_DEFAULT=1>.
 
@@ -1465,6 +1472,11 @@ default, the file's contents are considered to be multiple lines (i.e., as
 if the regular expression started with C<(?m)>, or I<Perl>'s C</m> modifier
 were used). But note that this is not restricted to text files. Matches can
 be performed against binary files as well.
+
+But if you need to match binary data in a binary file, when the current
+locale uses I<UTF-8>, you will need to set the environment variable
+C<RAWHIDE_PCRE2_NOT_UTF8_DEFAULT=1> (or C<LANG=C>) so as to prevent assuming
+that the file is encoded in I<UTF-8> as described above.
 
 =item C<rewhat> (or C<rew>)
 
@@ -1608,8 +1620,8 @@ Like the C<reacl> modifier, but apply the regex without case-sensitivity.
 
 =item C<ea> (or C<e>)
 
-Apply the glob pattern to each candidate file's extended attributes (EA),
-rather than its base name.
+Apply the glob pattern to the encoded extended attributes (EA) text of each
+candidate file, rather than its base name.
 
 This is available on I<Linux>, I<FreeBSD>, I<macOS>, I<Solaris>, and
 I<Cygwin>. I<OpenBSD> and I<NetBSD> don't do EAs. See I<xattr(1)> or
@@ -1618,12 +1630,12 @@ I<xattr(7)> or I<extattr(2)> or I<fsattr(7)> for more details.
 The output of S<C<rh --help>> states if extended attributes are available on
 the local system.
 
-The extended attributes text, if any, will be possibly multiple lines, one
-per extended attribute, each terminated by a newline character. Each
-extended attribute starts with its name. If it also has a value, then the
-name is followed by colon and space characters (S<C<": ">>), and then the
-value. Note that on I<macOS>, some extended attribute names contain a colon
-character, but they aren't typically followed by a space character.
+The encoded extended attributes text, if any, will be possibly multiple
+lines, one per extended attribute, each terminated by a newline
+character. Each extended attribute starts with its name. If it also has a value, then
+the name is followed by colon and space characters (S<C<": ">>), and then
+the value. Note that on I<macOS>, some extended attribute names contain a
+colon character, but they aren't typically followed by a space character.
 
 Note that any control characters (i.e., I<ASCII> 0-31, 127) in extended
 attribute names or values, and any non-I<ASCII> bytes (i.e., 128-255) in the
@@ -1695,13 +1707,13 @@ case-sensitivity. This might not be available on all systems.
 
 =item C<reea> (or C<ree>)
 
-Like the C<ea> modifier, but match each candidate file's extended attributes
-(EA) against a I<Perl>-compatible regular expression (regex) instead of a
-glob pattern. By default, the file's EAs are considered to be multiple lines
-(i.e., as if the regular expression started with C<(?m)>, or I<Perl>'s C</m>
-modifier were used). This is available on systems that have I<libpcre2-8>
-installed, and supported extended attributes. See the C<re> modifier above
-for more information.
+Like the C<ea> modifier, but match the encoded extended attributes (EA) text
+of each candidate file against a I<Perl>-compatible regular expression
+(regex) instead of a glob pattern. By default, the file's EAs are considered
+to be multiple lines (i.e., as if the regular expression started with
+C<(?m)>, or I<Perl>'s C</m> modifier were used). This is available on
+systems that have I<libpcre2-8> installed, and supported extended
+attributes. See the C<re> modifier above for more information.
 
 =item C<reiea> (or C<reie>)
 
@@ -1761,6 +1773,21 @@ working directory back to the initial working directory. Also note that
 C<%s> suffers from many path-based race conditions, which is insecure on
 hosts with malicious local actors that have write access to the directory
 tree being searched, and so should not generally be used.
+
+C<Warning:> It is usually an extremely good idea to put C<--> before C<%s>
+or C<%S> in shell commands (e.g., S<C<'>I<cmd>C< -- %s'>>). Most commands
+(I<rh> included) follow the convention that C<--> on the command line stops
+treating subsequent command line arguments as options, even if they start
+with a dash (C<"-">). It is important for security that C<%s> and C<%S>
+never be considered as options to the command being executed, as it can
+cause the command to perform some action that you did not intend. Malicious
+filenames can exploit this. But the use of C<--> will prevent that. It will
+ensure that C<%s> and C<%S> are treated as non-option command line
+arguments. This isn't always necessary. Sometimes the position of a command
+line argument dictates that it is not an option. The situation changes from
+one command to another. But in general, the use of C<--> before C<%s> or
+C<%S> is essential for security. I recommend that you try your command with
+C<--> first, and only remove it if that didn't work.
 
 =item C<ush> (or C<u>)
 
@@ -1828,7 +1855,8 @@ allow you to use I<perl> as the user shell:
 But this is getting silly now. Although, it's only 2.73 times slower than
 C</bin/sh>, so maybe it's not so silly. The I<python3> equivalent (no
 wrapper script needed, just C<RAWHIDE_USER_SHELL_LIKE_CSH=1>) is 16.72 times
-slower than C</bin/sh>.
+slower than C</bin/sh>. The I<raku> equivalent (with a wrapper script) is
+3.08 times faster than C</bin/sh>.
 
 =back
 
@@ -2060,8 +2088,8 @@ On I<Linux>, this is only available on systems with I<libe2p>. On I<Linux>
 systems without I<libe2p>, this is not a built-in symbol. Instead, this is a
 place-holder function that returns zero.
 
-This is also available on I<FreeBSD>, I<OpenBSD>, I<NetBSD>, and I<macOS>.
-The attributes/flags that are available vary from system to system. See
+This is also available on I<FreeBSD>, I<OpenBSD>, I<NetBSD>, and
+I<macOS>. The attributes/flags that are available vary from system to system. See
 I<chflags(1)> for details. See C</etc/rawhide.conf.d/attributes> for all the
 related predicate functions (e.g., C<uimmutable>, C<uappend>, C<nodump>,
 C<opaque>, ...).
@@ -2737,8 +2765,8 @@ C</etc/rawhide.conf.d/attributes> library:
   attr_P { projinherit }
   attr_F { casefold }
 
-On I<FreeBSD> systems, this is the C</etc/rawhide.conf.d/attributes> library.
-There is a similar file on I<OpenBSD>, I<NetBSD>, and I<macOS> systems:
+On I<FreeBSD> systems, this is the C</etc/rawhide.conf.d/attributes>
+library. There is a similar file on I<OpenBSD>, I<NetBSD>, and I<macOS> systems:
 
   # /etc/rawhide.conf.d/attributes (FreeBSD)
   # See rh(1) and rawhide.conf(5) for more information.

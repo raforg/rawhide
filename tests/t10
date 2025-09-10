@@ -85,7 +85,7 @@ test_rawhide_find "$rh -e '{.*}' $d"      "find $d -name '.*' -print"      ".*"
 # '@(pattern-list)' exactly one occurrence of any of the patterns match
 # '!(pattern-list)' input string cannot be matched with any of the patterns
 
-if [ x"`uname`" = xLinux ] && $rh -h | grep -q 'Ksh extended glob patterns' # Not musl
+if [ x"`uname`" = xLinux ] && $rh -h | grep -q 'ksh extended glob patterns' # Not musl
 then
 	rh="$explicit_rh"
 	test_rawhide_pre_hook() { test_rh_cd_pre_hook; }

@@ -83,9 +83,9 @@ static void help_message(void)
 	printf("  -Y           - Follow symlinks encountered while searching as well\n");
 	printf("\n");
 	printf("alternative action options:\n");
-	printf("  -x 'cmd %%s'  - Execute a shell command for each match (racy)\n");
-	printf("  -X 'cmd %%S'  - Like -x but run from each match's directory (safer)\n");
-	printf("  -U -U -U     - Unlink matches (but tell me three times), implies -D\n");
+	printf("  -x 'cmd -- %%s' - Execute a shell command for each match (racy)\n");
+	printf("  -X 'cmd -- %%S' - Like -x but run from each match's directory (safer)\n");
+	printf("  -U -U -U       - Unlink matches (but tell me three times), implies -D\n");
 	printf("\n");
 	printf("output action options:\n");
 	printf("  -l           - Output matching entries like ls -l (but unsorted)\n");
@@ -107,7 +107,7 @@ static void help_message(void)
 	printf("path format options:\n");
 	printf("  -Q           - Enclose paths in double quotes\n");
 	printf("  -E           - Output C-style escapes for control characters\n");
-	printf("  -b           - Same as -E (like ls(1))\n");
+	printf("  -b           - Same as -E (like ls(1) on many systems)\n");
 	printf("  -q           - Output ? for control characters (default if tty)\n");
 	printf("  -p           - Append / indicator to directories\n");
 	printf("  -t           - Append most type indicators (one of / @ = | >)\n");
@@ -124,10 +124,10 @@ static void help_message(void)
 	printf("  -H or -HH    - Output sizes like 1.2K 34M 5.6G etc., implies -l\n");
 	printf("  -I or -II    - Like -H but with units of 1000, not 1024, implies -l\n");
 	printf("  -T           - Output mtime/atime/ctime in ISO format, implies -l\n");
-	printf("  -#           - Output numeric user/group IDs (not names), implies -l\n");
+	printf(" '-#'          - Output numeric user/group IDs (not names), implies -l\n");
 	printf("\n");
 	printf("debug option:\n");
-	printf("  -? spec      - Output debug messages: spec can include any of:\n");
+	printf(" '-?' spec     - Output debug messages: spec can include any of:\n");
 	printf("                   cmdline, parser, traversal, exec, all, extra\n");
 
 	printf("\nrh (rawhide) finds files using pretty C expressions.\n");
@@ -146,7 +146,7 @@ static void help_message(void)
 	printf("  ? * [abc] [!abc] [a-c] [!a-c]\n");
 	#ifdef FNM_EXTMATCH
 	printf("  ?(a|b|c) *(a|b|c) +(a|b|c) @(a|b|c) !(a|b|c)\n");
-	printf("  Ksh extended glob patterns are available here (see fnmatch(3))\n");
+	printf("  Some ksh extended glob patterns are available here (see fnmatch(3))\n");
 	#endif
 
 	printf("\nPattern modifiers:\n");

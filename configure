@@ -28,6 +28,17 @@ for opt in "$@"
 do
 	case "$opt" in
 		--help|-h)
+			case "`uname`" in
+				Linux*)         default_prefix=/usr/local default_etcdir=/etc         default_mandir=\$prefix/share/man;;
+				FreeBSD*)       default_prefix=/usr/local default_etcdir=$\prefix/etc default_mandir=\$prefix/man;;
+				NetBSD*)        default_prefix=/usr/pkg   default_etcdir=\$prefix/etc default_mandir=\$prefix/man;;
+				OpenBSD*)       default_prefix=/usr/local default_etcdir=\$prefix/etc default_mandir=\$prefix/man;;
+				SunOS*|Solaris) default_prefix=/usr/local default_etcdir=/etc         default_mandir=\$prefix/man;;
+				Darwin*)        default_prefix=/usr/local default_etcdir=/etc         default_mandir=\$prefix/share/man;;
+				CYGWIN_NT*)     default_prefix=/usr/local default_etcdir=/etc         default_mandir=\$prefix/share/man;;
+				*)              default_prefix=/usr/local default_etcdir=\$prefix/etc default_mandir=\$prefix/man;;
+			esac
+
 			echo "$0 [options]"
 			echo "options:"
 			echo "  --help, -h         - Output this help message, then exit"
@@ -51,7 +62,7 @@ do
 			echo "  --disable-flag     - Alias for --disable-attr (BSD terminology)"
 			echo "  --enable-magic     - Enable libmagic support (default when possible)"
 			echo "  --disable-magic    - Disable libmagic support"
-			echo "  --enable-ndebug    - Enable NDEBUG (remove debugging code)"
+			echo "  --enable-ndebug    - Enable NDEBUG (remove debugging code, 8% smaller)"
 			echo "  --disable-ndebug   - Disable NDEBUG (keep debugging code - default)"
 			echo "  --enable-mangz     - Enable gzipped manpages (default on some systems)"
 			echo "  --disable-mangz    - Disable gzipped manpages (default)"
@@ -76,11 +87,14 @@ do
 			echo "This is for building packages and doesn't affect paths in the final binary."
 			echo ""
 			echo "To override a platform-specific install prefix, use --prefix (e.g. /opt/bin)."
-			echo "A synonym for --prefix=/usr/local is --prefix=default"
+			echo "A synonym for --prefix=/usr/local is --prefix=default (for distribution)."
+			echo "The default prefix for this system is $default_prefix"
 			echo ""
 			echo "To override a platform-specific config directory, use --etcdir (e.g. /opt/etc)."
+			echo "The default etcdir for this system is $default_etcdir"
 			echo ""
 			echo "To override a platform-specific manpage directory, use --mandir (e.g. /opt/man)."
+			echo "The default mandir for this system is $default_mandir"
 			echo ""
 			echo "To compile for macports, use --macports (uses /opt/local for everything)."
 			echo "If you have a non-default macports prefix, use --macports-prefix instead."
@@ -237,7 +251,7 @@ case "`uname`" in
 			-e 's,^\(MAN_GZIP =\) 0,\1 1,'
 		;;
 
-	*)
+	*) # prefix=/usr/local etcdir=$prefix/etc mandir=$prefix/man manzip=0
 		echo "Unknown platform: Check Makefile for binary/config/manpage installation locations"
 		editconf Makefile \
 			-e 's,^\(PREFIX = \).*$,\1/usr/local,' \

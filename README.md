@@ -84,9 +84,9 @@ a high-level interface to the built-in symbols mentioned above, and makes
        -Y           - Follow symlinks encountered while searching as well
 
      alternative action options:
-       -x 'cmd %s'  - Execute a shell command for each match (racy)
-       -X 'cmd %S'  - Like -x but run from each match's directory (safer)
-       -U -U -U     - Unlink matches (but tell me three times), implies -D
+       -x 'cmd -- %s' - Execute a shell command for each match (racy)
+       -X 'cmd -- %S' - Like -x but run from each match's directory (safer)
+       -U -U -U       - Unlink matches (but tell me three times), implies -D
 
      output action options:
        -l           - Output matching entries like ls -l (but unsorted)
@@ -108,7 +108,7 @@ a high-level interface to the built-in symbols mentioned above, and makes
      path format options:
        -Q           - Enclose paths in double quotes
        -E           - Output C-style escapes for control characters
-       -b           - Same as -E (like ls(1))
+       -b           - Same as -E (like ls(1) on many systems)
        -q           - Output ? for control characters (default if tty)
        -p           - Append / indicator to directories
        -t           - Append most type indicators (one of / @ = | >)
@@ -125,10 +125,10 @@ a high-level interface to the built-in symbols mentioned above, and makes
        -H or -HH    - Output sizes like 1.2K 34M 5.6G etc., implies -l
        -I or -II    - Like -H but with units of 1000, not 1024, implies -l
        -T           - Output mtime/atime/ctime in ISO format, implies -l
-       -#           - Output numeric user/group IDs (not names), implies -l
+      '-#'          - Output numeric user/group IDs (not names), implies -l
 
      debug option:
-       -? spec      - Output debug messages: spec can include any of:
+      '-?' spec     - Output debug messages: spec can include any of:
                         cmdline, parser, traversal, exec, all, extra
 
      rh (rawhide) finds files using pretty C expressions.
@@ -146,7 +146,7 @@ a high-level interface to the built-in symbols mentioned above, and makes
      Glob pattern notation:
        ? * [abc] [!abc] [a-c] [!a-c]
        ?(a|b|c) *(a|b|c) +(a|b|c) @(a|b|c) !(a|b|c)
-       Ksh extended glob patterns are available here (see fnmatch(3))
+       Some ksh extended glob patterns are available here (see fnmatch(3))
 
      Pattern modifiers:
                      .i            .re           .rei
@@ -187,6 +187,7 @@ a high-level interface to the built-in symbols mentioned above, and makes
        .exists       .dev          .major        .minor        .ino
        .mode         .type         .perm         .nlink        .uid
        .gid          .rdev         .rmajor       .rminor       .size
+       .blksize      .blocks       .atime        .mtime        .ctime
        .attr         .proj         .gen          .strlen       .inode
        .nlinks       .user         .group        .sz           .accessed
        .modified     .changed      .attribute    .project      .generation
@@ -279,6 +280,8 @@ Find files with holes (for filesystems without transparent compression):
         (mode & IFMT) == IFREG && size && blocks && (blocks * 512) < size
         file && size && blocks && space < size
 
+Note: The above doesn't take indirect blocks into account. It's just a heuristic.
+
 Find regular files with multiple hard links:
 
         (mode & IFMT) == IFREG && nlink > 1
@@ -318,6 +321,9 @@ Find mountpoints under the current directory:
 
         $ rh -1 'dev != ".".dev'
 
+**Note:** The above doesn't match *Linux* bind mounts because they don't
+involve a separate device.
+
 Find directories with no sub-directories (fast, for most filesystems, but
 not *btrfs*):
 
@@ -343,21 +349,37 @@ Find all hard links to all regular files that have multiple hard links (very
 slow):
 
         # rh -e 'f && nlink > 1' \
-             -X 'rh / "(dev == \"%S\".dev) && (ino == \"\".ino)"; echo' \
+             -X 'rh / "(dev == \"$2\".dev) && (ino == \"\".ino)"; echo' \
              /
 
-The same, but for a single filesystem only (shorter, less slow, but still
-very slow):
+**Note:** The use of `$2` instead of `%S` is to avoid the additional double
+quotes that would be introduced when `%S` is interpolated as `"$2"`. Using
+`%S` instead would leave the file name itself unquoted at the level of the
+inner shell.
 
-        # rh -1 -e 'f && nlink > 1' -X 'rh -1 / "ino == \"%S\".ino"; echo' /
+**Warning:** The above example is cute, but it is not safe for all file
+names. If the file's base name contains certain things like `\\` or `\"` or
+`"` it won't work, and if it contains `";` that would trigger an arbitrary
+code execution security vulnerability. In general, nested uses of *rh* like
+this are not safe, unless you first check to ensure that no candidate files
+have the characters `\` or `"` in their path, but even then, there would be
+a race condition between the time that you check and the time that you use
+the nested `rh`. In general, nested uses of *rh* are only safe when %s or %S
+is used as a separate command line argument (after `--`), and not as part of
+the search criteria expression.
+
+The same, but for a single filesystem only (shorter, less slow, but still
+very slow, and still unsafe):
+
+        # rh -1 -e 'f && nlink > 1' -X 'rh -1 / "ino == \"$2\".ino"; echo' /
 
 Find 32-bit ELF executables:
 
         $ rh 'f && anyx && sz > 10k && "ELF 32-bit*executable*".what'
 
-Find text files with ISO-8859 encoding:
+Find text files that look like they have an ISO-8859-* encoding:
 
-        $ rh 'f && "*ISO-8859 text".what'
+        $ rh 'f && "*ISO-8859* text".what'
         $ rh 'f && "text/*; charset=iso-8859*".mime'
 
 Find files that contain `TODO`:
@@ -436,7 +458,7 @@ least on *Solaris*).
 
 Find files on *macOS* with ACLs that grant write access to the user `drew`:
 
-        $ rh '(uid == $drew) ? uw : "user:[^:]+:drew:\d+:allow:write".reacl'
+        $ rh '(uid == $drew) ? uw : "user:[^:]+:drew:\d+:allow:write".rea'
 
 Find files with non-trivial access control lists (ACL):
 
@@ -519,7 +541,7 @@ To see what other things the `Makefile` can do:
 
 # PACKAGING
 
-To build a package on rpm-based distributions:
+To build a package on rpm-based *Linux* distributions:
 
         rpmbuild -ta rawhide-3.3.tar.gz
 
@@ -527,8 +549,8 @@ To build a package on rpm-based distributions:
 
 *Rawhide* should compile and work on any recent *POSIX* system (post-2008)
 with a *C* compiler and *make*. It has been thoroughly tested on
-*Debian*/*Ubuntu*/*Fedora* *Linux*, *FreeBSD*, *OpenBSD*, *NetBSD*, *macOS*,
-*Solaris*, and *Cygwin*.
+*Debian*/*Ubuntu*/*Fedora*/*Arch* *Linux*, *FreeBSD*, *OpenBSD*, *NetBSD*,
+*macOS*, *Solaris*, and *Cygwin*.
 
 The *configure* script only knows about these systems as far as installation
 locations are concerned, and whether or not manual entries should be
