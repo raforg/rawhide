@@ -179,7 +179,7 @@ rhstr.o: Makefile rhstr.c rh.h rhstr.h
 	$(CC) $(ALL_CFLAGS) -c rhstr.c
 
 clean:
-	rm -f $(RAWHIDE_PROG_NAME) $(OBJS) tags $(RAWHIDE_APP_MANFILE).html $(RAWHIDE_FMT_MANFILE).html README.html
+	rm -f $(RAWHIDE_PROG_NAME) $(OBJS) tags $(RAWHIDE_APP_MANFILE).html $(RAWHIDE_FMT_MANFILE).html README.html CONTRIBUTING.html
 	@rm -f valgrind.out *.gcda *.gcno *.gcov
 
 clobber: clean
@@ -282,10 +282,13 @@ $(RAWHIDE_FMT_MANFILE).html: $(RAWHIDE_FMT_MANFILE).pod
 
 # html2 is for internal use (requires python3 and its markdown module)
 
-html2: README.html
+html2: README.html CONTRIBUTING.html
 
 README.html: README.md
 	./md2html README.md $@ '$(RAWHIDE_ID) - README'
+
+CONTRIBUTING.html: CONTRIBUTING.md
+	./md2html CONTRIBUTING.md $@ '$(RAWHIDE_ID) - CONTRIBUTING'
 
 tags:     Makefile rh.h rh.c rhcmds.h rhcmds.c rhdata.h rhdata.c rhdir.h rhdir.c rhparse.h rhparse.c rherr.h rherr.c rhstr.h rhstr.c
 	ctags Makefile rh.h rh.c rhcmds.h rhcmds.c rhdata.h rhdata.c rhdir.h rhdir.c rhparse.h rhparse.c rherr.h rherr.c rhstr.h rhstr.c
@@ -374,7 +377,7 @@ help:
 	@echo "  man     - Create the manual entries (needs pod2man)"
 	@echo "  tags    - Create the tags file for vim (needs ctags)"
 	@echo "  html    - Create manual entries as HTML (needs pod2html)"
-	@echo "  html2   - Create README file as HTML (needs python3 and markdown module)"
+	@echo "  html2   - Create README/CONTRIBUTING as HTML (needs python3 and markdown module)"
 	@echo "  check   - Same as test"
 	@echo "  tests   - Same as test"
 	@echo "  default - Reset Makefile to its default configuration"
