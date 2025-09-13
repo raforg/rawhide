@@ -156,6 +156,11 @@ struct runtime_t
 	char *fpath;            /* Path to the current candidate file */
 	llong fpath_size;       /* Size of the dynamic fpath buffer */
 
+	char *defused_path;           /* Copy of fpath with leading ./ for %s */
+	size_t defused_path_size;     /* Allocated size of defused_fpath */
+	char *defused_basename;       /* Copy of fpath with leading ./ for %S */
+	size_t defused_basename_size; /* Allocated size of defused_basename */
+
 	int ftarget_done;       /* Have we read the current candidate symlink's target path yet? */
 	char *ftarget;          /* Target path of the current candidate symlink (long-lived, on-demand) */
 

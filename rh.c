@@ -1340,6 +1340,10 @@ int main(int argc, char *argv[])
 	free(attr.search_stack);
 	if (attr.user_shell_copy)
 		free(attr.user_shell_copy);
+	if (attr.defused_path)
+		free(attr.defused_path);
+	if (attr.defused_basename)
+		free(attr.defused_basename);
 
 	exit(attr.exit_status);
 }

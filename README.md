@@ -84,9 +84,9 @@ a high-level interface to the built-in symbols mentioned above, and makes
        -Y           - Follow symlinks encountered while searching as well
 
      alternative action options:
-       -x 'cmd -- %s' - Execute a shell command for each match (racy)
-       -X 'cmd -- %S' - Like -x but run from each match's directory (safer)
-       -U -U -U       - Unlink matches (but tell me three times), implies -D
+       -x 'cmd %s'  - Execute a shell command for each match (racy)
+       -X 'cmd %S'  - Like -x but run from each match's directory (safer)
+       -U -U -U     - Unlink matches (but tell me three times), implies -D
 
      output action options:
        -l           - Output matching entries like ls -l (but unsorted)
@@ -331,9 +331,9 @@ not *btrfs*):
 
 The same, but works for *btrfs* (slow-ish, but demonstrates shell commands):
 
-        $ rh 'd && "[ $(rh -red -- %S | wc -l) = 0 ]".sh'
-        $ rh 'd && "[ -z \"$(rh -red -- %S)\" ]".sh'
-        $ rh 'd && {[ -z "$(rh -red -- %S)" ]}.sh'
+        $ rh 'd && "[ $(rh -red %S | wc -l) = 0 ]".sh'
+        $ rh 'd && "[ -z \"$(rh -red %S)\" ]".sh'
+        $ rh 'd && {[ -z "$(rh -red %S)" ]}.sh'
 
 Find empty (readable) directories (fast-ish, and works for *btrfs*):
 
@@ -341,9 +341,9 @@ Find empty (readable) directories (fast-ish, and works for *btrfs*):
 
 Find symlinks whose immediate targets are also symlinks:
 
-        $ rh -l 'l && "[ -L \"$(rh -L%%l -- %S)\" ]".sh'
-        $ rh -l 'l && "[ -L \"$(readlink -- %S)\" ]".sh'
-        $ rh -l 'l && {[ -L "$(readlink -- %S)" ]}.sh'
+        $ rh -l 'l && "[ -L \"$(rh -L%%l %S)\" ]".sh'
+        $ rh -l 'l && "[ -L \"$(readlink %S)\" ]".sh'
+        $ rh -l 'l && {[ -L "$(readlink %S)" ]}.sh'
 
 Find all hard links to all regular files that have multiple hard links (very
 slow):
@@ -365,8 +365,8 @@ this are not safe, unless you first check to ensure that no candidate files
 have the characters `\` or `"` in their path, but even then, there would be
 a race condition between the time that you check and the time that you use
 the nested `rh`. In general, nested uses of *rh* are only safe when %s or %S
-is used as a separate command line argument (after `--`), and not as part of
-the search criteria expression.
+is used as a separate command line argument, and not as part of the search
+criteria expression.
 
 The same, but for a single filesystem only (shorter, less slow, but still
 very slow, and still unsafe):

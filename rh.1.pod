@@ -46,9 +46,9 @@ I<rh> - (I<rawhide>) find files using pretty I<C> expressions
    -Y           - Follow symlinks encountered while searching as well
 
  alternative action options:
-   -x 'cmd -- %s' - Execute a shell command for each match (racy)
-   -X 'cmd -- %S' - Like -x but run from each match's directory (safer)
-   -U -U -U       - Unlink matches (but tell me three times), implies -D
+   -x 'cmd %s'  - Execute a shell command for each match (racy)
+   -X 'cmd %S'  - Like -x but run from each match's directory (safer)
+   -U -U -U     - Unlink matches (but tell me three times), implies -D
 
  output action options:
    -l           - Output matching entries like ls -l (but unsorted)
@@ -330,7 +330,7 @@ You can also need an explicit C<-e> option if you want the file test
 expression to appear to the left of any command line options on (most)
 systems where all non-option command line arguments must appear to the right
 of all command line options and their arguments (e.g.,
-S<C<rh -e '>I<expr>C<' -X '>I<cmd>C< -- %S' >I<dir>>). This doesn't apply to
+S<C<rh -e '>I<expr>C<' -X '>I<cmd>C< %S' >I<dir>>). This doesn't apply to
 I<Linux> with I<GNU glibc>, which provides more flexible command line option
 parsing.
 
@@ -509,23 +509,21 @@ interpolating C<%s> and C<%S> as C<"$1"> and C<"$2"> is inappropriate for a
 particular command, you can instead use C<$1> and C<$2> directly, including
 via the shell's B<Parameter Expansion> syntax.
 
+As a special precaution, if C<%s> or C<%S> starts with a dash (C<"-">) or a
+plus sign (C<"+">), then a leading C<./> will be included so as to ensure
+that it cannot be incorrectly interpreted as a command line option in the
+shell command being executed. This makes it unnecessary for you to ever add
+C<--> before C<%s> or C<%S> to achieve the same effect. This also means that
+if the shell command being executed really needs the base name, and not just
+a valid file name, then it must use something like C<${1#./}> (rather than
+C<%s>), or C<${2#./}> (rather than C<%S>), so as to remove any leading
+C<./>. Note that this differs from I<GNU find> which always includes a
+leading C<./> before its equivalent of C<%S> (C<-execdir {}>), not just when
+it might be necessary. The I<GNU find> equivalent of C<%s> (C<-exec {}>) can
+never start with a dash.
+
 For this option, the C<%s> interpolation is more likely to be useful than
 the C<%S> interpolation.
-
-C<Warning:> It is almost always extremely important to put C<--> before
-C<%s> or C<%S> in shell commands (e.g., S<C<'>I<cmd>C< -- %s'>>). Most
-commands (I<rh> included) follow the convention that C<--> on the command
-line stops treating subsequent command line arguments as options, even if
-they start with a dash (C<"-">). It is important for security that C<%s> and
-C<%S> never be considered as options to the command being executed, as it
-can cause the command to perform some action that you did not
-intend. Malicious filenames can exploit this. But the use of C<--> will prevent
-that. It will ensure that C<%s> and C<%S> are treated as non-option command
-line arguments. This isn't always necessary. Sometimes the position of a
-command line argument dictates that it is not an option. The situation
-changes from one command to another. But in general, the use of C<--> before
-C<%s> or C<%S> is essential for security. I recommend that you try your
-command with C<--> first, and only remove it if that didn't work.
 
 This option is similar to the C<-exec> action in I<POSIX> I<find(1)>. And it
 suffers from the same large number of path-based race conditions as
@@ -542,7 +540,7 @@ and the C<">I<cmd>C<".sh> and C<">I<cmd>C<".ush> "pattern" modifiers (see
 I<rawhide.conf(5)>), where this is needed for security. This means that you
 can't rely on C<$PATH> to find an executable that is in the current
 directory. An explicit path would be needed instead (e.g.,
-S<C<-x './>I<cmd>C< -- %s'>>).
+S<C<-x './>I<cmd>C< %s'>>).
 
 This option, and the C<-l>, C<-0>, C<-L>, C<-j>, C<-X>, and C<-U> options,
 are all mutually exclusive.
@@ -582,23 +580,21 @@ interpolating C<%s> and C<%S> as C<"$1"> and C<"$2"> is inappropriate for a
 particular command, you can instead use C<$1> and C<$2> directly, including
 via the shell's B<Parameter Expansion> syntax.
 
+As a special precaution, if C<%s> or C<%S> starts with a dash (C<"-">) or a
+plus sign (C<"+">), then a leading C<./> will be included so as to ensure
+that it cannot be incorrectly interpreted as a command line option in the
+shell command being executed. This makes it unnecessary for you to ever add
+C<--> before C<%s> or C<%S> to achieve the same effect. This also means that
+if the shell command being executed really needs the base name, and not just
+a valid file name, then it must use something like C<${1#./}> (rather than
+C<%s>), or C<${2#./}> (rather than C<%S>), so as to remove any leading
+C<./>. Note that this differs from I<GNU find> which always includes a
+leading C<./> before its equivalent of C<%S> (C<-execdir {}>), not just when
+it might be necessary. The I<GNU find> equivalent of C<%s> (C<-exec {}>) can
+never start with a dash.
+
 For this option, the C<%S> interpolation is more likely to be useful than
 the C<%s> interpolation.
-
-C<Warning:> It is almost always extremely important to put C<--> before
-C<%s> or C<%S> in shell commands (e.g., S<C<'>I<cmd>C< -- %s'>>). Most
-commands (I<rh> included) follow the convention that C<--> on the command
-line stops treating subsequent command line arguments as options, even if
-they start with a dash (C<"-">). It is important for security that C<%s> and
-C<%S> never be considered as options to the command being executed, as it
-can cause the command to perform some action that you did not
-intend. Malicious filenames can exploit this. But the use of C<--> will prevent
-that. It will ensure that C<%s> and C<%S> are treated as non-option command
-line arguments. This isn't always necessary. Sometimes the position of a
-command line argument dictates that it is not an option. The situation
-changes from one command to another. But in general, the use of C<--> before
-C<%s> or C<%S> is essential for security. I recommend that you try your
-command with C<--> first, and only remove it if that didn't work.
 
 This option is similar to the C<-execdir> action in I<GNU find(1)>, and so
 does not suffer from the same large number of path-based race conditions as
@@ -1878,9 +1874,9 @@ not I<btrfs>):
 
 The same, but works for I<btrfs> (slow-ish, but demonstrates shell commands):
 
-    $ rh 'd && "[ $(rh -red -- %S | wc -l) = 0 ]".sh'
-    $ rh 'd && "[ -z \"$(rh -red -- %S)\" ]".sh'
-    $ rh 'd && {[ -z "$(rh -red -- %S)" ]}.sh'
+    $ rh 'd && "[ $(rh -red %S | wc -l) = 0 ]".sh'
+    $ rh 'd && "[ -z \"$(rh -red %S)\" ]".sh'
+    $ rh 'd && {[ -z "$(rh -red %S)" ]}.sh'
 
 Find empty (readable) directories (fast-ish, and works for I<btrfs>):
 
@@ -1888,9 +1884,9 @@ Find empty (readable) directories (fast-ish, and works for I<btrfs>):
 
 Find symlinks whose immediate targets are also symlinks:
 
-    $ rh -l 'l && "[ -L \"$(rh -L%%l -- %S)\" ]".sh'
-    $ rh -l 'l && "[ -L \"$(readlink -- %S)\" ]".sh'
-    $ rh -l 'l && {[ -L "$(readlink -- %S)" ]}.sh'
+    $ rh -l 'l && "[ -L \"$(rh -L%%l %S)\" ]".sh'
+    $ rh -l 'l && "[ -L \"$(readlink %S)\" ]".sh'
+    $ rh -l 'l && {[ -L "$(readlink %S)" ]}.sh'
 
 Find all hard links to all regular files that have multiple hard links (very
 slow):
@@ -1912,8 +1908,8 @@ I<rh> like this are not safe, unless you first check to ensure that no
 candidate files have the characters C<\> or C<"> in their path, but even
 then, there would be a race condition between the time that you check and
 the time that you use the nested C<rh>. In general, nested uses of I<rh> are
-only safe when %s or %S is used as a separate command line argument (after
-C<-->), and not as part of the search criteria expression.
+only safe when %s or %S is used as a separate command line argument, and not
+as part of the search criteria expression.
 
 The same, but for a single filesystem only (shorter, less slow, but still
 very slow, and still unsafe):
@@ -2129,13 +2125,13 @@ Delete old backup files:
 
 I<grep(1)> for something only in recent files:
 
-    $ rh -e 'f && modified >= ago(hour)' -x 'grep -H -- something %s'
-    $ rh -e 'f && past(hour)'            -x 'grep -H -- something %s'
+    $ rh -e 'f && modified >= ago(hour)' -x 'grep -H something %s'
+    $ rh -e 'f && past(hour)'            -x 'grep -H something %s'
 
 The same, but just list the files where I<grep(1)> found something:
 
-    $ rh 'f && modified >= ago(hour) && "grep -q -- something %S".sh'
-    $ rh 'f && past(hour)            && "grep -q -- something %S".sh'
+    $ rh 'f && modified >= ago(hour) && "grep -q something %S".sh'
+    $ rh 'f && past(hour)            && "grep -q something %S".sh'
 
 Show all access control lists:
 
@@ -2448,8 +2444,8 @@ Run I<file(1)> on every file in or below the current directory.
 
   $ find . -type f -exec file '{}' \;
 
-  $ rh -x 'file -- %s' file
-  $ rh -x 'file -- %s' f
+  $ rh -x 'file %s' file
+  $ rh -x 'file %s' f
 
 =head2 Traversing the filesystem just once - for two different actions
 
@@ -2461,8 +2457,8 @@ into C</root/suid.txt> and large files into C</root/big.txt>.
     \( -size +100M -fprintf /root/big.txt '%-10s %p\n' \)
 
   # rh -L '' / '
-    (setuid && "rh -M0 -L \"%%#m %%u %%p\n\" -- %s >>/root/suid.txt".sh) +
-    (size > 100M && "rh -M0 -L \"%%-10s %%p\n\" -- %s >>/root/big.txt".sh)
+    (setuid && "rh -M0 -L \"%%#m %%u %%p\n\" %s >>/root/suid.txt".sh) +
+    (size > 100M && "rh -M0 -L \"%%-10s %%p\n\" %s >>/root/big.txt".sh)
   '
 
 =head2 Searching files by age
@@ -2896,14 +2892,15 @@ criteria expression among the command line arguments when there is no
 explicit C<-e> option. This eliminates the risk that the use of a shell file
 name glob pattern might encounter a malicious file name and add it to the
 command line, and that malicious file name being interpreted as an implicit
-search criteria expression. To completely eliminate this risk, you need to
-also include C<--> on the command line before the glob pattern because a
-malicious file name might start with C<-e> and be interpreted as an explicit
-search criteria expression. But this additional precaution is only necessary
-when there is no explicit C<-e> option on the command line. An alternative
-to the use of this environment variable is to just always include an
-explicit C<-e> option on the command line, even when you want the default
-behaviour of matching all filesystem entries (i.e., C<-e1>).
+search criteria expression, if it were maliciously deleted at just the right
+moment. To completely eliminate this risk, you need to also include C<--> on
+the command line before the glob pattern because a malicious file name might
+start with C<-e> and be interpreted as an explicit search criteria
+expression. But this additional precaution is only necessary when there is
+no explicit C<-e> option on the command line. An alternative to the use of
+this environment variable is to just always include an explicit C<-e> option
+on the command line, even when you want the default behaviour of matching
+all filesystem entries (i.e., C<-e1>).
 
 The environment variable C<RAWHIDE_USER_SHELL> can be set to the absolute
 path to an alternative shell to be used by the C<">I<cmd>C<".ush> "pattern"

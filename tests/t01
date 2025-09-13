@@ -133,15 +133,57 @@ fi
 # shell command using $() rather than `` which worked safely with both
 # methods of interpolation.
 
-rh2="${valgrind}`pwd`/rh -Nn -f `pwd`/rawhide.conf"
 mkdir $d/'`$X`'
 touch $d/'`$X`'/f
-#test_rawhide "X='echo tricky'             $rh -m1 -e 'd && !empty && \"[ -n \\\"\`$rh2 -ref -- %S\`\\\" ]\".sh' $d" ""             "rh: fstatat tricky: No such file or directory\n" 0 "backtick cmd with backticks in %S and arbitrary cmd with space in env (orig unsafe)"
-#test_rawhide "X='/sbin/reboot-not-really' $rh -m1 -e 'd && !empty && \"[ -n \\\"\`$rh2 -ref -- %S\`\\\" ]\".sh' $d" "$d/\`\$X\`\n" "sh: 1: /sbin/reboot-not-really: not found\n" 0 "backtick cmd with backticks in %S and arbitrary cmd with slash in env (orig unsafe)"
-test_rawhide "X='echo tricky'             $rh -m1 -e 'd && !empty && \"[ -n \\\"\`$rh2 -ref -- %S\`\\\" ]\".sh' $d" "$d/\`\$X\`\n" "" 0 "backtick cmd with backticks in %S and arbitrary cmd with space in env (safe)"
-test_rawhide "X='/sbin/reboot-not-really' $rh -m1 -e 'd && !empty && \"[ -n \\\"\`$rh2 -ref -- %S\`\\\" ]\".sh' $d" "$d/\`\$X\`\n" "" 0 "backtick cmd with backticks in %S and arbitrary cmd with slash in env (safe)"
-test_rawhide "X='echo tricky'             $rh -m1 -e 'd && !empty && \"[ -n \\\"\$($rh2 -ref -- %S)\\\" ]\".sh' $d" "$d/\`\$X\`\n" "" 0 "\$() cmd with backticks in %S and arbitrary cmd with space in env (safe)"
-test_rawhide "X='/sbin/reboot-not-really' $rh -m1 -e 'd && !empty && \"[ -n \\\"\$($rh2 -ref -- %S)\\\" ]\".sh' $d" "$d/\`\$X\`\n" "" 0 "\$() cmd with backticks in %S and arbitrary cmd with slash in env (safe)"
+#test_rawhide "X='echo tricky'             $rh -m1 -e 'd && !empty && \"[ -n \\\"\`$explicit_rh -ref -- %S\`\\\" ]\".sh' $d" ""             "rh: fstatat tricky: No such file or directory\n" 0 "backtick cmd with backticks in %S and arbitrary cmd with space in env (orig unsafe)"
+#test_rawhide "X='/sbin/reboot-not-really' $rh -m1 -e 'd && !empty && \"[ -n \\\"\`$explicit_rh -ref -- %S\`\\\" ]\".sh' $d" "$d/\`\$X\`\n" "sh: 1: /sbin/reboot-not-really: not found\n" 0 "backtick cmd with backticks in %S and arbitrary cmd with slash in env (orig unsafe)"
+test_rawhide "X='echo tricky'             $rh -m1 -e 'd && !empty && \"[ -n \\\"\`$explicit_rh -ref -- %S\`\\\" ]\".sh' $d" "$d/\`\$X\`\n" "" 0 "backtick cmd with backticks in %S and arbitrary cmd with space in env (safe)"
+test_rawhide "X='/sbin/reboot-not-really' $rh -m1 -e 'd && !empty && \"[ -n \\\"\`$explicit_rh -ref -- %S\`\\\" ]\".sh' $d" "$d/\`\$X\`\n" "" 0 "backtick cmd with backticks in %S and arbitrary cmd with slash in env (safe)"
+test_rawhide "X='echo tricky'             $rh -m1 -e 'd && !empty && \"[ -n \\\"\$($explicit_rh -ref -- %S)\\\" ]\".sh' $d" "$d/\`\$X\`\n" "" 0 "\$() cmd with backticks in %S and arbitrary cmd with space in env (safe)"
+test_rawhide "X='/sbin/reboot-not-really' $rh -m1 -e 'd && !empty && \"[ -n \\\"\$($explicit_rh -ref -- %S)\\\" ]\".sh' $d" "$d/\`\$X\`\n" "" 0 "\$() cmd with backticks in %S and arbitrary cmd with slash in env (safe)"
+
+rm -r $d/*
+
+# Test defusing %s and %S that start with - or +
+
+mkdir $d/normal
+mkdir $d/-dash
+mkdir $d/+plus
+
+touch $d/normal/normal
+touch $d/normal/-dash
+touch $d/normal/+plus
+touch $d/-dash/normal
+touch $d/-dash/-dash
+touch $d/-dash/+plus
+touch $d/+plus/normal
+touch $d/+plus/-dash
+touch $d/+plus/+plus
+
+test_rawhide_pre_hook() { test_rh_cd_pre_hook; }
+test_rawhide_post_hook() { test_rh_cd_post_hook; test_rh_sort_post_hook; }
+
+test_rawhide "$explicit_rh -x 'echo %s %S'"                       ". .\n./+plus ./+plus\n./+plus/+plus ./+plus\n./+plus/-dash ./-dash\n./+plus/normal normal\n./-dash ./-dash\n./-dash/+plus ./+plus\n./-dash/-dash ./-dash\n./-dash/normal normal\n./normal normal\n./normal/+plus ./+plus\n./normal/-dash ./-dash\n./normal/normal normal\n" "" 0 "defuse %s/%S for -x starting with - or +"
+test_rawhide "$explicit_rh -x 'echo %s %S' -- normal"             "normal normal\nnormal/+plus ./+plus\nnormal/-dash ./-dash\nnormal/normal normal\n"                                                                                                                                                                                          "" 0 "defuse %s/%S for -x starting with - or + (normal)"
+test_rawhide "$explicit_rh -x 'echo %s %S' -- -dash"              "./-dash ./-dash\n./-dash/+plus ./+plus\n./-dash/-dash ./-dash\n./-dash/normal normal\n"                                                                                                                                                                                     "" 0 "defuse %s/%S for -x starting with - or + (-dash)"
+test_rawhide "$explicit_rh -x 'echo %s %S' -- +plus"              "./+plus ./+plus\n./+plus/+plus ./+plus\n./+plus/-dash ./-dash\n./+plus/normal normal\n"                                                                                                                                                                                     "" 0 "defuse %s/%S for -x starting with - or + (+plus)"
+test_rawhide "$explicit_rh -X 'echo %s %S'"                       ". .\n./+plus ./+plus\n./+plus/+plus ./+plus\n./+plus/-dash ./-dash\n./+plus/normal normal\n./-dash ./-dash\n./-dash/+plus ./+plus\n./-dash/-dash ./-dash\n./-dash/normal normal\n./normal normal\n./normal/+plus ./+plus\n./normal/-dash ./-dash\n./normal/normal normal\n" "" 0 "defuse %s/%S for -X starting with - or +"
+test_rawhide "$explicit_rh -X 'echo %s %S' -- normal"             "normal normal\nnormal/+plus ./+plus\nnormal/-dash ./-dash\nnormal/normal normal\n"                                                                                                                                                                                          "" 0 "defuse %s/%S for -X starting with - or + (normal)"
+test_rawhide "$explicit_rh -X 'echo %s %S' -- -dash"              "./-dash ./-dash\n./-dash/+plus ./+plus\n./-dash/-dash ./-dash\n./-dash/normal normal\n"                                                                                                                                                                                     "" 0 "defuse %s/%S for -X starting with - or + (-dash)"
+test_rawhide "$explicit_rh -X 'echo %s %S' -- +plus"              "./+plus ./+plus\n./+plus/+plus ./+plus\n./+plus/-dash ./-dash\n./+plus/normal normal\n"                                                                                                                                                                                     "" 0 "defuse %s/%S for -X starting with - or + (+plus)"
+test_rawhide "$explicit_rh -e '\"echo %s %S\".sh && 0'"           ". .\n./+plus ./+plus\n./+plus/+plus ./+plus\n./+plus/-dash ./-dash\n./+plus/normal normal\n./-dash ./-dash\n./-dash/+plus ./+plus\n./-dash/-dash ./-dash\n./-dash/normal normal\n./normal normal\n./normal/+plus ./+plus\n./normal/-dash ./-dash\n./normal/normal normal\n" "" 0 "defuse %s/%S for sh starting with - or +"
+test_rawhide "$explicit_rh -e '\"echo %s %S\".sh && 0' -- normal" "normal normal\nnormal/+plus ./+plus\nnormal/-dash ./-dash\nnormal/normal normal\n"                                                                                                                                                                                          "" 0 "defuse %s/%S for sh starting with - or + (normal)"
+test_rawhide "$explicit_rh -e '\"echo %s %S\".sh && 0' -- -dash"  "./-dash ./-dash\n./-dash/+plus ./+plus\n./-dash/-dash ./-dash\n./-dash/normal normal\n"                                                                                                                                                                                     "" 0 "defuse %s/%S for sh starting with - or + (-dash)"
+test_rawhide "$explicit_rh -e '\"echo %s %S\".sh && 0' -- +plus"  "./+plus ./+plus\n./+plus/+plus ./+plus\n./+plus/-dash ./-dash\n./+plus/normal normal\n"                                                                                                                                                                                     "" 0 "defuse %s/%S for sh starting with - or + (+plus)"
+test_rawhide "RAWHIDE_USER_SHELL=/bin/sh $explicit_rh -e '\"echo %s %S\".ush && 0'"           ". .\n./+plus ./+plus\n./+plus/+plus ./+plus\n./+plus/-dash ./-dash\n./+plus/normal normal\n./-dash ./-dash\n./-dash/+plus ./+plus\n./-dash/-dash ./-dash\n./-dash/normal normal\n./normal normal\n./normal/+plus ./+plus\n./normal/-dash ./-dash\n./normal/normal normal\n" "" 0 "defuse %s/%S for ush starting with - or +"
+test_rawhide "RAWHIDE_USER_SHELL=/bin/sh $explicit_rh -e '\"echo %s %S\".ush && 0' -- normal" "normal normal\nnormal/+plus ./+plus\nnormal/-dash ./-dash\nnormal/normal normal\n"                                                                                                                                                                                                                       "" 0 "defuse %s/%S for ush starting with - or + (normal)"
+test_rawhide "RAWHIDE_USER_SHELL=/bin/sh $explicit_rh -e '\"echo %s %S\".ush && 0' -- -dash"  "./-dash ./-dash\n./-dash/+plus ./+plus\n./-dash/-dash ./-dash\n./-dash/normal normal\n"                                                                                                                                                                                                                  "" 0 "defuse %s/%S for ush starting with - or + (-dash)"
+test_rawhide "RAWHIDE_USER_SHELL=/bin/sh $explicit_rh -e '\"echo %s %S\".ush && 0' -- +plus"  "./+plus ./+plus\n./+plus/+plus ./+plus\n./+plus/-dash ./-dash\n./+plus/normal normal\n"                                                                                                                                                                                                                  "" 0 "defuse %s/%S for ush starting with - or + (+plus)"
+
+test_rawhide_pre_hook() { true; }
+test_rawhide_post_hook() { true; }
+
+rm -r $d/normal $d/-dash $d/+plus
 
 finish
 

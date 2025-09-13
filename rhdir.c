@@ -1625,6 +1625,76 @@ static const char *get_basename(void)
 
 /*
 
+static const char *defused(char **buf, size_t *bufsz, const char *src);
+
+Returns src unless it starts with - or + and could therefore be mistaken for
+a command line option. In that case, returns a dynamically allocated copy
+(in a long-lived buffer *buf of size *bufsz) with ./ prepended.
+
+*/
+
+static const char *defused(char **buf, size_t *bufsz, const char *src)
+{
+	/* Defuse src starting with - or + so it can't be seen as an option */
+
+	if (src && (*src == '-' || *src == '+'))
+	{
+		size_t size = strlen(src) + 3;
+
+		if (size > *bufsz)
+		{
+			void *defused;
+
+			if (!(defused = realloc(*buf, size)))
+				fatalsys("out of memory");
+
+			*buf = defused;
+			*bufsz = size;
+		}
+
+		strlcpy(*buf, "./", *bufsz);
+		strlcpy(*buf + 2, src, *bufsz - 2);
+
+		return *buf;
+	}
+
+	/* The src is fine as is */
+
+	return src;
+}
+
+/*
+
+static const char *defused_path(void);
+
+Returns the path unless it starts with - or + and could therefore be
+mistaken for a command line option. In that case, returns a dynamically
+allocated copy (in a long-lived buffer) with ./ prepended.
+
+*/
+
+static const char *defused_path(void)
+{
+	return defused(&attr.defused_path, &attr.defused_path_size, attr.fpath);
+}
+
+/*
+
+static const char *defused_basename(void);
+
+Returns the basename unless it starts with - or + and could therefore be
+mistaken for a command line option. In that case, returns a dynamically
+allocated copy (in a long-lived buffer) with ./ prepended.
+
+*/
+
+static const char *defused_basename(void)
+{
+	return defused(&attr.defused_basename, &attr.defused_basename_size, get_basename());
+}
+
+/*
+
 void visitf_execute(void);
 
 The -x action for matching files. It executes a shell command. Occurrences
@@ -1915,7 +1985,7 @@ arguments ($1=%s, $2=%S) to avoid the need to quote anything.
 
 int syscmd(const char *cmd)
 {
-	int rc = systeml(cmd, attr.fpath, get_basename(), (char *)NULL);
+	int rc = systeml(cmd, defused_path(), defused_basename(), (char *)NULL);
 
 	if (rc != -1 && WIFSIGNALED(rc) && (WTERMSIG(rc) == SIGINT || WTERMSIG(rc) == SIGQUIT))
 		kill(getpid(), WTERMSIG(rc));
@@ -2003,7 +2073,7 @@ positional arguments ($1=%s, $2=%S) to avoid the need to quote anything.
 
 int usyscmd(const char *cmd)
 {
-	int rc = usysteml(cmd, attr.fpath, get_basename(), (char *)NULL);
+	int rc = usysteml(cmd, defused_path(), defused_basename(), (char *)NULL);
 
 	if (rc != -1 && WIFSIGNALED(rc) && (WTERMSIG(rc) == SIGINT || WTERMSIG(rc) == SIGQUIT))
 		kill(getpid(), WTERMSIG(rc));

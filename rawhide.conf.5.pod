@@ -1755,6 +1755,19 @@ interpolating C<%s> and C<%S> as C<"$1"> and C<"$2"> is inappropriate for a
 particular command, you can instead use C<$1> and C<$2> directly, including
 via the shell's B<Parameter Expansion> syntax.
 
+As a special precaution, if C<%s> or C<%S> starts with a dash (C<"-">) or a
+plus sign (C<"+">), then a leading C<./> will be included so as to ensure
+that it cannot be incorrectly interpreted as a command line option in the
+shell command being executed. This makes it unnecessary for you to ever add
+C<--> before C<%s> or C<%S> to achieve the same effect. This also means that
+if the shell command being executed really needs the base name, and not just
+a valid file name, then it must use something like C<${1#./}> (rather than
+C<%s>), or C<${2#./}> (rather than C<%S>), so as to remove any leading
+C<./>. Note that this differs from I<GNU find> which always includes a
+leading C<./> before its equivalent of C<%S> (C<-execdir {}>), not just when
+it might be necessary. The I<GNU find> equivalent of C<%s> (C<-exec {}>) can
+never start with a dash.
+
 Every shell command is executed after safely changing the current working
 directory to the directory containing each candidate file. This minimizes
 the number of path-based race conditions. So the C<%S> interpolation is more
@@ -1773,21 +1786,6 @@ working directory back to the initial working directory. Also note that
 C<%s> suffers from many path-based race conditions, which is insecure on
 hosts with malicious local actors that have write access to the directory
 tree being searched, and so should not generally be used.
-
-C<Warning:> It is usually an extremely good idea to put C<--> before C<%s>
-or C<%S> in shell commands (e.g., S<C<'>I<cmd>C< -- %s'>>). Most commands
-(I<rh> included) follow the convention that C<--> on the command line stops
-treating subsequent command line arguments as options, even if they start
-with a dash (C<"-">). It is important for security that C<%s> and C<%S>
-never be considered as options to the command being executed, as it can
-cause the command to perform some action that you did not intend. Malicious
-filenames can exploit this. But the use of C<--> will prevent that. It will
-ensure that C<%s> and C<%S> are treated as non-option command line
-arguments. This isn't always necessary. Sometimes the position of a command
-line argument dictates that it is not an option. The situation changes from
-one command to another. But in general, the use of C<--> before C<%s> or
-C<%S> is essential for security. I recommend that you try your command with
-C<--> first, and only remove it if that didn't work.
 
 =item C<ush> (or C<u>)
 
