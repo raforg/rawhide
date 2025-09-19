@@ -55,21 +55,21 @@ test_cmdbufsize 18 "$rh -x 'echo 6789012345678' $d" ""                          
 
 # These require a buffer size of at least 10
 # echo "$1"
-test_cmdbufsize 11 "$rh -x 'echo %s' $d" "tests/.$t\ntests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: small"
-test_cmdbufsize 10 "$rh -x 'echo %s' $d" "tests/.$t\ntests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: max"
-test_cmdbufsize  9 "$rh -x 'echo %s' $d" ""                             "./rh: command is too big: echo %%s (tests/.$t)\n./rh: command is too big: echo %%s (tests/.$t/abcd )\n" 1 "interpolating %s: too big"
+test_cmdbufsize 11 "$rh -x 'echo %s' $d" "./tests/.$t\n./tests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: small"
+test_cmdbufsize 10 "$rh -x 'echo %s' $d" "./tests/.$t\n./tests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: max"
+test_cmdbufsize  9 "$rh -x 'echo %s' $d" ""                                 "./rh: command is too big: echo %%s (tests/.$t)\n./rh: command is too big: echo %%s (tests/.$t/abcd )\n" 1 "interpolating %s: too big"
 
 # These require a buffer size of at least 10
 # echo "$2"
-test_cmdbufsize 11 "$rh -x 'echo %S' $d" ".$t\nabcd \n" ""                                                                                                       0 "interpolating %S: small"
-test_cmdbufsize 10 "$rh -x 'echo %S' $d" ".$t\nabcd \n" ""                                                                                                       0 "interpolating %S: max"
-test_cmdbufsize 09 "$rh -x 'echo %S' $d" ""             "./rh: command is too big: echo %%S (tests/.$t)\n./rh: command is too big: echo %%S (tests/.$t/abcd )\n" 1 "interpolating %S: too big"
+test_cmdbufsize 11 "$rh -x 'echo %S' $d" "./.$t\n./abcd \n" ""                                                                                                       0 "interpolating %S: small"
+test_cmdbufsize 10 "$rh -x 'echo %S' $d" "./.$t\n./abcd \n" ""                                                                                                       0 "interpolating %S: max"
+test_cmdbufsize 09 "$rh -x 'echo %S' $d" ""                 "./rh: command is too big: echo %%S (tests/.$t)\n./rh: command is too big: echo %%S (tests/.$t/abcd )\n" 1 "interpolating %S: too big"
 
 # These require a buffer size of at least 12
 # echo "$1" %
-test_cmdbufsize 13 "$rh -x 'echo %s %%' $d" "tests/.$t %%\ntests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: small"
-test_cmdbufsize 12 "$rh -x 'echo %s %%' $d" "tests/.$t %%\ntests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: max"
-test_cmdbufsize 11 "$rh -x 'echo %s %%' $d" ""                                   "./rh: command is too big: echo %%s %%%% (tests/.$t)\n./rh: command is too big: echo %%s %%%% (tests/.$t/abcd )\n" 1 "interpolating %%: too big"
+test_cmdbufsize 13 "$rh -x 'echo %s %%' $d" "./tests/.$t %%\n./tests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: small"
+test_cmdbufsize 12 "$rh -x 'echo %s %%' $d" "./tests/.$t %%\n./tests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: max"
+test_cmdbufsize 11 "$rh -x 'echo %s %%' $d" ""                                       "./rh: command is too big: echo %%s %%%% (tests/.$t)\n./rh: command is too big: echo %%s %%%% (tests/.$t/abcd )\n" 1 "interpolating %%: too big"
 
 label2="-X"
 
@@ -81,21 +81,21 @@ test_cmdbufsize 18 "$rh -X 'echo 6789012345678' $d" ""                          
 
 # These require a buffer size of at least 10
 # echo "$1"
-test_cmdbufsize 11 "$rh -X 'echo %s' $d" "tests/.$t\ntests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: small"
-test_cmdbufsize 10 "$rh -X 'echo %s' $d" "tests/.$t\ntests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: max"
-test_cmdbufsize  9 "$rh -X 'echo %s' $d" ""                             "./rh: command is too big: echo %%s (tests/.$t)\n./rh: command is too big: echo %%s (tests/.$t/abcd )\n" 1 "interpolating %s: too big"
+test_cmdbufsize 11 "$rh -X 'echo %s' $d" "./tests/.$t\n./tests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: small"
+test_cmdbufsize 10 "$rh -X 'echo %s' $d" "./tests/.$t\n./tests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: max"
+test_cmdbufsize  9 "$rh -X 'echo %s' $d" ""                                 "./rh: command is too big: echo %%s (tests/.$t)\n./rh: command is too big: echo %%s (tests/.$t/abcd )\n" 1 "interpolating %s: too big"
 
 # These require a buffer size of at least 10
 # echo "$2"
-test_cmdbufsize 11 "$rh -X 'echo %S' $d" ".$t\nabcd \n" ""                                                                                                       0 "interpolating %S: small"
-test_cmdbufsize 10 "$rh -X 'echo %S' $d" ".$t\nabcd \n" ""                                                                                                       0 "interpolating %S: max"
-test_cmdbufsize 09 "$rh -X 'echo %S' $d" ""             "./rh: command is too big: echo %%S (tests/.$t)\n./rh: command is too big: echo %%S (tests/.$t/abcd )\n" 1 "interpolating %S: too big"
+test_cmdbufsize 11 "$rh -X 'echo %S' $d" "./.$t\n./abcd \n" ""                                                                                                       0 "interpolating %S: small"
+test_cmdbufsize 10 "$rh -X 'echo %S' $d" "./.$t\n./abcd \n" ""                                                                                                       0 "interpolating %S: max"
+test_cmdbufsize 09 "$rh -X 'echo %S' $d" ""                 "./rh: command is too big: echo %%S (tests/.$t)\n./rh: command is too big: echo %%S (tests/.$t/abcd )\n" 1 "interpolating %S: too big"
 
 # These require a buffer size of at least 12
 # echo "$1" %
-test_cmdbufsize 13 "$rh -X 'echo %s %%' $d" "tests/.$t %%\ntests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: small"
-test_cmdbufsize 12 "$rh -X 'echo %s %%' $d" "tests/.$t %%\ntests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: max"
-test_cmdbufsize 11 "$rh -X 'echo %s %%' $d" ""                                   "./rh: command is too big: echo %%s %%%% (tests/.$t)\n./rh: command is too big: echo %%s %%%% (tests/.$t/abcd )\n" 1 "interpolating %%: too big"
+test_cmdbufsize 13 "$rh -X 'echo %s %%' $d" "./tests/.$t %%\n./tests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: small"
+test_cmdbufsize 12 "$rh -X 'echo %s %%' $d" "./tests/.$t %%\n./tests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: max"
+test_cmdbufsize 11 "$rh -X 'echo %s %%' $d" ""                                       "./rh: command is too big: echo %%s %%%% (tests/.$t)\n./rh: command is too big: echo %%s %%%% (tests/.$t/abcd )\n" 1 "interpolating %%: too big"
 
 label2=".sh"
 
@@ -107,21 +107,21 @@ test_cmdbufsize 18 "$rh -e '\"echo 6789012345678\".sh && 0' $d" ""              
 
 # These require a buffer size of at least 10
 # echo "$1"
-test_cmdbufsize 11 "$rh -e '\"echo %s\".sh && 0' $d" "tests/.$t\ntests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: small"
-test_cmdbufsize 10 "$rh -e '\"echo %s\".sh && 0' $d" "tests/.$t\ntests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: max"
-test_cmdbufsize  9 "$rh -e '\"echo %s\".sh && 0' $d" ""                             "./rh: command is too big: echo %%s (tests/.$t)\n./rh: command is too big: echo %%s (tests/.$t/abcd )\n" 1 "interpolating %s: too big"
+test_cmdbufsize 11 "$rh -e '\"echo %s\".sh && 0' $d" "./tests/.$t\n./tests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: small"
+test_cmdbufsize 10 "$rh -e '\"echo %s\".sh && 0' $d" "./tests/.$t\n./tests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: max"
+test_cmdbufsize  9 "$rh -e '\"echo %s\".sh && 0' $d" ""                                 "./rh: command is too big: echo %%s (tests/.$t)\n./rh: command is too big: echo %%s (tests/.$t/abcd )\n" 1 "interpolating %s: too big"
 
 # These require a buffer size of at least 10
 # echo "$2"
-test_cmdbufsize 11 "$rh -e '\"echo %S\".sh && 0' $d" ".$t\nabcd \n" ""                                                                                                       0 "interpolating %S: small"
-test_cmdbufsize 10 "$rh -e '\"echo %S\".sh && 0' $d" ".$t\nabcd \n" ""                                                                                                       0 "interpolating %S: max"
-test_cmdbufsize  9 "$rh -e '\"echo %S\".sh && 0' $d" ""             "./rh: command is too big: echo %%S (tests/.$t)\n./rh: command is too big: echo %%S (tests/.$t/abcd )\n" 1 "interpolating %S: too big"
+test_cmdbufsize 11 "$rh -e '\"echo %S\".sh && 0' $d" "./.$t\n./abcd \n" ""                                                                                                       0 "interpolating %S: small"
+test_cmdbufsize 10 "$rh -e '\"echo %S\".sh && 0' $d" "./.$t\n./abcd \n" ""                                                                                                       0 "interpolating %S: max"
+test_cmdbufsize  9 "$rh -e '\"echo %S\".sh && 0' $d" ""                 "./rh: command is too big: echo %%S (tests/.$t)\n./rh: command is too big: echo %%S (tests/.$t/abcd )\n" 1 "interpolating %S: too big"
 
 # These require a buffer size of at least 12
 # echo "$1: %
-test_cmdbufsize 13 "$rh -e '\"echo %s %%\".sh && 0' $d" "tests/.$t %%\ntests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: small"
-test_cmdbufsize 12 "$rh -e '\"echo %s %%\".sh && 0' $d" "tests/.$t %%\ntests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: max"
-test_cmdbufsize 11 "$rh -e '\"echo %s %%\".sh && 0' $d" ""                                   "./rh: command is too big: echo %%s %%%% (tests/.$t)\n./rh: command is too big: echo %%s %%%% (tests/.$t/abcd )\n" 1 "interpolating %%: too big"
+test_cmdbufsize 13 "$rh -e '\"echo %s %%\".sh && 0' $d" "./tests/.$t %%\n./tests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: small"
+test_cmdbufsize 12 "$rh -e '\"echo %s %%\".sh && 0' $d" "./tests/.$t %%\n./tests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: max"
+test_cmdbufsize 11 "$rh -e '\"echo %s %%\".sh && 0' $d" ""                                       "./rh: command is too big: echo %%s %%%% (tests/.$t)\n./rh: command is too big: echo %%s %%%% (tests/.$t/abcd )\n" 1 "interpolating %%: too big"
 
 label2=".ush"
 
@@ -135,21 +135,21 @@ then
 
 	# These require a buffer size of at least 14
 	# echo $argv[1]
-	test_cmdbufsize 11 "RAWHIDE_USER_SHELL=/bin/sh $rh -e '\"echo %s\".ush && 0' $d" "tests/.$t\ntests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: small"
-	test_cmdbufsize 10 "RAWHIDE_USER_SHELL=/bin/sh $rh -e '\"echo %s\".ush && 0' $d" "tests/.$t\ntests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: max"
-	test_cmdbufsize  9 "RAWHIDE_USER_SHELL=/bin/sh $rh -e '\"echo %s\".ush && 0' $d" ""                             "./rh: command is too big: echo %%s (tests/.$t)\n./rh: command is too big: echo %%s (tests/.$t/abcd )\n" 1 "interpolating %s: too big"
+	test_cmdbufsize 11 "RAWHIDE_USER_SHELL=/bin/sh $rh -e '\"echo %s\".ush && 0' $d" "./tests/.$t\n./tests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: small"
+	test_cmdbufsize 10 "RAWHIDE_USER_SHELL=/bin/sh $rh -e '\"echo %s\".ush && 0' $d" "./tests/.$t\n./tests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: max"
+	test_cmdbufsize  9 "RAWHIDE_USER_SHELL=/bin/sh $rh -e '\"echo %s\".ush && 0' $d" ""                                 "./rh: command is too big: echo %%s (tests/.$t)\n./rh: command is too big: echo %%s (tests/.$t/abcd )\n" 1 "interpolating %s: too big"
 
 	# These require a buffer size of at least 14
 	# echo $argv[2]
-	test_cmdbufsize 11 "RAWHIDE_USER_SHELL=/bin/sh $rh -e '\"echo %S\".ush && 0' $d" ".$t\nabcd \n" ""                                                                                                       0 "interpolating %S: small"
-	test_cmdbufsize 10 "RAWHIDE_USER_SHELL=/bin/sh $rh -e '\"echo %S\".ush && 0' $d" ".$t\nabcd \n" ""                                                                                                       0 "interpolating %S: max"
-	test_cmdbufsize  9 "RAWHIDE_USER_SHELL=/bin/sh $rh -e '\"echo %S\".ush && 0' $d" ""             "./rh: command is too big: echo %%S (tests/.$t)\n./rh: command is too big: echo %%S (tests/.$t/abcd )\n" 1 "interpolating %S: too big"
+	test_cmdbufsize 11 "RAWHIDE_USER_SHELL=/bin/sh $rh -e '\"echo %S\".ush && 0' $d" "./.$t\n./abcd \n" ""                                                                                                       0 "interpolating %S: small"
+	test_cmdbufsize 10 "RAWHIDE_USER_SHELL=/bin/sh $rh -e '\"echo %S\".ush && 0' $d" "./.$t\n./abcd \n" ""                                                                                                       0 "interpolating %S: max"
+	test_cmdbufsize  9 "RAWHIDE_USER_SHELL=/bin/sh $rh -e '\"echo %S\".ush && 0' $d" ""                 "./rh: command is too big: echo %%S (tests/.$t)\n./rh: command is too big: echo %%S (tests/.$t/abcd )\n" 1 "interpolating %S: too big"
 
 	# These require a buffer size of at least 16
 	# echo $argv[1] %
-	test_cmdbufsize 13 "RAWHIDE_USER_SHELL=/bin/sh $rh -e '\"echo %s %%\".ush && 0' $d" "tests/.$t %%\ntests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: small"
-	test_cmdbufsize 12 "RAWHIDE_USER_SHELL=/bin/sh $rh -e '\"echo %s %%\".ush && 0' $d" "tests/.$t %%\ntests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: max"
-	test_cmdbufsize 11 "RAWHIDE_USER_SHELL=/bin/sh $rh -e '\"echo %s %%\".ush && 0' $d" ""                                   "./rh: command is too big: echo %%s %%%% (tests/.$t)\n./rh: command is too big: echo %%s %%%% (tests/.$t/abcd )\n" 1 "interpolating %%: too big"
+	test_cmdbufsize 13 "RAWHIDE_USER_SHELL=/bin/sh $rh -e '\"echo %s %%\".ush && 0' $d" "./tests/.$t %%\n./tests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: small"
+	test_cmdbufsize 12 "RAWHIDE_USER_SHELL=/bin/sh $rh -e '\"echo %s %%\".ush && 0' $d" "./tests/.$t %%\n./tests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: max"
+	test_cmdbufsize 11 "RAWHIDE_USER_SHELL=/bin/sh $rh -e '\"echo %s %%\".ush && 0' $d" ""                                       "./rh: command is too big: echo %%s %%%% (tests/.$t)\n./rh: command is too big: echo %%s %%%% (tests/.$t/abcd )\n" 1 "interpolating %%: too big"
 
 	label2=".ush (fish)"
 
@@ -163,21 +163,21 @@ then
 
 		# These require a buffer size of at least 14
 		# echo $argv[1]
-		test_cmdbufsize 15 "RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e '\"echo %s\".ush && 0' $d" "tests/.$t\ntests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: small"
-		test_cmdbufsize 14 "RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e '\"echo %s\".ush && 0' $d" "tests/.$t\ntests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: max"
-		test_cmdbufsize 13 "RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e '\"echo %s\".ush && 0' $d" ""                             "./rh: command is too big: echo %%s (tests/.$t)\n./rh: command is too big: echo %%s (tests/.$t/abcd )\n" 1 "interpolating %s: too big"
+		test_cmdbufsize 15 "RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e '\"echo %s\".ush && 0' $d" "./tests/.$t\n./tests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: small"
+		test_cmdbufsize 14 "RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e '\"echo %s\".ush && 0' $d" "./tests/.$t\n./tests/.$t/abcd \n" ""                                                                                                       0 "interpolating %s: max"
+		test_cmdbufsize 13 "RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e '\"echo %s\".ush && 0' $d" ""                                 "./rh: command is too big: echo %%s (tests/.$t)\n./rh: command is too big: echo %%s (tests/.$t/abcd )\n" 1 "interpolating %s: too big"
 
 		# These require a buffer size of at least 14
 		# echo $argv[2]
-		test_cmdbufsize 15 "RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e '\"echo %S\".ush && 0' $d" ".$t\nabcd \n" ""                                                                                                       0 "interpolating %S: small"
-		test_cmdbufsize 14 "RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e '\"echo %S\".ush && 0' $d" ".$t\nabcd \n" ""                                                                                                       0 "interpolating %S: max"
-		test_cmdbufsize 13 "RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e '\"echo %S\".ush && 0' $d" ""             "./rh: command is too big: echo %%S (tests/.$t)\n./rh: command is too big: echo %%S (tests/.$t/abcd )\n" 1 "interpolating %S: too big"
+		test_cmdbufsize 15 "RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e '\"echo %S\".ush && 0' $d" "./.$t\n./abcd \n" ""                                                                                                       0 "interpolating %S: small"
+		test_cmdbufsize 14 "RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e '\"echo %S\".ush && 0' $d" "./.$t\n./abcd \n" ""                                                                                                       0 "interpolating %S: max"
+		test_cmdbufsize 13 "RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e '\"echo %S\".ush && 0' $d" ""                 "./rh: command is too big: echo %%S (tests/.$t)\n./rh: command is too big: echo %%S (tests/.$t/abcd )\n" 1 "interpolating %S: too big"
 
 		# These require a buffer size of at least 16
 		# echo $argv[1] %
-		test_cmdbufsize 17 "RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e '\"echo %s %%\".ush && 0' $d" "tests/.$t %%\ntests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: small"
-		test_cmdbufsize 16 "RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e '\"echo %s %%\".ush && 0' $d" "tests/.$t %%\ntests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: max"
-		test_cmdbufsize 15 "RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e '\"echo %s %%\".ush && 0' $d" ""                                   "./rh: command is too big: echo %%s %%%% (tests/.$t)\n./rh: command is too big: echo %%s %%%% (tests/.$t/abcd )\n" 1 "interpolating %%: too big"
+		test_cmdbufsize 17 "RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e '\"echo %s %%\".ush && 0' $d" "./tests/.$t %%\n./tests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: small"
+		test_cmdbufsize 16 "RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e '\"echo %s %%\".ush && 0' $d" "./tests/.$t %%\n./tests/.$t/abcd  %%\n" ""                                                                                                                 0 "interpolating %%: max"
+		test_cmdbufsize 15 "RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e '\"echo %s %%\".ush && 0' $d" ""                                       "./rh: command is too big: echo %%s %%%% (tests/.$t)\n./rh: command is too big: echo %%s %%%% (tests/.$t/abcd )\n" 1 "interpolating %%: too big"
 	fi
 fi
 

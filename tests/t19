@@ -93,13 +93,13 @@ test_rawhide_post_hook() { true; }
 
 # Clean up /usrCWD for Freebsd where /home -> usr/home
 test_rawhide_post_hook() { sed -e "s,`pwd`,CWD,g" -e "s,/usrCWD,CWD," $stdout > $stdout.tmp && mv $stdout.tmp $stdout; }
-test_rawhide "$rh -x 'echo \`pwd\` %s %S' $d" "CWD $d .$t\nCWD $d/d1 d1\nCWD $d/d1/d2 d2\nCWD $d/d1/d2/d3 d3\nCWD $d/d1/d2/d3/d4 d4\n"                                     "" 0 "-x 'echo \`pwd\` %s %S'"
-test_rawhide "$rh -X 'echo \`pwd\` %s %S' $d" "CWD/tests $d .$t\nCWD/$d $d/d1 d1\nCWD/$d/d1 $d/d1/d2 d2\nCWD/$d/d1/d2 $d/d1/d2/d3 d3\nCWD/$d/d1/d2/d3 $d/d1/d2/d3/d4 d4\n" "" 0 "-X 'echo \`pwd\` %s %S'"
+test_rawhide "$rh -x 'echo \`pwd\` %s %S' $d" "CWD ./$d ./.$t\nCWD ./$d/d1 ./d1\nCWD ./$d/d1/d2 ./d2\nCWD ./$d/d1/d2/d3 ./d3\nCWD ./$d/d1/d2/d3/d4 ./d4\n"                                     "" 0 "-x 'echo \`pwd\` %s %S'"
+test_rawhide "$rh -X 'echo \`pwd\` %s %S' $d" "CWD/tests ./$d ./.$t\nCWD/$d ./$d/d1 ./d1\nCWD/$d/d1 ./$d/d1/d2 ./d2\nCWD/$d/d1/d2 ./$d/d1/d2/d3 ./d3\nCWD/$d/d1/d2/d3 ./$d/d1/d2/d3/d4 ./d4\n" "" 0 "-X 'echo \`pwd\` %s %S'"
 
-test_rawhide "$rh -x 'echo \`pwd\` %s %S' -v $d" "echo \`pwd\` \"\$1\" \"\$2\" # 1=$d 2=.$t\nCWD $d .$t\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1 2=d1\nCWD $d/d1 d1\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2 2=d2\nCWD $d/d1/d2 d2\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2/d3 2=d3\nCWD $d/d1/d2/d3 d3\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2/d3/d4 2=d4\nCWD $d/d1/d2/d3/d4 d4\n"                                                        "" 0 "-x 'echo \`pwd\` %s %S' -v"
-test_rawhide "$rh -X 'echo \`pwd\` %s %S' -v $d" "echo \`pwd\` \"\$1\" \"\$2\" # 1=$d 2=.$t\nCWD/tests $d .$t\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1 2=d1\nCWD/$d $d/d1 d1\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2 2=d2\nCWD/$d/d1 $d/d1/d2 d2\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2/d3 2=d3\nCWD/$d/d1/d2 $d/d1/d2/d3 d3\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2/d3/d4 2=d4\nCWD/$d/d1/d2/d3 $d/d1/d2/d3/d4 d4\n"                    "" 0 "-X 'echo \`pwd\` %s %S' -v"
-test_rawhide "RAWHIDE_TEST_TTY=1 $rh -x 'echo \`pwd\` %s %S' -v $d" "echo \`pwd\` \"\$1\" \"\$2\" # 1=$d 2=.$t\nCWD $d .$t\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1 2=d1\nCWD $d/d1 d1\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2 2=d2\nCWD $d/d1/d2 d2\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2/d3 2=d3\nCWD $d/d1/d2/d3 d3\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2/d3/d4 2=d4\nCWD $d/d1/d2/d3/d4 d4\n"                                     "" 0 "-x 'echo \`pwd\` %s %S' -v (tty)"
-test_rawhide "RAWHIDE_TEST_TTY=1 $rh -X 'echo \`pwd\` %s %S' -v $d" "echo \`pwd\` \"\$1\" \"\$2\" # 1=$d 2=.$t\nCWD/tests $d .$t\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1 2=d1\nCWD/$d $d/d1 d1\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2 2=d2\nCWD/$d/d1 $d/d1/d2 d2\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2/d3 2=d3\nCWD/$d/d1/d2 $d/d1/d2/d3 d3\necho \`pwd\` \"\$1\" \"\$2\" # 1=$d/d1/d2/d3/d4 2=d4\nCWD/$d/d1/d2/d3 $d/d1/d2/d3/d4 d4\n" "" 0 "-X 'echo \`pwd\` %s %S' -v (tty)"
+test_rawhide "$rh -x 'echo \`pwd\` %s %S' -v $d" "echo \`pwd\` \"\$1\" \"\$2\" # 1=./$d 2=./.$t\nCWD ./$d ./.$t\necho \`pwd\` \"\$1\" \"\$2\" # 1=./$d/d1 2=./d1\nCWD ./$d/d1 ./d1\necho \`pwd\` \"\$1\" \"\$2\" # 1=./$d/d1/d2 2=./d2\nCWD ./$d/d1/d2 ./d2\necho \`pwd\` \"\$1\" \"\$2\" # 1=./$d/d1/d2/d3 2=./d3\nCWD ./$d/d1/d2/d3 ./d3\necho \`pwd\` \"\$1\" \"\$2\" # 1=./$d/d1/d2/d3/d4 2=./d4\nCWD ./$d/d1/d2/d3/d4 ./d4\n"                                                        "" 0 "-x 'echo \`pwd\` %s %S' -v"
+test_rawhide "$rh -X 'echo \`pwd\` %s %S' -v $d" "echo \`pwd\` \"\$1\" \"\$2\" # 1=./$d 2=./.$t\nCWD/tests ./$d ./.$t\necho \`pwd\` \"\$1\" \"\$2\" # 1=./$d/d1 2=./d1\nCWD/$d ./$d/d1 ./d1\necho \`pwd\` \"\$1\" \"\$2\" # 1=./$d/d1/d2 2=./d2\nCWD/$d/d1 ./$d/d1/d2 ./d2\necho \`pwd\` \"\$1\" \"\$2\" # 1=./$d/d1/d2/d3 2=./d3\nCWD/$d/d1/d2 ./$d/d1/d2/d3 ./d3\necho \`pwd\` \"\$1\" \"\$2\" # 1=./$d/d1/d2/d3/d4 2=./d4\nCWD/$d/d1/d2/d3 ./$d/d1/d2/d3/d4 ./d4\n"                    "" 0 "-X 'echo \`pwd\` %s %S' -v"
+test_rawhide "RAWHIDE_TEST_TTY=1 $rh -x 'echo \`pwd\` %s %S' -v $d" "echo \`pwd\` \"\$1\" \"\$2\" # 1=./$d 2=./.$t\nCWD ./$d ./.$t\necho \`pwd\` \"\$1\" \"\$2\" # 1=./$d/d1 2=./d1\nCWD ./$d/d1 ./d1\necho \`pwd\` \"\$1\" \"\$2\" # 1=./$d/d1/d2 2=./d2\nCWD ./$d/d1/d2 ./d2\necho \`pwd\` \"\$1\" \"\$2\" # 1=./$d/d1/d2/d3 2=./d3\nCWD ./$d/d1/d2/d3 ./d3\necho \`pwd\` \"\$1\" \"\$2\" # 1=./$d/d1/d2/d3/d4 2=./d4\nCWD ./$d/d1/d2/d3/d4 ./d4\n"                                     "" 0 "-x 'echo \`pwd\` %s %S' -v (tty)"
+test_rawhide "RAWHIDE_TEST_TTY=1 $rh -X 'echo \`pwd\` %s %S' -v $d" "echo \`pwd\` \"\$1\" \"\$2\" # 1=./$d 2=./.$t\nCWD/tests ./$d ./.$t\necho \`pwd\` \"\$1\" \"\$2\" # 1=./$d/d1 2=./d1\nCWD/$d ./$d/d1 ./d1\necho \`pwd\` \"\$1\" \"\$2\" # 1=./$d/d1/d2 2=./d2\nCWD/$d/d1 ./$d/d1/d2 ./d2\necho \`pwd\` \"\$1\" \"\$2\" # 1=./$d/d1/d2/d3 2=./d3\nCWD/$d/d1/d2 ./$d/d1/d2/d3 ./d3\necho \`pwd\` \"\$1\" \"\$2\" # 1=./$d/d1/d2/d3/d4 2=./d4\nCWD/$d/d1/d2/d3 ./$d/d1/d2/d3/d4 ./d4\n" "" 0 "-X 'echo \`pwd\` %s %S' -v (tty)"
 test_rawhide_post_hook() { true; }
 
 test_rawhide "$rh -x ''" "" "./rh: missing -x option argument (see ./rh -h for help)\n" 1 "-x with empty argument"
@@ -107,12 +107,12 @@ test_rawhide "$rh -X ''" "" "./rh: missing -X option argument (see ./rh -h for h
 test_rawhide "$rh -x"    "" "./rh: missing -x option argument (see ./rh -h for help)\n" 1 "-x with no argument"
 test_rawhide "$rh -X"    "" "./rh: missing -X option argument (see ./rh -h for help)\n" 1 "-X with no argument"
 
-test_rawhide "$rh -M0 -X 'echo \`pwd\` .%s.%S.' /"         "/ ././.\n"             "" 0 "chdir for -X in / root directory"
-test_rawhide "$rh -M0 -X 'echo \`pwd\` .%s.%S.' /etc"      "/ ./etc.etc.\n"        "" 0 "chdir for -X in /etc directory (no trailing /)"
-test_rawhide "$rh -M0 -X 'echo \`pwd\` .%s.%S.' /etc/"     "/ ./etc.etc.\n"        "" 0 "chdir for -X in /etc/ directory (with trailing /)"
-test_rawhide "$rh -M0 -X 'echo \`pwd\` .%s.%S.' /usr/bin"  "/usr ./usr/bin.bin.\n" "" 0 "chdir for -X in /usr/bin directory (no trailing /)"
-test_rawhide "$rh -M0 -X 'echo \`pwd\` .%s.%S.' /usr/bin/" "/usr ./usr/bin.bin.\n" "" 0 "chdir for -X in /usr/bin/ directory (with trailing /)"
-test_rawhide "$rh -M0 -X 'true' ."                         ""                      "" 0 "chdir for -X in . (no chdir - just for coverage)"
+test_rawhide "$rh -M0 -X 'echo \`pwd\` .%s,%S.' /"         "/ ./,/.\n"               "" 0 "chdir for -X in / root directory"
+test_rawhide "$rh -M0 -X 'echo \`pwd\` .%s,%S.' /etc"      "/ ./etc,./etc.\n"        "" 0 "chdir for -X in /etc directory (no trailing /)"
+test_rawhide "$rh -M0 -X 'echo \`pwd\` .%s,%S.' /etc/"     "/ ./etc,./etc.\n"        "" 0 "chdir for -X in /etc/ directory (with trailing /)"
+test_rawhide "$rh -M0 -X 'echo \`pwd\` .%s,%S.' /usr/bin"  "/usr ./usr/bin,./bin.\n" "" 0 "chdir for -X in /usr/bin directory (no trailing /)"
+test_rawhide "$rh -M0 -X 'echo \`pwd\` .%s,%S.' /usr/bin/" "/usr ./usr/bin,./bin.\n" "" 0 "chdir for -X in /usr/bin/ directory (with trailing /)"
+test_rawhide "$rh -M0 -X 'true' ."                         ""                        "" 0 "chdir for -X in . (no chdir - just for coverage)"
 
 # On OpenBSD, setuid/setgid bits don't change euid/egid
 if [ "`uname`" != OpenBSD -a "`whoami`" = root ] && grep -q '^nobody:' /etc/passwd && grep -q '^nogroup:' /etc/group
@@ -128,7 +128,7 @@ then
 
 		test_rawhide "RAWHIDE_TEST_SETUID_FAILURE=1 ./rh2 -Nn -f rawhide.conf -M0 -X 'echo %S' -e exit $d" "" "./rh2: failed to revoke unexpected setuid privileges: Success\n" 1 "fail to revoke setuid privileges"
 
-		test_rawhide "./rh2 -Nn -f rawhide.conf -M0 -X 'echo %S' -e exit $d" ".$t\n" "" 0 "revoke setuid privileges (just for coverage)"
+		test_rawhide "./rh2 -Nn -f rawhide.conf -M0 -X 'echo %S' -e exit $d" "./.$t\n" "" 0 "revoke setuid privileges (just for coverage)"
 
 		if grep -q '^daemon:' /etc/passwd && [ -x "`command -v sudo`" ]
 		then
@@ -149,7 +149,7 @@ then
 
 		test_rawhide "RAWHIDE_TEST_SETGID_FAILURE=1 ./rh2 -Nn -f rawhide.conf -M0 -X 'echo %S' -e exit $d" "" "./rh2: failed to revoke unexpected setgid privileges: Success\n" 1 "fail to revoke setgid privileges"
 
-		test_rawhide "./rh2 -Nn -f rawhide.conf -M0 -X 'echo %S' -e exit $d" ".$t\n" "" 0 "revoke setgid privileges (just for coverage)"
+		test_rawhide "./rh2 -Nn -f rawhide.conf -M0 -X 'echo %S' -e exit $d" "./.$t\n" "" 0 "revoke setgid privileges (just for coverage)"
 
 		if grep -q '^daemon:' /etc/passwd && [ -x "`command -v sudo`" ]
 		then
@@ -183,10 +183,10 @@ case "$LANG" in
 	*.UTF-8)
 		rm -r $d/d1
 		touch $d/'áêìöç-🙂'
-		test_rawhide "$rh -v -x 'echo %s' $d/" "echo \"\$1\" # 1=$d 2=.$t\n$d\necho \"\$1\" # 1=$d/áêìöç-🙂 2=áêìöç-🙂\n$d/áêìöç-🙂\n" "" 0 "-v -x %s with multi-byte characters/emoji"
-		test_rawhide "$rh -v -x 'echo %S' $d/" "echo \"\$2\" # 1=$d 2=.$t\n.$t\necho \"\$2\" # 1=$d/áêìöç-🙂 2=áêìöç-🙂\náêìöç-🙂\n"   "" 0 "-v -x %S with multi-byte characters/emoji"
-		test_rawhide "$rh -v -X 'echo %s' $d/" "echo \"\$1\" # 1=$d 2=.$t\n$d\necho \"\$1\" # 1=$d/áêìöç-🙂 2=áêìöç-🙂\n$d/áêìöç-🙂\n" "" 0 "-v -X %s with multi-byte characters/emoji"
-		test_rawhide "$rh -v -X 'echo %S' $d/" "echo \"\$2\" # 1=$d 2=.$t\n.$t\necho \"\$2\" # 1=$d/áêìöç-🙂 2=áêìöç-🙂\náêìöç-🙂\n"   "" 0 "-v -X %S with multi-byte characters/emoji"
+		test_rawhide "$rh -v -x 'echo %s' $d/" "echo \"\$1\" # 1=./$d 2=./.$t\n./$d\necho \"\$1\" # 1=./$d/áêìöç-🙂 2=./áêìöç-🙂\n./$d/áêìöç-🙂\n" "" 0 "-v -x %s with multi-byte characters/emoji"
+		test_rawhide "$rh -v -x 'echo %S' $d/" "echo \"\$2\" # 1=./$d 2=./.$t\n./.$t\necho \"\$2\" # 1=./$d/áêìöç-🙂 2=./áêìöç-🙂\n./áêìöç-🙂\n"   "" 0 "-v -x %S with multi-byte characters/emoji"
+		test_rawhide "$rh -v -X 'echo %s' $d/" "echo \"\$1\" # 1=./$d 2=./.$t\n./$d\necho \"\$1\" # 1=./$d/áêìöç-🙂 2=./áêìöç-🙂\n./$d/áêìöç-🙂\n" "" 0 "-v -X %s with multi-byte characters/emoji"
+		test_rawhide "$rh -v -X 'echo %S' $d/" "echo \"\$2\" # 1=./$d 2=./.$t\n./.$t\necho \"\$2\" # 1=./$d/áêìöç-🙂 2=./áêìöç-🙂\n./áêìöç-🙂\n"   "" 0 "-v -X %S with multi-byte characters/emoji"
 		;;
 esac
 

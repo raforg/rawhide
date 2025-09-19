@@ -509,18 +509,16 @@ interpolating C<%s> and C<%S> as C<"$1"> and C<"$2"> is inappropriate for a
 particular command, you can instead use C<$1> and C<$2> directly, including
 via the shell's B<Parameter Expansion> syntax.
 
-As a special precaution, if C<%s> or C<%S> starts with a dash (C<"-">) or a
-plus sign (C<"+">), then a leading C<./> will be included so as to ensure
-that it cannot be incorrectly interpreted as a command line option in the
-shell command being executed. This makes it unnecessary for you to ever add
-C<--> before C<%s> or C<%S> to achieve the same effect. This also means that
-if the shell command being executed really needs the base name, and not just
-a valid file name, then it must use something like C<${1#./}> (rather than
-C<%s>), or C<${2#./}> (rather than C<%S>), so as to remove any leading
-C<./>. Note that this differs from I<GNU find> which always includes a
-leading C<./> before its equivalent of C<%S> (C<-execdir {}>), not just when
-it might be necessary. The I<GNU find> equivalent of C<%s> (C<-exec {}>) can
-never start with a dash.
+As a special precaution, a leading C<./> will be added to C<%s> or C<%S>
+unless it is an absolute path, or relative to the current directory or its
+parent directory (i.e., unless it starts with C</> or C<./> or C<../>), so
+as to ensure that it cannot be incorrectly interpreted as a command line
+option or similar in the shell command being executed. This makes it
+unnecessary for you to ever add C<--> before C<%s> or C<%S> to achieve the
+same effect. This also means that if the shell command being executed really
+needs the base name, and not just a valid file path, then it must use
+something like C<"${2#./}"> (rather than C<%S>), so as to remove any leading
+C<./>.
 
 For this option, the C<%s> interpolation is more likely to be useful than
 the C<%S> interpolation.
@@ -580,18 +578,16 @@ interpolating C<%s> and C<%S> as C<"$1"> and C<"$2"> is inappropriate for a
 particular command, you can instead use C<$1> and C<$2> directly, including
 via the shell's B<Parameter Expansion> syntax.
 
-As a special precaution, if C<%s> or C<%S> starts with a dash (C<"-">) or a
-plus sign (C<"+">), then a leading C<./> will be included so as to ensure
-that it cannot be incorrectly interpreted as a command line option in the
-shell command being executed. This makes it unnecessary for you to ever add
-C<--> before C<%s> or C<%S> to achieve the same effect. This also means that
-if the shell command being executed really needs the base name, and not just
-a valid file name, then it must use something like C<${1#./}> (rather than
-C<%s>), or C<${2#./}> (rather than C<%S>), so as to remove any leading
-C<./>. Note that this differs from I<GNU find> which always includes a
-leading C<./> before its equivalent of C<%S> (C<-execdir {}>), not just when
-it might be necessary. The I<GNU find> equivalent of C<%s> (C<-exec {}>) can
-never start with a dash.
+As a special precaution, a leading C<./> will be added to C<%s> or C<%S>
+unless it is an absolute path, or relative to the current directory or its
+parent directory (i.e., unless it starts with C</> or C<./> or C<../>), so
+as to ensure that it cannot be incorrectly interpreted as a command line
+option or similar in the shell command being executed. This makes it
+unnecessary for you to ever add C<--> before C<%s> or C<%S> to achieve the
+same effect. This also means that if the shell command being executed really
+needs the base name, and not just a valid file path, then it must use
+something like C<"${2#./}"> (rather than C<%S>), so as to remove any leading
+C<./>.
 
 For this option, the C<%S> interpolation is more likely to be useful than
 the C<%s> interpolation.

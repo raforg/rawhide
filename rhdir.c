@@ -1625,42 +1625,68 @@ static const char *get_basename(void)
 
 /*
 
+static int no_defusing_required(const char *src);
+
+Returns 1 if src does not require defusing for use as %s or %S. Returns 0
+otherwise. In other words, does src start with "/" or "./" or "../"? If so,
+it does not require defusing. If not, we'll need to prepend "./".
+
+*/
+
+static int no_defusing_required(const char *src)
+{
+	return !src || *src == '/' || (src[0] == '.' && (src[1] == '/' || (src[1] == '.' && src[2] == '/')));
+}
+
+/*
+
 static const char *defused(char **buf, size_t *bufsz, const char *src);
 
-Returns src unless it starts with - or + and could therefore be mistaken for
-a command line option. In that case, returns a dynamically allocated copy
-(in a long-lived buffer *buf of size *bufsz) with ./ prepended.
+Returns src if it is an absolute path or a path relative to the current
+working directory (.) or its parent (..). Otherwise, returns a dynamically
+allocated copy (in a long-lived buffer *buf of size *bufsz) with ./
+prepended. This protects against (possibly malicious) file names that might
+start with - or +, and therefore be mistaken for command line options by the
+command that is about to be executed. Rather than only prepending ./ to
+things that start with - or +, we prepend it to everything that isn't an
+absolute path, or a path relative to the current directory or its parent
+directory) because it's not possible to anticipate what might constitute an
+important behaviour-modifying argument for any arbitrary command that we
+might be able to invoke (including ones that haven't been written yet). It's
+a bit ugly (if anyone ever looks at it), but it's safe by default. If the
+user needs an actual basename (for %S) then they can use ${2#./} thanks to
+the fact that %s and %S are passed to the shell as positional parameters.
+Similarly, ${1#./} can be used to extract the unaffected version of a
+non-absolute %s (but that's probably unlikely to be useful).
 
 */
 
 static const char *defused(char **buf, size_t *bufsz, const char *src)
 {
-	/* Defuse src starting with - or + so it can't be seen as an option */
+	/* The src is fine if it is an absolute path or relative to . or .. */
 
-	if (src && (*src == '-' || *src == '+'))
+	if (no_defusing_required(src))
+		return src;
+
+	/* Defuse non-absolute src so it can't be seen as an option or similar */
+
+	size_t size = strlen(src) + 3;
+
+	if (size > *bufsz)
 	{
-		size_t size = strlen(src) + 3;
+		void *defused;
 
-		if (size > *bufsz)
-		{
-			void *defused;
+		if (!(defused = realloc(*buf, size)))
+			fatalsys("out of memory");
 
-			if (!(defused = realloc(*buf, size)))
-				fatalsys("out of memory");
-
-			*buf = defused;
-			*bufsz = size;
-		}
-
-		strlcpy(*buf, "./", *bufsz);
-		strlcpy(*buf + 2, src, *bufsz - 2);
-
-		return *buf;
+		*buf = defused;
+		*bufsz = size;
 	}
 
-	/* The src is fine as is */
+	strlcpy(*buf, "./", *bufsz);
+	strlcpy(*buf + 2, src, *bufsz - 2);
 
-	return src;
+	return *buf;
 }
 
 /*
@@ -1718,7 +1744,14 @@ void visitf_execute(void)
 
 	if (attr.verbose)
 	{
-		printf_sanitized("%s # 1=%s 2=%s", command, attr.fpath, get_basename());
+		const char *path = attr.fpath;
+		const char *base = get_basename();
+
+		printf_sanitized("%s # 1=%s%s 2=%s%s", command,
+			no_defusing_required(path) ? "" : "./", path,
+			no_defusing_required(base) ? "" : "./", base
+		);
+
 		putchar('\n');
 		fflush(stdout);
 	}
@@ -1836,7 +1869,14 @@ void visitf_execute_local(void)
 
 	if (attr.verbose)
 	{
-		printf_sanitized("%s # 1=%s 2=%s", command, attr.fpath, get_basename());
+		const char *path = attr.fpath;
+		const char *base = get_basename();
+
+		printf_sanitized("%s # 1=%s%s 2=%s%s", command,
+			no_defusing_required(path) ? "" : "./", path,
+			no_defusing_required(base) ? "" : "./", base
+		);
+
 		putchar('\n');
 		fflush(stdout);
 	}

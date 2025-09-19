@@ -623,17 +623,17 @@ test_rawhide "$rh 'd && {[ \`$explicit_rh -m1 -M1     -q %S | wc -l\` = 0 ]}.sh'
 
 test_rawhide_post_hook() { true; }
 
-test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".sh' /"         "/ ././.\n/\n"                    "" 0 ".sh in / root directory"
-test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".sh' /etc"      "/ ./etc.etc.\n/etc\n"            "" 0 ".sh in /etc directory (no trailing /)"
-test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".sh' /etc/"     "/ ./etc.etc.\n/etc\n"            "" 0 ".sh in /etc/ directory (with trailing /)"
-test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".sh' /usr/bin"  "/usr ./usr/bin.bin.\n/usr/bin\n" "" 0 ".sh in /usr/bin directory (no trailing /)"
-test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".sh' /usr/bin/" "/usr ./usr/bin.bin.\n/usr/bin\n" "" 0 ".sh in /usr/bin/ directory (with trailing /)"
+test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s,%S.\".sh' /"         "/ ./,/.\n/\n"                      "" 0 ".sh in / root directory"
+test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s,%S.\".sh' /etc"      "/ ./etc,./etc.\n/etc\n"            "" 0 ".sh in /etc directory (no trailing /)"
+test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s,%S.\".sh' /etc/"     "/ ./etc,./etc.\n/etc\n"            "" 0 ".sh in /etc/ directory (with trailing /)"
+test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s,%S.\".sh' /usr/bin"  "/usr ./usr/bin,./bin.\n/usr/bin\n" "" 0 ".sh in /usr/bin directory (no trailing /)"
+test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s,%S.\".sh' /usr/bin/" "/usr ./usr/bin,./bin.\n/usr/bin\n" "" 0 ".sh in /usr/bin/ directory (with trailing /)"
 
-test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s.%S.}.sh' /"         "/ ././.\n/\n"                    "" 0 ".sh in / root directory"
-test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s.%S.}.sh' /etc"      "/ ./etc.etc.\n/etc\n"            "" 0 ".sh in /etc directory (no trailing /)"
-test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s.%S.}.sh' /etc/"     "/ ./etc.etc.\n/etc\n"            "" 0 ".sh in /etc/ directory (with trailing /)"
-test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s.%S.}.sh' /usr/bin"  "/usr ./usr/bin.bin.\n/usr/bin\n" "" 0 ".sh in /usr/bin directory (no trailing /)"
-test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s.%S.}.sh' /usr/bin/" "/usr ./usr/bin.bin.\n/usr/bin\n" "" 0 ".sh in /usr/bin/ directory (with trailing /)"
+test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s,%S.}.sh' /"         "/ ./,/.\n/\n"                      "" 0 ".sh in / root directory"
+test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s,%S.}.sh' /etc"      "/ ./etc,./etc.\n/etc\n"            "" 0 ".sh in /etc directory (no trailing /)"
+test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s,%S.}.sh' /etc/"     "/ ./etc,./etc.\n/etc\n"            "" 0 ".sh in /etc/ directory (with trailing /)"
+test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s,%S.}.sh' /usr/bin"  "/usr ./usr/bin,./bin.\n/usr/bin\n" "" 0 ".sh in /usr/bin directory (no trailing /)"
+test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s,%S.}.sh' /usr/bin/" "/usr ./usr/bin,./bin.\n/usr/bin\n" "" 0 ".sh in /usr/bin/ directory (with trailing /)"
 
 test_rawhide "$rh -e '\"false\".s'            $d" "" ""                                                                                                                                        0 ".s (abbrev)"
 test_rawhide "$rh -e '\"invalid\".r'          $d" "" "./rh: command line: -e '\"invalid\".r': line 1 byte 11: invalid string suffix: .r (expected pattern modifier or reference file field)\n" 1 ".r (invalid abbrev)"
@@ -674,17 +674,17 @@ test_rawhide "$rh 'd && {[ \`$explicit_rh -m1 -M1     -q %S | wc -l\` = 0 ]}.ush
 
 test_rawhide_post_hook() { true; }
 
-test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".ush' /"         "/ ././.\n/\n"                    "" 0 ".ush in / root directory"
-test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".ush' /etc"      "/ ./etc.etc.\n/etc\n"            "" 0 ".ush in /etc directory (no trailing /)"
-test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".ush' /etc/"     "/ ./etc.etc.\n/etc\n"            "" 0 ".ush in /etc/ directory (with trailing /)"
-test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".ush' /usr/bin"  "/usr ./usr/bin.bin.\n/usr/bin\n" "" 0 ".ush in /usr/bin directory (no trailing /)"
-test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s.%S.\".ush' /usr/bin/" "/usr ./usr/bin.bin.\n/usr/bin\n" "" 0 ".ush in /usr/bin/ directory (with trailing /)"
+test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s,%S.\".ush' /"         "/ ./,/.\n/\n"                      "" 0 ".ush in / root directory"
+test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s,%S.\".ush' /etc"      "/ ./etc,./etc.\n/etc\n"            "" 0 ".ush in /etc directory (no trailing /)"
+test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s,%S.\".ush' /etc/"     "/ ./etc,./etc.\n/etc\n"            "" 0 ".ush in /etc/ directory (with trailing /)"
+test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s,%S.\".ush' /usr/bin"  "/usr ./usr/bin,./bin.\n/usr/bin\n" "" 0 ".ush in /usr/bin directory (no trailing /)"
+test_rawhide "$rh -M0 -e '\"echo \`pwd\` .%s,%S.\".ush' /usr/bin/" "/usr ./usr/bin,./bin.\n/usr/bin\n" "" 0 ".ush in /usr/bin/ directory (with trailing /)"
 
-test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s.%S.}.ush' /"         "/ ././.\n/\n"                    "" 0 ".ush in / root directory"
-test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s.%S.}.ush' /etc"      "/ ./etc.etc.\n/etc\n"            "" 0 ".ush in /etc directory (no trailing /)"
-test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s.%S.}.ush' /etc/"     "/ ./etc.etc.\n/etc\n"            "" 0 ".ush in /etc/ directory (with trailing /)"
-test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s.%S.}.ush' /usr/bin"  "/usr ./usr/bin.bin.\n/usr/bin\n" "" 0 ".ush in /usr/bin directory (no trailing /)"
-test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s.%S.}.ush' /usr/bin/" "/usr ./usr/bin.bin.\n/usr/bin\n" "" 0 ".ush in /usr/bin/ directory (with trailing /)"
+test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s,%S.}.ush' /"         "/ ./,/.\n/\n"                      "" 0 ".ush in / root directory"
+test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s,%S.}.ush' /etc"      "/ ./etc,./etc.\n/etc\n"            "" 0 ".ush in /etc directory (no trailing /)"
+test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s,%S.}.ush' /etc/"     "/ ./etc,./etc.\n/etc\n"            "" 0 ".ush in /etc/ directory (with trailing /)"
+test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s,%S.}.ush' /usr/bin"  "/usr ./usr/bin,./bin.\n/usr/bin\n" "" 0 ".ush in /usr/bin directory (no trailing /)"
+test_rawhide "$rh -M0 -e '{echo \`pwd\` .%s,%S.}.ush' /usr/bin/" "/usr ./usr/bin,./bin.\n/usr/bin\n" "" 0 ".ush in /usr/bin/ directory (with trailing /)"
 
 test_rawhide "$rh -e '\"false\".u'            $d" "" ""                                                                                                                                        0 ".s (abbrev)"
 test_rawhide "$rh -e '\"false\".us'           $d" "" ""                                                                                                                                        0 ".s (abbrev)"
@@ -717,15 +717,15 @@ then
 	like_csh="$(pwd)/like_csh"
 	printf "#!/bin/sh\nexec /bin/sh \"\$1\" \"\$2\" sh \"\$3\" \"\$4\"\n" > $like_csh
 	chmod 700 $like_csh
-	test_rawhide "RAWHIDE_USER_SHELL=$like_csh RAWHIDE_USER_SHELL_LIKE_CSH=1 $rh -e 'f && {echo %s %S; false}.ush' $d" "$d/f f\n" "" 0 ".ush with RAWHIDE_USER_SHELL=like_csh and RAWHIDE_USER_SHELL_LIKE_CSH=1"
+	test_rawhide "RAWHIDE_USER_SHELL=$like_csh RAWHIDE_USER_SHELL_LIKE_CSH=1 $rh -e 'f && {echo %s %S; false}.ush' $d" "./$d/f ./f\n" "" 0 ".ush with RAWHIDE_USER_SHELL=like_csh and RAWHIDE_USER_SHELL_LIKE_CSH=1"
 	rm -f $like_csh
-	test_rawhide "RAWHIDE_USER_SHELL=/bin/sh RAWHIDE_USER_SHELL_LIKE_CSH=0 $rh -e 'f && {echo %s %S; false}.ush' $d" "$d/f f\n" "" 0 ".ush with RAWHIDE_USER_SHELL=/bin/sh and RAWHIDE_USER_SHELL_LIKE_CSH=0"
-	test_rawhide "RAWHIDE_USER_SHELL=/bin/sh                               $rh -e 'f && {echo %s %S; false}.ush' $d" "$d/f f\n" "" 0 ".ush with RAWHIDE_USER_SHELL=/bin/sh and no RAWHIDE_USER_SHELL_LIKE_CSH=1"
+	test_rawhide "RAWHIDE_USER_SHELL=/bin/sh RAWHIDE_USER_SHELL_LIKE_CSH=0 $rh -e 'f && {echo %s %S; false}.ush' $d" "./$d/f ./f\n" "" 0 ".ush with RAWHIDE_USER_SHELL=/bin/sh and RAWHIDE_USER_SHELL_LIKE_CSH=0"
+	test_rawhide "RAWHIDE_USER_SHELL=/bin/sh                               $rh -e 'f && {echo %s %S; false}.ush' $d" "./$d/f ./f\n" "" 0 ".ush with RAWHIDE_USER_SHELL=/bin/sh and no RAWHIDE_USER_SHELL_LIKE_CSH=1"
 
-	[ -x /usr/bin/fish ] && test_rawhide "                              RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e 'f && {echo \$argv[1] \$argv[2];false}.ush' $d" "$d/f f\n" "" 0 ".ush with supported non-posix shell fish, with \$argv[1] and \$argv[2] (without unnecessary RAWHIDE_USER_SHELL_LIKE_CSH=1)"
-	[ -x /usr/bin/fish ] && test_rawhide "RAWHIDE_USER_SHELL_LIKE_CSH=1 RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e 'f && {echo \$argv[1] \$argv[2];false}.ush' $d" "$d/f f\n" "" 0 ".ush with supported non-posix shell fish, with \$argv[1] and \$argv[2] (with unnecessary RAWHIDE_USER_SHELL_LIKE_CSH=1)"
-	[ -x /usr/bin/fish ] && test_rawhide "                              RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e 'f && {echo %s %S;false}.ush'               $d" "$d/f f\n" "" 0 ".ush with supported non-posix shell fish, with %s and %S (without unnecessary RAWHIDE_USER_SHELL_LIKE_CSH=1)"
-	[ -x /usr/bin/fish ] && test_rawhide "RAWHIDE_USER_SHELL_LIKE_CSH=1 RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e 'f && {echo %s %S;false}.ush'               $d" "$d/f f\n" "" 0 ".ush with supported non-posix shell fish, with %s and %S (with unnecessary RAWHIDE_USER_SHELL_LIKE_CSH=1)"
+	[ -x /usr/bin/fish ] && test_rawhide "                              RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e 'f && {echo \$argv[1] \$argv[2];false}.ush' $d" "./$d/f ./f\n" "" 0 ".ush with supported non-posix shell fish, with \$argv[1] and \$argv[2] (without unnecessary RAWHIDE_USER_SHELL_LIKE_CSH=1)"
+	[ -x /usr/bin/fish ] && test_rawhide "RAWHIDE_USER_SHELL_LIKE_CSH=1 RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e 'f && {echo \$argv[1] \$argv[2];false}.ush' $d" "./$d/f ./f\n" "" 0 ".ush with supported non-posix shell fish, with \$argv[1] and \$argv[2] (with unnecessary RAWHIDE_USER_SHELL_LIKE_CSH=1)"
+	[ -x /usr/bin/fish ] && test_rawhide "                              RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e 'f && {echo %s %S;false}.ush'               $d" "./$d/f ./f\n" "" 0 ".ush with supported non-posix shell fish, with %s and %S (without unnecessary RAWHIDE_USER_SHELL_LIKE_CSH=1)"
+	[ -x /usr/bin/fish ] && test_rawhide "RAWHIDE_USER_SHELL_LIKE_CSH=1 RAWHIDE_USER_SHELL=/usr/bin/fish $rh -e 'f && {echo %s %S;false}.ush'               $d" "./$d/f ./f\n" "" 0 ".ush with supported non-posix shell fish, with %s and %S (with unnecessary RAWHIDE_USER_SHELL_LIKE_CSH=1)"
 else
 	test_rawhide "RAWHIDE_USER_SHELL=                                     $rh -e '{false}.ush' $d" "" ""                                                                                                  0 "root .ush with empty \$RAWHIDE_USER_SHELL"
 	test_rawhide "RAWHIDE_USER_SHELL='/bin/sh'                            $rh -e '{false}.ush' $d" "" ""                                                                                                  0 "root .ush with \$RAWHIDE_USER_SHELL with no options (ignored)"
@@ -743,11 +743,11 @@ else
 		like_csh="$(pwd)/like_csh"
 		printf "#!/bin/sh\nexec /bin/sh \"\$1\" \"\$2\" sh \"\$3\" \"\$4\"\n" > $like_csh
 		chmod 700 $like_csh
-		test_rawhide "RAWHIDE_USER_SHELL=$like_csh RAWHIDE_USER_SHELL_LIKE_CSH=1 $rh -e 'f && {echo %s %S; false}.ush' $d" "f \n" "" 0 "root .ush with RAWHIDE_USER_SHELL=like_csh (ignored) and RAWHIDE_USER_SHELL_LIKE_CSH=1"
+		test_rawhide "RAWHIDE_USER_SHELL=$like_csh RAWHIDE_USER_SHELL_LIKE_CSH=1 $rh -e 'f && {echo %s %S; false}.ush' $d" "./f \n" "" 0 "root .ush with RAWHIDE_USER_SHELL=like_csh (ignored) and RAWHIDE_USER_SHELL_LIKE_CSH=1"
 		rm -f $like_csh
 	fi
-	test_rawhide "RAWHIDE_USER_SHELL=/bin/sh RAWHIDE_USER_SHELL_LIKE_CSH=0 $rh -e 'f && {echo %s %S; false}.ush' $d" "$d/f f\n" "" 0 "root .ush with RAWHIDE_USER_SHELL=/bin/sh (ignored) and RAWHIDE_USER_SHELL_LIKE_CSH=0"
-	test_rawhide "RAWHIDE_USER_SHELL=/bin/sh                               $rh -e 'f && {echo %s %S; false}.ush' $d" "$d/f f\n" "" 0 "root .ush with RAWHIDE_USER_SHELL=/bin/sh (ignored) and no RAWHIDE_USER_SHELL_LIKE_CSH=1"
+	test_rawhide "RAWHIDE_USER_SHELL=/bin/sh RAWHIDE_USER_SHELL_LIKE_CSH=0 $rh -e 'f && {echo %s %S; false}.ush' $d" "./$d/f ./f\n" "" 0 "root .ush with RAWHIDE_USER_SHELL=/bin/sh (ignored) and RAWHIDE_USER_SHELL_LIKE_CSH=0"
+	test_rawhide "RAWHIDE_USER_SHELL=/bin/sh                               $rh -e 'f && {echo %s %S; false}.ush' $d" "./$d/f ./f\n" "" 0 "root .ush with RAWHIDE_USER_SHELL=/bin/sh (ignored) and no RAWHIDE_USER_SHELL_LIKE_CSH=1"
 fi
 
 # Test the pcre compiled pattern cache

@@ -35,7 +35,7 @@ test_rawhide "RAWHIDE_TEST_FSTATAT_FAILURE=$d  $rh $d"       ""                 
 test_rawhide "RAWHIDE_TEST_OPENAT_FAILURE=1    $rh $d"       "$d\n"                  "./rh: $d: Operation not permitted\n"           1 "simulate openat failure"
 test_rawhide "RAWHIDE_TEST_FDOPENDIR_FAILURE=1 $rh $d"       "$d\n"                  "./rh: fdopendir $d: Operation not permitted\n" 1 "simulate fdopendir failure"
 test_rawhide "RAWHIDE_TEST_CHDIR_FAILURE=1  $rh -X 'echo %s' $d" ""                  "./rh: chdir tests: Operation not permitted\n"  1 "simulate chdir failure"
-test_rawhide "RAWHIDE_TEST_FCHDIR_FAILURE=1 $rh -X 'echo %s' $d" "$d\n"              "./rh: fchdir $d: Operation not permitted\n"    1 "simulate fchdir failure"
+test_rawhide "RAWHIDE_TEST_FCHDIR_FAILURE=1 $rh -X 'echo %s' $d" "./$d\n"            "./rh: fchdir $d: Operation not permitted\n"    1 "simulate fchdir failure"
 ln -s d1 $d/link
 test_rawhide_grep "RAWHIDE_TEST_READLINKAT_FAILURE=1          $rh -l $d/link"              "^.*$" "./rh: readlinkat $d/link: Operation not permitted\n" 1 "simulate readlinkat failure (just for coverage)"
 test_rawhide_grep "RAWHIDE_TEST_READLINKAT_TOO_LONG_FAILURE=1 $rh -l $d/link"              "^.*$" "./rh: readlinkat $d/link: target is too long\n"      1 "simulate readlinkat too long (just for coverage)"
