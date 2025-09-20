@@ -319,7 +319,7 @@ Find symlinks whose ultimate targets don't exist:
 
 Find mountpoints under the current directory:
 
-        $ rh -1 'dev != ".".dev'
+        $ rh -1 -e 'dev != ".".dev'
 
 **Note:** The above doesn't match *Linux* bind mounts because they don't
 involve a separate device.
@@ -327,29 +327,29 @@ involve a separate device.
 Find directories with no sub-directories (fast, for most filesystems, but
 not *btrfs*):
 
-        $ rh 'd && nlink == 2'
+        $ rh -e 'd && nlink == 2'
 
 The same, but works for *btrfs* (slow-ish, but demonstrates shell commands):
 
-        $ rh 'd && "[ $(rh -red %S | wc -l) = 0 ]".sh'
-        $ rh 'd && "[ -z \"$(rh -red %S)\" ]".sh'
-        $ rh 'd && {[ -z "$(rh -red %S)" ]}.sh'
+        $ rh -e 'd && "[ $(rh -red %S | wc -l) = 0 ]".sh'
+        $ rh -e 'd && "[ -z \"$(rh -red %S)\" ]".sh'
+        $ rh -e 'd && {[ -z "$(rh -red %S)" ]}.sh'
 
 Find empty (readable) directories (fast-ish, and works for *btrfs*):
 
-        $ rh 'd && empty'
+        $ rh -e 'd && empty'
 
 Find symlinks whose immediate targets are also symlinks:
 
-        $ rh -l 'l && "[ -L \"$(rh -L%%l %S)\" ]".sh'
-        $ rh -l 'l && "[ -L \"$(readlink %S)\" ]".sh'
-        $ rh -l 'l && {[ -L "$(readlink %S)" ]}.sh'
+        $ rh -l -e 'l && "[ -L \"$(rh -L%%l %S)\" ]".sh'
+        $ rh -l -e 'l && "[ -L \"$(readlink %S)\" ]".sh'
+        $ rh -l -e 'l && {[ -L "$(readlink %S)" ]}.sh'
 
 Find all hard links to all regular files that have multiple hard links (very
 slow):
 
         # rh -e 'f && nlink > 1' \
-             -X 'rh / "(dev == \"$2\".dev) && (ino == \"\".ino)"; echo' \
+             -X 'rh -e "(dev == \"$2\".dev) && (ino == \"\".ino)" /; echo' \
              /
 
 **Note:** The use of `$2` instead of `%S` is to avoid the additional double
@@ -371,32 +371,32 @@ criteria expression.
 The same, but for a single filesystem only (shorter, less slow, but still
 very slow, and still unsafe):
 
-        # rh -1 -e 'f && nlink > 1' -X 'rh -1 / "ino == \"$2\".ino"; echo' /
+        # rh -1 -e 'f && nlink > 1' -X 'rh -1e "ino == \"$2\".ino" /; echo' /
 
 Find 32-bit ELF executables:
 
-        $ rh 'f && anyx && sz > 10k && "ELF 32-bit*executable*".what'
+        $ rh -e 'f && anyx && sz > 10k && "ELF 32-bit*executable*".what'
 
 Find text files that look like they have an ISO-8859-* encoding:
 
-        $ rh 'f && "*ISO-8859* text".what'
-        $ rh 'f && "text/*; charset=iso-8859*".mime'
+        $ rh -e 'f && "*ISO-8859* text".what'
+        $ rh -e 'f && "text/*; charset=iso-8859*".mime'
 
 Find files that contain `TODO`:
 
-        $ rh '"*TODO*".body'
-        $ rh '"TODO".rebody'
+        $ rh -e '"*TODO*".body'
+        $ rh -e '"TODO".rebody'
 
 Find files using a *Perl*-compatible regular expression (regex):
 
-        $ rh '"^[a-zA-Z0-9_]+[0-9][0-9][0-9]?\..*[a-cz]$".re'
-        $ rh '"^\w+\d{2,3}\..*[a-cz]$".re'
+        $ rh -e '"^[a-zA-Z0-9_]+[0-9][0-9][0-9]?\..*[a-cz]$".re'
+        $ rh -e '"^\w+\d{2,3}\..*[a-cz]$".re'
 
 See *perlre(1)*, *pcre2pattern(3)*, and *pcre2syntax(3)* for details.
 
 The same, but with documentation:
 
-        $ rh '"
+        $ rh -e '"
           ^         # Anchor the match to the start of the base name 
           \w+       # Starts with at least one word character
           \d{2,3}   # Followed by two or three digits
@@ -408,45 +408,45 @@ The same, but with documentation:
 
 Case-insensitive search (anything with `abc` in the name):
 
-        $ rh '"*ABC*".i' # Case-insensitive glob of base name
-        $ rh '"ABC".rei' # Case-insensitive regex of base name
+        $ rh -e '"*ABC*".i' # Case-insensitive glob of base name
+        $ rh -e '"ABC".rei' # Case-insensitive regex of base name
 
 Find files by their full path starting from the search directory (anything
 under an `abc` directory):
 
-        $ rh '"*/abc/*".path'  # Glob of full path
-        $ rh '"/abc/".repath'  # Regex of full path
-        $ rh '"*/ABC/*".ipath' # Case-insensitive glob of full path
-        $ rh '"/ABC/".reipath' # Case-insensitive regex of full path
+        $ rh -e '"*/abc/*".path'  # Glob of full path
+        $ rh -e '"/abc/".repath'  # Regex of full path
+        $ rh -e '"*/ABC/*".ipath' # Case-insensitive glob of full path
+        $ rh -e '"/ABC/".reipath' # Case-insensitive regex of full path
 
 Find symlinks by their target path (symlinks to anything under an `abc`
 directory):
 
-        $ rh -l '"*/abc/*".link'  # Glob of symlink target path
-        $ rh -l '"/abc/".relink'  # Regex of symlink target path
-        $ rh -l '"*/ABC/*".ilink' # Case-insensitive glob of symlink target
-        $ rh -l '"/ABC/".reilink' # Case-insensitive regex of symlink target
+        $ rh -le '"*/abc/*".link'  # Glob of symlink target path
+        $ rh -le '"/abc/".relink'  # Regex of symlink target path
+        $ rh -le '"*/ABC/*".ilink' # Case-insensitive glob of symlink target
+        $ rh -le '"/ABC/".reilink' # Case-insensitive regex of symlink target
 
 Find files with *"POSIX"* ACLs (*Linux* and *Cygwin*) that grant write
 access to the user `drew`:
 
-        $ rh '(uid == $drew) ? "*user::?w?*".acl   : "*user:drew:?w?*".acl'
-        $ rh '(uid == $drew) ? "^user::.w.$".reacl : "^user:drew:.w.$".reacl'
+        $ rh -e '(uid == $drew) ? "*user::?w?*".acl   : "*user:drew:?w?*".acl'
+        $ rh -e '(uid == $drew) ? "^user::.w.$".reacl : "^user:drew:.w.$".reacl'
 
 Find files with *NFSv4* ACLs (*FreeBSD* and *Solaris*) that grant write
 access to the user `drew`:
 
-        $ rh '(uid == $drew)
+        $ rh -e '(uid == $drew)
             ?    "*owner@:?w????????????:???????:allow*".acl
             : "*user:drew:?w????????????:???????:allow*".acl
         '
 
-        $ rh '(uid == $drew)
+        $ rh -e '(uid == $drew)
             ?    "owner@:.w.{12}:.{7}:allow".reacl
             : "user:drew:.w.{12}:.{7}:allow".reacl
         '
 
-        $ rh '(uid == $drew)
+        $ rh -e '(uid == $drew)
             ?    "owner@:[^:]+/write_data/[^:]+(:[^:]*)?:allow".reacl
             : "user:drew:[^:]+/write_data/[^:]+(:[^:]*)?:allow".reacl
         '
@@ -458,33 +458,33 @@ least on *Solaris*).
 
 Find files on *macOS* with ACLs that grant write access to the user `drew`:
 
-        $ rh '(uid == $drew) ? uw : "user:[^:]+:drew:\d+:allow:write".rea'
+        $ rh -e '(uid == $drew) ? uw : "user:[^:]+:drew:\d+:allow:write".reacl'
 
 Find files with non-trivial access control lists (ACL):
 
-        $ rh '"*mask::*".acl'        # "POSIX" ACLs (Linux, Cygwin)
-        $ rh '"(user|group):".reacl' # NFSv4 ACLs (FreeBSD, Solaris)
-        $ rh '"?*".acl'              # macOS ACLs
+        $ rh -e '"*mask::*".acl'        # "POSIX" ACLs (Linux, Cygwin)
+        $ rh -e '"(user|group):".reacl' # NFSv4 ACLs (FreeBSD, Solaris)
+        $ rh -e '"?*".acl'              # macOS ACLs
 
 Find files with extended attributes (EA):
 
-        $ rh '"?*".ea'
-        $ rh '".".reea'
+        $ rh -e '"?*".ea'
+        $ rh -e '".".reea'
 
 Find files on *Linux* by their *selinux(8)* context (any):
 
-        $ rh '"*security.selinux: *_u:*_r:*_t:s[0-3]*".ea'
-        $ rh '"^security\.selinux:\ .*_u:.*_r:.*_t:s[0-3]".reea'
+        $ rh -e '"*security.selinux: *_u:*_r:*_t:s[0-3]*".ea'
+        $ rh -e '"^security\.selinux:\ .*_u:.*_r:.*_t:s[0-3]".reea'
 
 Find files on *Linux*, *FreeBSD*, *OpenBSD*, *NetBSD*, or *macOS*, that are
 immutable or append-only:
 
-        $ rh / 'immutable || append'
+        $ rh -e 'immutable || append' /
 
 Find files on *Solaris* with setuid executable extended attributes (silly):
 
-        $ rh / '"*/stat: -rws*".ea'
-        $ rh / '"/stat:\ -rws".reea'
+        $ rh -e '"*/stat: -rws*".ea' /
+        $ rh -e '"/stat:\ -rws".reea' /
 
 # DOCUMENTATION
 

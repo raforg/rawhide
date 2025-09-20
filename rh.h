@@ -177,7 +177,7 @@ struct runtime_t
 	llong fea_size;         /* Non-default size to allocate for extended attributes? */
 	int fea_solaris_no_sunwattr; /* Suppress ubiquitous SUNWattr_ro/SUNWattr_rw EAs on Solaris? */
 	int fea_solaris_no_statinfo; /* Suppress artificial stat(2) info EAs on Solaris? */
-	int no_implicit_expr_heuristic; /* Suppress implicit search criteria expression heuristic */
+	int implicit_expr_heuristic; /* Allow implicit search criteria expression heuristic */
 
 	char *user_shell;        /* The value of $RAWHIDE_USER_SHELL to override the user's login shell, for .ush */
 	int user_shell_like_csh; /* The value of $RAWHIDE_USER_SHELL_LIKE_CSH (i.e., shell doesn't take $0 argument, or --) */

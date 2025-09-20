@@ -296,6 +296,49 @@ strongly recommended that I<expr> generally be enclosed in single quotes
 (C<"'">).
 
 If no explicit file test expression is supplied via the C<-e> option, then
+the default file test expression is C<1>, which matches all filesystem
+entries.
+
+B<Warning:> When using non-literal search path arguments (e.g., shell
+globbing, environment variables, and shell parameters), you mustn't assume
+that they won't result in file names that (possibly maliciously) start with
+C<-e> or C<-x> or C<-X> (see below), so you must include C<--> before any
+non-literal search path arguments so as to prevent any such file names from
+being interpreted as command line options which would trigger an arbitrary
+code execution security vulnerability. Because that could be really bad.
+
+It is possible to make the C<-e> option implicit, rather than explicit. This
+means that it's possible to omit the C<-e> and just include the file test
+expression as a normal non-option command line argument. I<rh> can use a
+heuristic to distinguish between a file test expression argument and search
+path arguments. This can save keystrokes and can make it possible to specify
+the file test expression and search paths in any order. This used to be the
+default behaviour until it was pointed out that it rendered I<rh>
+susceptible to malicious implicit file test expressions masquerading as a
+file name, which could be maliciously deleted at just the right moment to
+trigger an arbitrary code execution security vulnerability, but only when
+the command line arguments are non-literal. It's safe when there are no
+search path command line arguments, and when you have supplied literal
+search paths, but it's unsafe when non-literal search paths are supplied via
+shell glob patterns or environment variables or shell parameters, and you
+haven't supplied a file test expression first. If you can't see the literal
+search paths, and you haven't supplied the file test expression, then
+allowing implicit file test expressions is unsafe. So the implicit file test
+expression heuristic is no longer the default behaviour. To allow implicit
+file test expressions, set the environment variable
+C<RAWHIDE_ALLOW_IMPLICIT_EXPR_HEURISTIC=1>. But only do this if you promise
+to always specify an explicit C<-e> option when using non-literal search
+paths so as to eliminate the risk of malicious file names that look like an
+implicit or explicit file test expression. And always include C<--> before
+non-literal search paths whether or not you are allowing implicit file test
+expressions so as to eliminate the risk of malicious file names that look
+like the C<-x> or C<-X> options (see below) which would also trigger an
+arbitrary code execution security vulnerability.
+
+The remainder of this section describes the behaviour when
+C<RAWHIDE_ALLOW_IMPLICIT_EXPR_HEURISTIC=1>.
+
+If no explicit file test expression is supplied via the C<-e> option, then
 any remaining command line arguments are examined to identify any implicit
 file test expression.
 
@@ -336,25 +379,6 @@ parsing.
 
 If no file test expression is supplied anywhere, the default file test
 expression is C<1>, which matches all filesystem entries.
-
-B<Warning:> The fact that an implicit search criteria expression can be
-heuristically identified among the command line arguments when there is no
-explicit C<-e> option can be very convenient, but it is also very
-dangerous. It means that, when a shell file name glob pattern is used to generate
-command line arguments, a malicious file name, if maliciously deleted at
-just the right moment, could be interpreted as a search criteria
-expression. If you are unwilling to accept this risk, you can always explicitly use the
-C<-e> option. Alternatively, this behaviour can be suppressed by setting the
-environment variable C<RAWHIDE_NO_IMPLICIT_EXPR_HEURISTIC=1>. Doing so will
-cause I<rh> to always default to the search criteria C<1>, matching all
-filesystem entries, when no C<-e> option has been supplied on the command
-line. It effectively makes it mandatory to specify search criteria
-explicitly via the C<-e> option unless you want to match everything (the
-default). Also note that, when you want to match all filesystem entries, and
-so do not need an explicit C<-e> option, you should include C<--> on the
-command line before the glob pattern, so as to prevent a malicious file name
-that starts with C<-e> from being interpreted as an explicit search criteria
-expression.
 
 =back
 
@@ -1858,7 +1882,7 @@ Find symlinks whose ultimate targets don't exist:
 
 Find mountpoints under the current directory:
 
-    $ rh -1 'dev != ".".dev'
+    $ rh -1 -e 'dev != ".".dev'
 
 B<Note:> The above doesn't match I<Linux> bind mounts because they don't
 involve a separate device.
@@ -1866,29 +1890,29 @@ involve a separate device.
 Find directories with no sub-directories (fast, for most filesystems, but
 not I<btrfs>):
 
-    $ rh 'd && nlink == 2'
+    $ rh -e 'd && nlink == 2'
 
 The same, but works for I<btrfs> (slow-ish, but demonstrates shell commands):
 
-    $ rh 'd && "[ $(rh -red %S | wc -l) = 0 ]".sh'
-    $ rh 'd && "[ -z \"$(rh -red %S)\" ]".sh'
-    $ rh 'd && {[ -z "$(rh -red %S)" ]}.sh'
+    $ rh -e 'd && "[ $(rh -red %S | wc -l) = 0 ]".sh'
+    $ rh -e 'd && "[ -z \"$(rh -red %S)\" ]".sh'
+    $ rh -e 'd && {[ -z "$(rh -red %S)" ]}.sh'
 
 Find empty (readable) directories (fast-ish, and works for I<btrfs>):
 
-    $ rh 'd && empty'
+    $ rh -e 'd && empty'
 
 Find symlinks whose immediate targets are also symlinks:
 
-    $ rh -l 'l && "[ -L \"$(rh -L%%l %S)\" ]".sh'
-    $ rh -l 'l && "[ -L \"$(readlink %S)\" ]".sh'
-    $ rh -l 'l && {[ -L "$(readlink %S)" ]}.sh'
+    $ rh -l -e 'l && "[ -L \"$(rh -L%%l %S)\" ]".sh'
+    $ rh -l -e 'l && "[ -L \"$(readlink %S)\" ]".sh'
+    $ rh -l -e 'l && {[ -L "$(readlink %S)" ]}.sh'
 
 Find all hard links to all regular files that have multiple hard links (very
 slow):
 
     # rh -e 'f && nlink > 1' \
-         -X 'rh / "(dev == \"$2\".dev) && (ino == \"\".ino)"; echo' \
+         -X 'rh -e "(dev == \"$2\".dev) && (ino == \"\".ino)" /; echo' \
          /
 
 B<Note:> The use of C<$2> instead of C<%S> is to avoid the additional double
@@ -1910,32 +1934,32 @@ as part of the search criteria expression.
 The same, but for a single filesystem only (shorter, less slow, but still
 very slow, and still unsafe):
 
-    # rh -1 -e 'f && nlink > 1' -X 'rh -1 / "ino == \"$2\".ino"; echo' /
+    # rh -1 -e 'f && nlink > 1' -X 'rh -1e "ino == \"$2\".ino" /; echo' /
 
 Find 32-bit ELF executables:
 
-    $ rh 'f && anyx && sz > 10k && "ELF 32-bit*executable*".what'
+    $ rh -e 'f && anyx && sz > 10k && "ELF 32-bit*executable*".what'
 
 Find text files that look like they have an ISO-8859-* encoding:
 
-    $ rh 'f && "*ISO-8859* text".what'
-    $ rh 'f && "text/*; charset=iso-8859*".mime'
+    $ rh -e 'f && "*ISO-8859* text".what'
+    $ rh -e 'f && "text/*; charset=iso-8859*".mime'
 
 Find files that contain C<TODO>:
 
-    $ rh 'f && "*TODO*".body'
-    $ rh 'f && "TODO".rebody'
+    $ rh -e 'f && "*TODO*".body'
+    $ rh -e 'f && "TODO".rebody'
 
 Find files using a I<Perl>-compatible regular expression (regex):
 
-    $ rh '"^[a-zA-Z0-9_]+[0-9][0-9][0-9]?\..*[a-cz]$".re'
-    $ rh '"^\w+\d{2,3}\..*[a-cz]$".re'
+    $ rh -e '"^[a-zA-Z0-9_]+[0-9][0-9][0-9]?\..*[a-cz]$".re'
+    $ rh -e '"^\w+\d{2,3}\..*[a-cz]$".re'
 
 See I<perlre(1)>, I<pcre2pattern(3)>, and I<pcre2syntax(3)> for details.
 
 The same, but with documentation:
 
-    $ rh '"
+    $ rh -e '"
       ^         # Anchor the match to the start of the base name
       \w+       # Starts with at least one word character
       \d{2,3}   # Followed by two or three digits
@@ -1947,45 +1971,45 @@ The same, but with documentation:
 
 Case-insensitive search (anything with C<abc> in the name):
 
-    $ rh '"*ABC*".i' # Case-insensitive glob of base name
-    $ rh '"ABC".rei' # Case-insensitive regex of base name
+    $ rh -e '"*ABC*".i' # Case-insensitive glob of base name
+    $ rh -e '"ABC".rei' # Case-insensitive regex of base name
 
 Find files by their full path starting from the search directory (anything
 under an C<abc> directory):
 
-    $ rh '"*/abc/*".path'  # Glob of full path
-    $ rh '"/abc/".repath'  # Regex of full path
-    $ rh '"*/ABC/*".ipath' # Case-insensitive glob of full path
-    $ rh '"/ABC/".reipath' # Case-insensitive regex of full path
+    $ rh -e '"*/abc/*".path'  # Glob of full path
+    $ rh -e '"/abc/".repath'  # Regex of full path
+    $ rh -e '"*/ABC/*".ipath' # Case-insensitive glob of full path
+    $ rh -e '"/ABC/".reipath' # Case-insensitive regex of full path
 
 Find symlinks by their target path (symlinks to anything under an C<abc>
 directory):
 
-    $ rh -l '"*/abc/*".link'  # Glob of symlink target path
-    $ rh -l '"/abc/".relink'  # Regex of symlink target path
-    $ rh -l '"*/ABC/*".ilink' # Case-insensitive glob of symlink target
-    $ rh -l '"/ABC/".reilink' # Case-insensitive regex of symlink target
+    $ rh -le '"*/abc/*".link'  # Glob of symlink target path
+    $ rh -le '"/abc/".relink'  # Regex of symlink target path
+    $ rh -le '"*/ABC/*".ilink' # Case-insensitive glob of symlink target
+    $ rh -le '"/ABC/".reilink' # Case-insensitive regex of symlink target
 
 Find files with I<"POSIX"> ACLs (I<Linux> and I<Cygwin>) that grant write
 access to the user C<drew>:
 
-    $ rh '(uid == $drew) ? "*user::?w?*".acl   : "*user:drew:?w?*".acl'
-    $ rh '(uid == $drew) ? "^user::.w.$".reacl : "^user:drew:.w.$".reacl'
+    $ rh -e'(uid==$drew) ? "*user::?w?*".acl   : "*user:drew:?w?*".acl'
+    $ rh -e'(uid==$drew) ? "^user::.w.$".reacl : "^user:drew:.w.$".reacl'
 
 Find files with I<NFSv4> ACLs (I<FreeBSD> and I<Solaris>) that grant write
 access to the user C<drew>:
 
-    $ rh '(uid == $drew)
+    $ rh -e '(uid == $drew)
         ?    "*owner@:?w????????????:???????:allow*".acl
         : "*user:drew:?w????????????:???????:allow*".acl
     '
 
-    $ rh '(uid == $drew)
+    $ rh -e '(uid == $drew)
         ?    "owner@:.w.{12}:.{7}:allow".reacl
         : "user:drew:.w.{12}:.{7}:allow".reacl
     '
 
-    $ rh '(uid == $drew)
+    $ rh -e '(uid == $drew)
         ?    "owner@:[^:\n]+/write_data/[^:\n]+(:[^:\n]*)?:allow".reacl
         : "user:drew:[^:\n]+/write_data/[^:\n]+(:[^:\n]*)?:allow".reacl
     '
@@ -1998,33 +2022,33 @@ least on I<Solaris>).
 Find files on I<macOS> with ACLs that grant write access to the user
 C<drew>:
 
-    $ rh '(uid == $drew) ? uw : "user:[^:\n]+:drew:\d+:allow:write".rea'
+    $ rh -e '(uid==$drew) ? uw : "user:[^:\n]+:drew:\d+:allow:write".rea'
 
 Find files with non-trivial access control lists (ACL):
 
-    $ rh '"*mask::*".acl'        # "POSIX" ACLs (Linux, Cygwin)
-    $ rh '"(user|group):".reacl' # NFSv4 ACLs (FreeBSD, Solaris)
-    $ rh '"?*".acl'              # macOS ACLs
+    $ rh -e '"*mask::*".acl'        # "POSIX" ACLs (Linux, Cygwin)
+    $ rh -e '"(user|group):".reacl' # NFSv4 ACLs (FreeBSD, Solaris)
+    $ rh -e '"?*".acl'              # macOS ACLs
 
 Find files with extended attributes (EA):
 
-    $ rh '"?*".ea'
-    $ rh '".".reea'
+    $ rh -e '"?*".ea'
+    $ rh -e '".".reea'
 
 Find files on I<Linux> by their I<selinux(8)> context (any):
 
-    $ rh '"*security.selinux: *_u:*_r:*_t:s[0-3]*".ea'
-    $ rh '"^security\.selinux:\ .*_u:.*_r:.*_t:s[0-3]".reea'
+    $ rh -e '"*security.selinux: *_u:*_r:*_t:s[0-3]*".ea'
+    $ rh -e '"^security\.selinux:\ .*_u:.*_r:.*_t:s[0-3]".reea'
 
 Find files on I<Linux>, I<FreeBSD>, I<OpenBSD>, I<NetBSD>, or I<macOS>, that
 are immutable or append-only:
 
-    $ rh / 'immutable || append'
+    $ rh -e 'immutable || append' /
 
 Find files on I<Solaris> with setuid executable extended attributes (silly):
 
-    $ rh / '"*/stat: -rws*".ea'
-    $ rh / '"/stat:\ -rws".reea'
+    $ rh -e '"*/stat: -rws*".ea' /
+    $ rh -e '"/stat:\ -rws".reea' /
 
 =head1 FUNCTION EXAMPLES
 
@@ -2736,14 +2760,13 @@ accessed time is changed. It is only updated for other changes to the
 inode. This relates to the C<ctime> and C<tctime> built-in symbols, and the
 C<ctime> reference file field (see I<rawhide.conf(5)>).
 
-There are some operating systems where glob pattern matching only matches
-valid characters, but not all potential byte sequences are valid characters
-according to the user's locale. On such systems, if any candidate file name
-contains a byte sequence that isn't a valid character, then the C<"*"> glob
-pattern won't match it. The search expression C<!"*"> would find any such
-files. But this doesn't apply to any of the operating systems that I<rh> has
-been written for and tested on. This could become a problem if I<rh> is
-ported to other operating systems.
+On older I<Linux> systems, glob matching via the standard C<fnmatch(3)>
+function only matches valid characters, but not all potential byte sequences
+are valid characters according to the user's locale. On such systems, if any
+candidate file name contains a byte sequence that isn't a valid character,
+then the C<"*"> glob pattern won't match it. The search criteria expression
+C<!"*"> would find any such files. But this is no longer the case on recent
+I<Linux> systems, so hopefully it won't be a problem.
 
 =head1 EXIT STATUS
 
@@ -2882,21 +2905,21 @@ the buffer size if needed to prevent extended attributes from being silently
 truncated. This affects extended attribute searching (C<ea>) (see
 I<rawhide.conf(5)>), and the S<C<-L %x>> format conversion (see above).
 
-Setting the environment variable C<RAWHIDE_NO_IMPLICIT_EXPR_HEURISTIC=1>
-suppresses the behaviour of heuristically looking for an implicit search
-criteria expression among the command line arguments when there is no
-explicit C<-e> option. This eliminates the risk that the use of a shell file
-name glob pattern might encounter a malicious file name and add it to the
-command line, and that malicious file name being interpreted as an implicit
-search criteria expression, if it were maliciously deleted at just the right
-moment. To completely eliminate this risk, you need to also include C<--> on
-the command line before the glob pattern because a malicious file name might
-start with C<-e> and be interpreted as an explicit search criteria
-expression. But this additional precaution is only necessary when there is
-no explicit C<-e> option on the command line. An alternative to the use of
-this environment variable is to just always include an explicit C<-e> option
-on the command line, even when you want the default behaviour of matching
-all filesystem entries (i.e., C<-e1>).
+Setting the environment variable C<RAWHIDE_ALLOW_IMPLICIT_EXPR_HEURISTIC=1>
+enables the heuristic that identifies implicit search criteria expressions
+in normal non-option command line arguments, rather than requiring an
+explicit C<-e> option (see above). This saves keystrokes, and makes it
+possible to specify search criteria and search paths in any order (not just
+on I<Linux>). B<Warning:> This is only safe when there is no search path
+argument or when there are only literal search path arguments. This is
+unsafe when non-literal search path arguments are used (i.e., from shell
+globbing, environment variables, and shell parameters). Non-literal search
+paths could include malicious file names that, if maliciously deleted at
+just the right moment, could trigger an arbitrary code execution security
+vulnerability. To eliminate this risk when using non-literal search paths,
+you must promise to supply an explicit C<-e> option (even if it's just
+C<-e1>) and C<--> before any non-literal search path arguments. When all of
+the search paths are literal, that isn't necessary.
 
 The environment variable C<RAWHIDE_USER_SHELL> can be set to the absolute
 path to an alternative shell to be used by the C<">I<cmd>C<".ush> "pattern"

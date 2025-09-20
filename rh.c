@@ -559,7 +559,7 @@ int main(int argc, char *argv[])
 	attr.fea_solaris_no_sunwattr = env_flag("RAWHIDE_SOLARIS_EA_NO_SUNWATTR");
 	attr.fea_solaris_no_statinfo = env_flag("RAWHIDE_SOLARIS_EA_NO_STATINFO");
 	attr.fea_size = env_int("RAWHIDE_EA_SIZE", 1, -1, 0);
-	attr.no_implicit_expr_heuristic = env_flag("RAWHIDE_NO_IMPLICIT_EXPR_HEURISTIC");
+	attr.implicit_expr_heuristic = env_flag("RAWHIDE_ALLOW_IMPLICIT_EXPR_HEURISTIC");
 	attr.user_shell = getenv("RAWHIDE_USER_SHELL");
 	attr.user_shell_like_csh = env_flag("RAWHIDE_USER_SHELL_LIKE_CSH");
 
@@ -1180,9 +1180,9 @@ int main(int argc, char *argv[])
 		opt_e_expr = (startPC != opt_e_expr);
 	}
 
-	/* If no explicit -e expr, search remaining arguments for an implicit expr (unless suppressed) */
+	/* If no explicit -e expr, search remaining arguments for an implicit expr (if allowed) */
 
-	if (!opt_e_expr && !attr.no_implicit_expr_heuristic)
+	if (!opt_e_expr && attr.implicit_expr_heuristic)
 	{
 		char *posp;
 		int posi;
