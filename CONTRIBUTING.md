@@ -7,8 +7,9 @@ email (`raf@raf.org`).
 
 If you want to make changes yourself, please follow my coding/documentation
 style precisely. Any changes to functionality probably need to include
-corresponding changes to documentation and tests. Everything *rh* does needs
-to be documented, and everything that is documented needs to be tested.
+corresponding changes to documentation and tests. Everything that *rh* does
+needs to be documented, and everything that is documented needs to be
+tested.
 
 When changing code and tests, please run all of the tests as both a
 non-`root` user, and as the `root` user, and consider running all tests on
@@ -45,10 +46,10 @@ changes result in a mid-paragraph line that ends with a dot, please move the
 last word and dot to become the start of the next line. Sorry if this is
 petty, but if you don't do it, I'll have to. :-)
 
-**Note:** If you contribute code, documentation, and/or tests to *rawhide*,
-I will interpret that as you assigning copyright to me, unless otherwise
-arranged. If you need to retain copyright, and need to have a new copyright
-notice added, let me know.
+**Note:** If you contribute code, comments, documentation, and/or tests to
+*rawhide*, I will interpret that as you assigning copyright to me, unless
+otherwise arranged. If you need to retain copyright, and need to have a new
+copyright notice added, just let me know.
 
 --------------------------------------------------------------------------------
 
