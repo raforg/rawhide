@@ -158,81 +158,81 @@ rhxargs() { xargs -r0 rh -M0 -e1 "$@" --; }
 # rhs - plain rh sorted by path (like ls -1AR)
 # usage: rh arguments that don't conflict with -j
 # usage: rhs [options] [--] [path...]
-# e.g.: rhs f
+# e.g.: rhs -e f
 rhs() { rh -j "$@" | jqs; }
 
 # rht - plain rh sorted by mtime, most recent first (like ls -1ARt)
 # usage: rh arguments that don't conflict with -j
-# e.g.: rht f
+# e.g.: rht -e f
 rht() { rh -j "$@" | jqt; }
 
 # rhz - plain rh sorted by size (like ls -1AR but sorted by size)
 # usage: rh arguments that don't conflict with -j
-# e.g.: rhz 'size > 1M'
+# e.g.: rhz -e 'size > 1M'
 rhz() { rh -j "$@" | jqz; }
 
 
 # rls - rh -rl sorted by path (like ls -lA)
 # usage: rh arguments that don't conflict with -r or -j
-# e.g.: rls f
+# e.g.: rls -e f
 rls() { rh -rj "$@" | jqsz | rhxargs -l; }
 
 # rlt - rh -rl sorted by mtime, most recent first (like ls -lAt)
 # usage: rh arguments that don't conflict with -r or -j
-# e.g.: rlt f
+# e.g.: rlt -e f
 rlt() { rh -rj "$@" | jqtz | rhxargs -l; }
 
 # rlz - rh -rl sorted by size (like ls -lA but sorted by size)
 # usage: rh arguments that don't conflict with -r or -j
-# e.g.: rlz 'size > 1M'
+# e.g.: rlz -e 'size > 1M'
 rlz() { rh -rj "$@" | jqzz | rhxargs -l; }
 
 
 # rlrs - rh -l sorted by path (like ls -lAR)
 # usage: rh arguments that don't conflict with -j
-# e.g.: rlrs f
+# e.g.: rlrs -e f
 rlrs() { rh -j "$@" | jqsz | rhxargs -l; }
 
 # rlrt - rh -l sorted by mtime, most recent first (like ls -lARt)
 # usage: rh arguments that don't conflict with -r or -j
-# e.g.: rlrt f
+# e.g.: rlrt -e f
 rlrt() { rh -j "$@" | jqtz | rhxargs -l; }
 
 # rlrz - rh -l sorted by size (like ls -lAR but sorted by size)
 # usage: rh arguments that don't conflict with -r or -j
-# e.g.: rlrz 'size > 1M'
+# e.g.: rlrz -e 'size > 1M'
 rlrz() { rh -j "$@" | jqzz | rhxargs -l; }
 
 
 # rvs - rh -rv sorted by path (like ls -lA)
 # usage: rh arguments that don't conflict with -r or -j
-# e.g.: rvs f
+# e.g.: rvs -e f
 rvs() { rh -rj "$@" | jqsz | rhxargs -v; }
 
 # rvt - rh -rv sorted by mtime, most recent first (like ls -lAt)
 # usage: rh arguments that don't conflict with -r or -j
-# e.g.: rvt f
+# e.g.: rvt -e f
 rvt() { rh -rj "$@" | jqtz | rhxargs -v; }
 
 # rvz - rh -rv sorted by size (like ls -lA but sorted by size)
 # usage: rh arguments that don't conflict with -r or -j
-# e.g.: rvz 'size > 1M'
+# e.g.: rvz -e 'size > 1M'
 rvz() { rh -rj "$@" | jqzz | rhxargs -v; }
 
 
 # rvrs - rh -v sorted by path (like ls -lAR)
 # usage: rh arguments that don't conflict with -j
-# e.g.: rvrs f
+# e.g.: rvrs -e f
 rvrs() { rh -j "$@" | jqsz | rhxargs -v; }
 
 # rvrt - rh -v sorted by mtime, most recent first (like ls -lARt)
 # usage: rh arguments that don't conflict with -r or -j
-# e.g.: rvrt f
+# e.g.: rvrt -e f
 rvrt() { rh -j "$@" | jqtz | rhxargs -v; }
 
 # rvrz - rh -v sorted by size (like ls -lAR but sorted by size)
 # usage: rh arguments that don't conflict with -r or -j
-# e.g.: rvrz 'size > 1M'
+# e.g.: rvrz -e 'size > 1M'
 rvrz() { rh -j "$@" | jqzz | rhxargs -v; }
 
 
