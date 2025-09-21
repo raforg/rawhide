@@ -335,8 +335,21 @@ expressions so as to eliminate the risk of malicious file names that look
 like the C<-x> or C<-X> options (see below) which would also trigger an
 arbitrary code execution security vulnerability.
 
+Note that the environment variable C<RAWHIDE_ALLOW_IMPLICIT_EXPR_HEURISTIC>
+is ignored when the C<-f> option is supplied (see above). So if the C<-f>
+option specifies a file that contains a default file test expression, it can
+only be overridden with an explicit C<-e> option, not with an implicit file
+test expression. The reason for this is that there would be no convenient
+way to use the default file test expression and prevent the risk of
+non-literal search path arguments being interpreted as implicit search
+paths. You would need to restate the default file test expression on the
+command line. By forcing any C<-e> option to be explicit when the C<-f>
+option is supplied, non-literal search path arguments can be used safely
+just by preceding them with C<--> as normal.
+
 The remainder of this section describes the behaviour when
-C<RAWHIDE_ALLOW_IMPLICIT_EXPR_HEURISTIC=1>.
+C<RAWHIDE_ALLOW_IMPLICIT_EXPR_HEURISTIC=1> (and the C<-f> option has not
+been supplied).
 
 If no explicit file test expression is supplied via the C<-e> option, then
 any remaining command line arguments are examined to identify any implicit
@@ -2919,7 +2932,11 @@ just the right moment, could trigger an arbitrary code execution security
 vulnerability. To eliminate this risk when using non-literal search paths,
 you must promise to supply an explicit C<-e> option (even if it's just
 C<-e1>) and C<--> before any non-literal search path arguments. When all of
-the search paths are literal, that isn't necessary.
+the search paths are literal, that isn't necessary. Note that this
+environment variable is ignored when the C<-f> option is supplied (see
+above). This is to make it convenient to use any default search criteria in
+the specified file without the risk that a non-literal search path might be
+interpreted as an overriding search criteria expression.
 
 The environment variable C<RAWHIDE_USER_SHELL> can be set to the absolute
 path to an alternative shell to be used by the C<">I<cmd>C<".ush> "pattern"

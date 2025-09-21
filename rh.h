@@ -302,6 +302,7 @@ struct runtime_t
 	int test_openat_failure;
 	int test_readlinkat_failure;
 	int test_readlinkat_too_long_failure;
+	int test_implicit_expr_heuristic_despite_f_option;
 };
 
 /* Structure of a reference file */

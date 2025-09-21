@@ -436,6 +436,7 @@ Read ~/.rhrc and ~/.rhrc.d (unless -n).
 Read -f file/dir/stdin (if present).
 Read -e expr (if present).
 
+If RAWHIDE_ALLOW_IMPLICIT_EXPR_HEURISTIC=1 (and -f not supplied):
 If no explicit -e expression is supplied, look among any
 remaining command line arguments for one that is not a
 file or directory (and doesn't look like it's supposed
@@ -573,6 +574,7 @@ int main(int argc, char *argv[])
 	attr.test_openat_failure = env_flag("RAWHIDE_TEST_OPENAT_FAILURE");
 	attr.test_readlinkat_failure = env_flag("RAWHIDE_TEST_READLINKAT_FAILURE");
 	attr.test_readlinkat_too_long_failure = env_flag("RAWHIDE_TEST_READLINKAT_TOO_LONG_FAILURE");
+	attr.test_implicit_expr_heuristic_despite_f_option = env_flag("RAWHIDE_TEST_IMPLICIT_EXPR_HEURISTIC_DESPITE_F_OPTION");
 
 	/* Parse cmdline options */
 
@@ -625,6 +627,9 @@ int main(int argc, char *argv[])
 					fatalsys("out of memory");
 
 				opt_f_list[opt_f - 1] = optarg;
+
+				if (!attr.test_implicit_expr_heuristic_despite_f_option)
+					attr.implicit_expr_heuristic = 0;
 
 				break;
 			}
