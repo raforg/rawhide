@@ -153,6 +153,22 @@ jqzz() { bjq -sj "$@" 'sort_by(.size,.path)|.[].path+"\u0000"'; }
 # usage: rhxargs [options]
 # e.g.: rhxargs -l or rhxargs -v
 rhxargs() { xargs -r0 rh -M0 -e1 "$@" --; }
+# Alternate implementations if xargs -r isn't supported.
+# This applies to Solaris and old macOS.
+xargs -r < /dev/null > /dev/null 2>&1
+if [ $? != 0 ]
+then
+	if [ $(xargs echo < /dev/null | wc -l) = 0 ]
+	then # Old macOS xargs has no -r option but it acts like -r anyway
+		rhxargs() { xargs -0 rh -M0 -e1 "$@" --; }
+	else # Solaris xargs has no -r option so implement it here
+		rhxargs()
+		{
+			xargs -0 \
+			sh -c '[ "$#" -eq 0 ] || exec rh -M0 -e1 "$0" -- "$@"' "$@"
+		}
+	fi
+fi
 
 
 # rhs - plain rh sorted by path (like ls -1AR)
@@ -234,26 +250,6 @@ rvrt() { rh -j "$@" | jqtz | rhxargs -v; }
 # usage: rh arguments that don't conflict with -r or -j
 # e.g.: rvrz -e 'size > 1M'
 rvrz() { rh -j "$@" | jqzz | rhxargs -v; }
-
-
-# Alternate implementations if xargs -r isn't supported.
-# This applies to macOS and Solaris.
-xargs -r < /dev/null > /dev/null 2>&1
-if [ $? != 0 ]
-then
-	rls()  { eval rh -lM0 -e1 -- $(rh -rj "$@" | jqss); }
-	rlt()  { eval rh -lM0 -e1 -- $(rh -rj "$@" | jqts); }
-	rlz()  { eval rh -lM0 -e1 -- $(rh -rj "$@" | jqzs); }
-	rlrs() { eval rh -lM0 -e1 -- $(rh -j  "$@" | jqss); }
-	rlrt() { eval rh -lM0 -e1 -- $(rh -j  "$@" | jqts); }
-	rlrz() { eval rh -lM0 -e1 -- $(rh -j  "$@" | jqzs); }
-	rvs()  { eval rh -vM0 -e1 -- $(rh -rj "$@" | jqss); }
-	rvt()  { eval rh -vM0 -e1 -- $(rh -rj "$@" | jqts); }
-	rvz()  { eval rh -vM0 -e1 -- $(rh -rj "$@" | jqzs); }
-	rvrs() { eval rh -vM0 -e1 -- $(rh -j  "$@" | jqss); }
-	rvrt() { eval rh -vM0 -e1 -- $(rh -j  "$@" | jqts); }
-	rvrz() { eval rh -vM0 -e1 -- $(rh -j  "$@" | jqzs); }
-fi
 
 
 # export RAWHIDE_CONFIG=/etc/rawhide.conf
