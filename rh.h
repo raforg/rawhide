@@ -213,6 +213,7 @@ struct runtime_t
 	unsigned long gen;      /* Linux ext2-style generation */
 
 	char *ttybuf;           /* Temp space for printf_sanitized() (long-lived, on-demand) */
+	char *ttybuf_sanitized; /* Temp space for printf_sanitized() (long-lived, on-demand) */
 	char *formatbuf;        /* Temp space for visitf_format() (long-lived, on-demand) */
 
 	int parent_fd;          /* File descriptor of parent directory */

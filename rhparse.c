@@ -1792,7 +1792,7 @@ static const char *show_token(void)
 		case SHIFTR: snprintf(buf, BUFSIZE, "shiftr >>"); break;
 		case AND: snprintf(buf, BUFSIZE, "and &&"); break;
 		case OR: snprintf(buf, BUFSIZE, "or ||"); break;
-		default: snprintf(buf, BUFSIZE, (isquotable(token)) ? "char 0x%02x" : "'%c'", (char)token); break;
+		default: snprintf(buf, BUFSIZE, (iscntrl((int)(unsigned char)token)) ? "char 0x%02x" : "'%c'", (unsigned char)token); break;
 	}
 
 	return buf;

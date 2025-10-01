@@ -222,7 +222,7 @@ test_rawhide_grep "$rh -L '%.5E\n'      /dev/null"                     "^[0-9]+\
 test_rawhide_grep "$rh -L '%25.5E\n'    /dev/null"                     "^ +[0-9]+\$"       ""                                         0 "-L '%25.5E\\\\n'"
 test_rawhide_grep "$rh -L '%-25.5E\n'   /dev/null"                     "^[0-9]+ +\$"       ""                                         0 "-L '%-25.5E\\\\n'"
 
-RAWHIDE_TEST_TTY=1 test_rawhide "$rh -L '%f\n' $d/f"                   "f\n"               ""                                         0 "-L '%f\\\\n' (tty)"
+test_rawhide "RAWHIDE_TEST_TTY=1 $rh -L '%f\n' $d/f"                   "f\n"               ""                                         0 "-L '%f\\\\n' (tty)"
 
 test_rawhide "$rh -L '%f\n'             $d/f" "f\n"                                        ""                                         0 "-L '%f\\\\n'"
 test_rawhide "$rh -L '%8f\n'            $d/f" "       f\n"                                 ""                                         0 "-L '%8f\\\\n'"
@@ -581,6 +581,17 @@ test_rawhide_grep "$rh -L '%j\n'        $d/abc*" "^\\{\"path\":\"$d/abc\\\\ndef\
 test_rawhide_grep "$rh -j               $d/abc*" "^\\{\"path\":\"$d/abc\\\\ndef\\\\u0007\", .*\\}$"  "" 0 "-j (json) file with binary name"
 rm $d/abc*
 
+if [ `locale charmap` = UTF-8 ]
+then
+	touch "$d/`printf 'abc\ndef\a\360\236\235\277'`" 2>/dev/null # Last four bytes are an undefined unicode char U+1e77f that requires a UTF-16 surrogate pair in json
+	if [ $? = 0 ] # macOS can't create this file
+	then
+		test_rawhide_grep "$rh -L '%j\n'        $d/abc*" "^\\{\"path\":\"$d/abc\\\\ndef\\\\u0007\\\\ud839\\\\udf7f\", .*\\}$"  "" 0 "-L %j (json) file with binary name"
+		test_rawhide_grep "$rh -j               $d/abc*" "^\\{\"path\":\"$d/abc\\\\ndef\\\\u0007\\\\ud839\\\\udf7f\", .*\\}$"  "" 0 "-j (json) file with binary name"
+		rm $d/abc*
+	fi
+fi
+
 # For %z %Z, see tests/t27
 
 # Suppress %Z tests when selinux is actually enabled (ironically),
@@ -600,6 +611,20 @@ test_rawhide "$rh -L '%-6.0Z\n' -M0     $d/f" "      \n"                        
 
 test_rawhide "$rh -L '%Q\n'             $d/f" ""                                           "./rh: invalid -L argument: %%Q\\\\n (invalid conversion: %%Q)\n"   1 "-L '%Q\\\\n' (error)"
 test_rawhide "$rh -L 'a%Qz\n'           $d/f" "a"                                          "./rh: invalid -L argument: a%%Qz\\\\n (invalid conversion: %%Q)\n" 1 "-L 'a%Qz\\\\n' (error)"
+
+test_rawhide "RAWHIDE_TEST_TTY=1 $rh -L '%Q\n' $d/f" ""                                    "./rh: invalid -L argument: %%Q\\\\n (invalid conversion: %%Q)\n"   1 "-L '%Q\\\\n' (error (with oklen) to tty)"
+
+test_rawhide "                   $rh -L '%$(printf '\370')\n' $d/f" ""                     "./rh: invalid -L argument: %%$(printf '\370')\\\\n (invalid conversion: %%$(printf '\370'))\n"   1 "-L '%\$(printf '\\\370')\\\\n' (error (with oklen) to non-tty with invalid byte sequence)"
+test_rawhide "RAWHIDE_TEST_TTY=1 $rh -L '%$(printf '\370')\n' $d/f" ""                     "./rh: invalid -L argument: %%?\\\\n (invalid conversion: %%?)\n"   1 "-L '%\$(printf '\\\370')\\\\n' (error (with oklen) to tty with invalid byte sequence)"
+
+test_rawhide "                   $rh -L '%$(printf '\233')\n' $d/f" ""                     "./rh: invalid -L argument: %%$(printf '\233')\\\\n (invalid conversion: %%$(printf '\233'))\n"   1 "-L '%\$(printf '\\\233')\\\\n' (error (with oklen) to non-tty with latin1 non-printable/control char CSI or invalid utf8)"
+test_rawhide "RAWHIDE_TEST_TTY=1 $rh -L '%$(printf '\233')\n' $d/f" ""                     "./rh: invalid -L argument: %%?\\\\n (invalid conversion: %%?)\n"   1 "-L '%\$(printf '\\\233')\\\\n' (error (with oklen) to tty with latin1 non-printable/control char CSI or invalid utf8)"
+
+if [ `locale charmap` = 'UTF-8' ]
+then
+	test_rawhide "                   $rh -L '%$(printf '\302\233')\n' $d/f" ""             "./rh: invalid -L argument: %%$(printf '\302\233')\\\\n (invalid conversion: %%$(printf '\302'))\n"   1 "-L '%\$(printf '\\\302\\\233')\\\\n' (error (with oklen) to non-tty with utf8 non-printable/control char CSI - note only first byte included at end)"
+	test_rawhide "RAWHIDE_TEST_TTY=1 $rh -L '%$(printf '\302\233')\n' $d/f" ""             "./rh: invalid -L argument: %%?\\\\n (invalid conversion: %%?)\n"   1 "-L '%\$(printf '\\\302\\\233')\\\\n' (error (with oklen) to tty with utf8 non-printable/control char CSI)"
+fi
 
 test_rawhide "$rh -L '%'                $d/f" ""                                           "./rh: invalid -L argument: %% (%% at the end)\n"  1 "-L 'a%' (error)"
 test_rawhide "$rh -L 'a%'               $d/f" "a"                                          "./rh: invalid -L argument: a%% (%% at the end)\n" 1 "-L 'a%' (error)"

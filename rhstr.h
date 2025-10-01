@@ -38,6 +38,7 @@ size_t strlcat(char *dst, const char *src, size_t size);
 
 int ssnprintf(char *str, ssize_t size, const char *format, ...);
 int cescape(char *dst, ssize_t dstsize, const char *src, ssize_t srcsize, int options);
+char *defuse_tty(char *buf, size_t bufsz, const char *src, ssize_t srcbytes);
 const char *ok(const char *s);
 const char *ok2(const char *s);
 const char *oklen(const char *s, size_t len);
@@ -47,6 +48,6 @@ const char *oklen(const char *s, size_t len);
 #define CESCAPE_JSON   5
 #define CESCAPE_BIN    10
 
-#define isquotable(c) iscntrl((int)(unsigned char)(c))
+#define is_wprint(wc) (iswprint((wint_t)(wc)) && (unsigned int)(wc) != 0x202d && (unsigned int)(wc) != 0x202e)
 
 #endif

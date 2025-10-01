@@ -54,9 +54,11 @@ All rights reserved.
 
 #define _FILE_OFFSET_BITS 64 /* For 64-bit off_t on 32-bit systems (Not AIX) */
 
+#include <stdlib.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <wctype.h>
 #include <sys/stat.h>
 
 #include "rh.h"
@@ -186,6 +188,8 @@ int cescape(char *dst, ssize_t dstsz, const char *src, ssize_t srcsz, int opts)
 	char *e;
 	int i, pos = 0;
 	int j = (opts & CESCAPE_JSON) == CESCAPE_JSON ? 2 : 0;
+	int k;
+	const char *end = (srcsz == -1) ? strchr(src, '\0') : src + srcsz;
 
 	for (i = 0; (srcsz == -1) ? src[i] : i < srcsz; ++i)
 	{
@@ -193,34 +197,96 @@ int cescape(char *dst, ssize_t dstsz, const char *src, ssize_t srcsz, int opts)
 			pos += ssnprintf(dst + pos, dstsz - pos, "\\0");
 		else if ((e = strchr(escape + j, src[i])))
 			pos += ssnprintf(dst + pos, dstsz - pos, "\\%c", (escaped + j)[e - (escape + j)]);
-		else if (isquotable(src[i]))
-			pos += ssnprintf(dst + pos, dstsz - pos, (j) ? "\\u00%02x" : (opts & CESCAPE_HEX) ? "\\x%02x" : "\\%03o", (unsigned char)src[i]);
 		else if ((opts & CESCAPE_QUOTES) && src[i] == '"')
 			pos += ssnprintf(dst + pos, dstsz - pos, "\\\"");
 		else if ((opts & CESCAPE_BIN) == CESCAPE_BIN && (src[i] & 0x80))
 			pos += ssnprintf(dst + pos, dstsz - pos, "\\x%02x", (unsigned char)src[i]);
 		else
-			pos += ssnprintf(dst + pos, dstsz - pos, "%c", (unsigned char)src[i]);
+		{
+			wchar_t wc;
+			int num_bytes_consumed = mbtowc(&wc, src + i, end - (src + i));
+			mbtowc(NULL, NULL, 0);
+			if (num_bytes_consumed == -1) /* "Invalid" byte sequence */
+				pos += ssnprintf(dst + pos, dstsz - pos, (j) ? "\\u00%02x" : (opts & CESCAPE_HEX) ? "\\x%02x" : "\\%03o", (unsigned char)src[i]);
+			else if (!is_wprint(wc)) /* Non-printable/control character */
+			{
+				if (j)
+				{
+					if ((unsigned int)wc > 0xffff) /* Need UTF-16 surrogate pair */
+					{
+						wchar_t u = wc - 0x10000;
+						wchar_t hi = ((u >> 10) & 0x3ff) + 0xd800;
+						wchar_t lo = (u & 0x3ff) + 0xdc00;
+						pos += ssnprintf(dst + pos, dstsz - pos, "\\u%04x\\u%04x", (unsigned int)hi, (unsigned int)lo);
+					}
+					else
+						pos += ssnprintf(dst + pos, dstsz - pos, "\\u%04x", (unsigned int)wc);
+				}
+				else
+					for (k = 0; k < num_bytes_consumed; ++k)
+						pos += ssnprintf(dst + pos, dstsz - pos, (opts & CESCAPE_HEX) ? "\\x%02x" : "\\%03o", (unsigned char)src[i + k]);
+
+				i += num_bytes_consumed - 1;
+			}
+			else /* Printable characters */
+			{
+				pos += ssnprintf(dst + pos, dstsz - pos, "%.*s", num_bytes_consumed, src + i);
+				i += num_bytes_consumed - 1;
+			}
+		}
 	}
 
 	return pos;
+}
+
+/*
+
+char *defuse_tty(char *buf, size_t bufsz, const char *src, size_t srcbytes);
+
+Copy src to buf, replacing non-printable characters (i.e., C0/C1 control
+characters) with ? to prevent terminal escape injection. bufsz is the size
+of the destination buffer (buf). No more than that many bytes will be
+written to buf. srcbytes is the number of bytes to copy from src. If it is
+-1, then src is treated as a nul-terminated string to determine the number
+of bytes.
+
+*/
+
+char *defuse_tty(char *buf, size_t bufsz, const char *src, ssize_t srcbytes)
+{
+	const char *end = (srcbytes == -1) ? strchr(src, '\0') : src + srcbytes;
+	char *s = buf;
+
+	while ((s - buf) < (bufsz - 1) && src < end && *src)
+	{
+		wchar_t wc;
+		int num_bytes_consumed = mbtowc(&wc, src, end - src);
+		mbtowc(NULL, NULL, 0);
+		if (num_bytes_consumed == -1) /* "Invalid" byte sequence */
+			*s++ = '?', ++src;
+		else if (!is_wprint(wc)) /* Non-printable/control character */
+			*s++ = '?', src += num_bytes_consumed;
+		else  /* Printable character */
+			if ((s + num_bytes_consumed - buf) < (bufsz - 1))
+				while (num_bytes_consumed--)
+					*s++ = *src++;
+			else
+				break;
+	}
+
+	*s = '\0';
+
+	return buf;
 }
 
 /* Sanitise text for errors */
 
 static const char *sanitise(char *buf, size_t sz, const char *str)
 {
-	char *s;
-
 	if (!attr.ttyerr)
 		return str;
 
-	for (s = buf; (s - buf) < (sz - 1) && *str; ++str)
-		*s++ = isquotable(*str) ? '?' : *str;
-
-	*s = '\0';
-
-	return buf;
+	return defuse_tty(buf, sz, str, -1);
 }
 
 const char *ok(const char *str)
@@ -239,19 +305,16 @@ const char *ok2(const char *str)
 	return sanitise(buf, 8192, str);
 }
 
-/* The same, for when it's not nul-terminated */
+/* The same, for when it's not nul-terminated (length byte) */
 
 const char *oklen(const char *str, size_t len)
 {
-	static char buf[1024];
-	char *s;
+	static char buf[256];
 
-	for (s = buf; len > 0; ++str, --len)
-		*s++ = (attr.ttyerr && isquotable(*str)) ? '?' : *str;
+	if (!attr.ttyerr)
+		return strlcpy(buf, str, len + 1), buf;
 
-	*s = '\0';
-
-	return buf;
+	return defuse_tty(buf, 1024, str, len);
 }
 
 /* vi:set ts=4 sw=4: */

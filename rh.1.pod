@@ -811,11 +811,13 @@ With the C<-x> or C<-X> option, this option outputs each command before it
 is executed. The C<%s> and C<%S> escape sequences will appear as C<"$1"> and
 C<"$2">, respectively, and their literal values will be included as a
 comment. When standard output (I<stdout>) is a terminal, C<"?"> is output in
-place of any ASCII control characters to prevent terminal escape injection.
+place of any non-printable/control characters to prevent terminal escape
+injection.
 
 With the C<-U> option, this option outputs each matching path before it is
 removed. When standard output (I<stdout>) is a terminal, C<"?"> is output in
-place of any ASCII control characters to prevent terminal escape injection.
+place of any non-printable/control characters to prevent terminal escape
+injection.
 
 With the C<-0> option, this option has no effect.
 
@@ -900,14 +902,14 @@ A literal per cent sign (C<"%">).
 The path including the starting search directory.
 
 When standard output (I<stdout>) is a terminal, C<"?"> is output in place of
-any ASCII control characters to prevent terminal escape injection.
+any non-printable/control characters to prevent terminal escape injection.
 
 =item C<%P>
 
 The path excluding the starting search directory.
 
 When standard output (I<stdout>) is a terminal, C<"?"> is output in place of
-any ASCII control characters to prevent terminal escape injection.
+any non-printable/control characters to prevent terminal escape injection.
 
 =item C<%f>
 
@@ -916,7 +918,7 @@ character (C<"/">)). As a special case, for the root directory (C</>) which
 has no base name, this is C<"/">.
 
 When standard output (I<stdout>) is a terminal, C<"?"> is output in place of
-any ASCII control characters to prevent terminal escape injection.
+any non-printable/control characters to prevent terminal escape injection.
 
 =item C<%h>
 
@@ -926,21 +928,21 @@ base name). As a special case, for paths in the current working directory
 and its immediate children, this is the empty string.
 
 When standard output (I<stdout>) is a terminal, C<"?"> is output in place of
-any ASCII control characters to prevent terminal escape injection.
+any non-printable/control characters to prevent terminal escape injection.
 
 =item C<%l>
 
 The target path of a symlink. For non-symlinks, this is the empty string.
 
 When standard output (I<stdout>) is a terminal, C<"?"> is output in place of
-any ASCII control characters to prevent terminal escape injection.
+any non-printable/control characters to prevent terminal escape injection.
 
 =item C<%H>
 
 The starting search path.
 
 When standard output (I<stdout>) is a terminal, C<"?"> is output in place of
-any ASCII control characters to prevent terminal escape injection.
+any non-printable/control characters to prevent terminal escape injection.
 
 =item C<%d>
 
@@ -1109,7 +1111,7 @@ utility). This is available on systems with I<libmagic(3)> installed. On other
 systems, this is the empty string.
 
 When standard output (I<stdout>) is a terminal, C<"?"> is output in place of
-any ASCII control characters to prevent terminal escape injection.
+any non-printable/control characters to prevent terminal escape injection.
 
 =item C<%W>
 
@@ -1117,7 +1119,7 @@ The MIME type (including the character set). This is available on systems
 with I<libmagic(3)> installed. On other systems, this is the empty string.
 
 When standard output (I<stdout>) is a terminal, C<"?"> is output in place of
-any ASCII control characters to prevent terminal escape injection.
+any non-printable/control characters to prevent terminal escape injection.
 
 =item C<%e>
 
@@ -1491,13 +1493,14 @@ backslash.
 
 =item C<-E>
 
-Output I<C>-style escape sequences in place of any ASCII control characters
-in matching paths. Some control characters have single-letter backslashed
-encodings (i.e., C<"\a\b\t\n\v\f\r">, which are I<ASCII> 7 (I<BEL>), 8
-(I<BS>), 9 (I<HT>), 10 (I<LF>), 11 (I<VT>), 12 (I<FF>), and 13 (I<CR>),
-respectively). The remaining ones will be output as backslashed octal
-numbers (e.g., C<"\033">, which is I<ASCII> 27 (I<ESC>)). Any backslash
-characters (C<"\">) in a path will be quoted with a preceding backslash.
+Output I<C>-style escape sequences in place of any non-printable/control
+characters in matching paths. Some control characters have single-letter
+backslashed encodings (i.e., C<"\a\b\t\n\v\f\r">, which are I<ASCII> 7
+(I<BEL>), 8 (I<BS>), 9 (I<HT>), 10 (I<LF>), 11 (I<VT>), 12 (I<FF>), and 13
+(I<CR>), respectively). The remaining ones will be output as backslashed
+octal numbers (e.g., C<"\033">, which is I<ASCII> 27 (I<ESC>)). Any
+backslash characters (C<"\">) in a path will be quoted with a preceding
+backslash.
 
 This option and the C<-q> option are mutually exclusive.
 
@@ -1507,10 +1510,10 @@ Same as the C<-E> option (like I<ls(1)>).
 
 =item C<-q>
 
-Output C<"?"> in place of any ASCII control characters in matching
-paths. This is the default if standard output (I<stdout>) is a terminal, and the
-C<-E>/C<-b> option has not been supplied, so as to prevent terminal escape
-injection.
+Output C<"?"> in place of any non-printable/control characters in matching
+paths. This is the default if standard output (I<stdout>) is a terminal, and
+the C<-E>/C<-b> option has not been supplied, so as to prevent terminal
+escape injection.
 
 This option and the C<-E>/C<-b> option are mutually exclusive.
 
@@ -2710,7 +2713,10 @@ be used in numeric constants. Other multi-byte character encodings are not
 supported (e.g., I<UTF-16>, I<GB 18030>, I<Big5>, I<Shift JIS>, and
 I<EUC-*>). These limitations let I<rh> enjoy most of the benefits of
 I<Unicode> without needing to expend any time or energy decoding and
-encoding characters.
+encoding characters. Actually, some decoding is done to identify
+non-printable/control characters, and to determine character widths. But
+that's not enough to make the other multi-byte character encodings mentioned
+above work, at least not for JSON output.
 
 If the user's C<$PATH> environment variable includes the current working
 directory, or any other non-absolute paths, they are automatically

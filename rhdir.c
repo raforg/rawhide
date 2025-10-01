@@ -35,7 +35,7 @@
 #include <time.h>
 #include <dirent.h>
 #include <errno.h>
-#include <ctype.h>
+#include <wctype.h>
 #include <fcntl.h>
 #include <wchar.h>
 #include <pwd.h>
@@ -131,7 +131,7 @@ static void debug_extraf(const char *format, ...)
 static void printf_sanitized(const char *format, ...);
 
 Like printf(3), but if stdout is a terminal, replace
-control chars with "?" to prevent terminal escape injection.
+control/invalid chars with "?" to prevent terminal escape injection.
 
 */
 
@@ -142,15 +142,14 @@ static void printf_sanitized(const char *format, ...)
 
 	if (attr.tty)
 	{
-		char *o;
-
 		if (!attr.ttybuf && !(attr.ttybuf = malloc(CMDBUFSIZE)))
 			fatalsys("out of memory");
 
-		vsnprintf(attr.ttybuf, CMDBUFSIZE, format, args);
+		if (!attr.ttybuf_sanitized && !(attr.ttybuf_sanitized = malloc(CMDBUFSIZE)))
+			fatalsys("out of memory");
 
-		for (o = attr.ttybuf; *o; ++o)
-			putchar(isquotable(*o) ? '?' : *o);
+		int bytes = vsnprintf(attr.ttybuf, CMDBUFSIZE, format, args);
+		printf("%s", defuse_tty(attr.ttybuf_sanitized, CMDBUFSIZE, attr.ttybuf, bytes));
 	}
 	else
 		vprintf(format, args);
@@ -720,6 +719,12 @@ int rawhide_search(char *fpath)
 		attr.ttybuf = NULL;
 	}
 
+	if (attr.ttybuf_sanitized)
+	{
+		free(attr.ttybuf_sanitized);
+		attr.ttybuf = NULL;
+	}
+
 	if (attr.body)
 	{
 		free(attr.body);
@@ -756,8 +761,23 @@ void visitf_default(void)
 	}
 	else if (attr.mask_name || attr.tty)
 	{
-		for (i = 0; attr.fpath[i]; ++i)
-			pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "%s%c", (attr.quote_name && (attr.fpath[i] == '"' || attr.fpath[i] == '\\')) ? "\\" : "", (isquotable(attr.fpath[i])) ? '?' : attr.fpath[i]);
+		const char *src = attr.fpath;
+		const char *end = strchr(src, '\0');
+
+		while (*src)
+		{
+			wchar_t wc;
+			int num_bytes_consumed = mbtowc(&wc, src, end - src);
+			mbtowc(NULL, NULL, 0);
+			if (num_bytes_consumed == -1) /* "Invalid" byte sequence */
+				pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "?"), ++src;
+			else if (!is_wprint(wc)) /* Non-printable/control character */
+				pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "?"), src += num_bytes_consumed;
+			else if (attr.quote_name && (wc == (wchar_t)'"' || wc == (wchar_t)'\\'))
+				pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "\\%c", (unsigned char)wc), src += num_bytes_consumed;
+			else  /* Printable character (other than " or /) */
+				pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "%.*s", num_bytes_consumed, src), src += num_bytes_consumed;
+		}
 	}
 	else if (attr.quote_name)
 	{
@@ -1903,7 +1923,7 @@ void visitf_execute_local(void)
 	}
 }
 
-/* 
+/*
 
 int systeml(const char *command, ...);
 
@@ -2014,7 +2034,28 @@ static int systeml(const char *command, ...)
 	return spawn(argv);
 }
 
-/* 
+/*
+
+static int dosyscmd(const char *cmd, int (*method)(const char *command, ...));
+
+Execute the shell command cmd via the function method. If the
+shell command terminates with SIGINT or SIGQUIT, that signal
+is propagated to the current process to terminate in the same
+way.
+
+*/
+
+static int dosyscmd(const char *cmd, int (*method)(const char *command, ...))
+{
+	int rc = method(cmd, defused_path(), defused_basename(), (char *)NULL);
+
+	if (rc != -1 && WIFSIGNALED(rc) && (WTERMSIG(rc) == SIGINT || WTERMSIG(rc) == SIGQUIT))
+		kill(getpid(), WTERMSIG(rc));
+
+	return rc;
+}
+
+/*
 
 int syscmd(const char *cmd);
 
@@ -2025,15 +2066,10 @@ arguments ($1=%s, $2=%S) to avoid the need to quote anything.
 
 int syscmd(const char *cmd)
 {
-	int rc = systeml(cmd, defused_path(), defused_basename(), (char *)NULL);
-
-	if (rc != -1 && WIFSIGNALED(rc) && (WTERMSIG(rc) == SIGINT || WTERMSIG(rc) == SIGQUIT))
-		kill(getpid(), WTERMSIG(rc));
-
-	return rc;
+	return dosyscmd(cmd, systeml);
 }
 
-/* 
+/*
 
 int usysteml(const char *command, ...);
 
@@ -2101,7 +2137,7 @@ static int usysteml(const char *command, ...)
 	return spawn(argv);
 }
 
-/* 
+/*
 
 int usyscmd(const char *cmd);
 
@@ -2113,12 +2149,7 @@ positional arguments ($1=%s, $2=%S) to avoid the need to quote anything.
 
 int usyscmd(const char *cmd)
 {
-	int rc = usysteml(cmd, defused_path(), defused_basename(), (char *)NULL);
-
-	if (rc != -1 && WIFSIGNALED(rc) && (WTERMSIG(rc) == SIGINT || WTERMSIG(rc) == SIGQUIT))
-		kill(getpid(), WTERMSIG(rc));
-
-	return rc;
+	return dosyscmd(cmd, usysteml);
 }
 
 /*
@@ -2295,7 +2326,7 @@ void visitf_unlink(void)
 static int add_field(char *buf, ssize_t sz, const char *name, const char *value);
 
 Add a JSON string field to buf (of sz bytes).
-Encode the value with C-like escape sequences (but without "\a").
+Encode the value with C-like escape sequences (but without "\a" or "\v").
 Return the length in bytes (excluding nul).
 
 */
@@ -3265,7 +3296,7 @@ void visitf_format(void)
 						break;
 					}
 
-					case 'x': /* Extended attributes */ 
+					case 'x': /* Extended attributes */
 					{
 						char *ea, *s;
 
@@ -3295,7 +3326,7 @@ void visitf_format(void)
 						break;
 					}
 
-					case 'X': /* ACL/EA indicator */ 
+					case 'X': /* ACL/EA indicator */
 					{
 						ofmt_add('s');
 						debug_extra(("fmt %%X \"%s\", \"%s\"", ofmt, aclea()));

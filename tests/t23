@@ -101,19 +101,19 @@ test_rawhide_grep "$rh    -Q $d" "^[\"]$name[\"]\$"                             
 test_rawhide_grep "$rh   -lQ $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__[\"]$name[\"]\$"                                                             "" 0 "-lQ"
 test_rawhide_grep "$rh  -vlQ $d" "^$dev$__$ino$__$blksize$__$blocks$__$space$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$time$__[\"]$name[\"]\$" "" 0 "-vl"
 
-touch "$d/`printf 'abc\a\b\t\n\v\f\rd%se\"f\\\\ghi\001\006\016\037jkl' \"'\"`" 2>/dev/null
-if [ $? = 0 ] # This touch doesn't succeed on Cygwin
+touch "$d/`printf 'abc\a\b\t\n\v\f\rd%se\"f\\\\ghi\001\006\016\037jkl\370' \"'\"`" 2>/dev/null
+if [ $? = 0 ] # This touch doesn't succeed on Cygwin or macOS
 then
-	test_rawhide                    "$rh     $d/abc*" "$d/abc\\a\\b\\t\\n\\v\\f\\rd'e\"f\\\\ghi\\001\\006\\016\\037jkl\n"                                   "" 0 "nasty name (no tty)"
-	test_rawhide "RAWHIDE_TEST_TTY=1 $rh     $d/abc*" "$d/abc???????d'e\"f\\\\ghi????jkl\n"                                                                 "" 0 "nasty name (tty)"
-	test_rawhide                    "$rh  -E $d/abc*" "$d/abc\\\\a\\\\b\\\\t\\\\n\\\\v\\\\f\\\\rd'e\"f\\\\\\\\ghi\\\\001\\\\006\\\\016\\\\037jkl\n"         "" 0 "nasty name with -E"
-	test_rawhide                    "$rh  -b $d/abc*" "$d/abc\\\\a\\\\b\\\\t\\\\n\\\\v\\\\f\\\\rd'e\"f\\\\\\\\ghi\\\\001\\\\006\\\\016\\\\037jkl\n"         "" 0 "nasty name with -b"
-	test_rawhide                    "$rh  -q $d/abc*" "$d/abc???????d'e\"f\\\\ghi????jkl\n"                                                                 "" 0 "nasty name with -q"
-	test_rawhide                    "$rh  -Q $d/abc*" "\"$d/abc\\a\\b\\t\\n\\v\\f\\rd'e\\\\\"f\\\\\\\\ghi\\001\\006\\016\\037jkl\"\n"                           "" 0 "nasty name with -Q (no tty)"
-	test_rawhide "RAWHIDE_TEST_TTY=1 $rh  -Q $d/abc*" "\"$d/abc???????d'e\\\\\"f\\\\\\\\ghi????jkl\"\n"                                                         "" 0 "nasty name with -Q (tty)"
-	test_rawhide                    "$rh -QE $d/abc*" "\"$d/abc\\\\a\\\\b\\\\t\\\\n\\\\v\\\\f\\\\rd'e\\\\\"f\\\\\\\\ghi\\\\001\\\\006\\\\016\\\\037jkl\"\n" "" 0 "nasty name with -QE"
-	test_rawhide                    "$rh -Qb $d/abc*" "\"$d/abc\\\\a\\\\b\\\\t\\\\n\\\\v\\\\f\\\\rd'e\\\\\"f\\\\\\\\ghi\\\\001\\\\006\\\\016\\\\037jkl\"\n" "" 0 "nasty name with -Qb"
-	test_rawhide                    "$rh -Qq $d/abc*" "\"$d/abc???????d'e\\\\\"f\\\\\\\\ghi????jkl\"\n"                                                         "" 0 "nasty name with -Qq"
+	test_rawhide                    "$rh     $d/abc*" "$d/abc\\a\\b\\t\\n\\v\\f\\rd'e\"f\\\\ghi\\001\\006\\016\\037jkl\370\n"                                      "" 0 "nasty name (no tty)"
+	test_rawhide "RAWHIDE_TEST_TTY=1 $rh     $d/abc*" "$d/abc???????d'e\"f\\\\ghi????jkl?\n"                                                                       "" 0 "nasty name (tty)"
+	test_rawhide                    "$rh  -E $d/abc*" "$d/abc\\\\a\\\\b\\\\t\\\\n\\\\v\\\\f\\\\rd'e\"f\\\\\\\\ghi\\\\001\\\\006\\\\016\\\\037jkl\\\\370\n"         "" 0 "nasty name with -E"
+	test_rawhide                    "$rh  -b $d/abc*" "$d/abc\\\\a\\\\b\\\\t\\\\n\\\\v\\\\f\\\\rd'e\"f\\\\\\\\ghi\\\\001\\\\006\\\\016\\\\037jkl\\\\370\n"         "" 0 "nasty name with -b"
+	test_rawhide                    "$rh  -q $d/abc*" "$d/abc???????d'e\"f\\\\ghi????jkl?\n"                                                                       "" 0 "nasty name with -q"
+	test_rawhide                    "$rh  -Q $d/abc*" "\"$d/abc\\a\\b\\t\\n\\v\\f\\rd'e\\\\\"f\\\\\\\\ghi\\001\\006\\016\\037jkl\\370\"\n"                         "" 0 "nasty name with -Q (no tty)"
+	test_rawhide "RAWHIDE_TEST_TTY=1 $rh  -Q $d/abc*" "\"$d/abc???????d'e\\\\\"f\\\\\\\\ghi????jkl?\"\n"                                                           "" 0 "nasty name with -Q (tty)"
+	test_rawhide                    "$rh -QE $d/abc*" "\"$d/abc\\\\a\\\\b\\\\t\\\\n\\\\v\\\\f\\\\rd'e\\\\\"f\\\\\\\\ghi\\\\001\\\\006\\\\016\\\\037jkl\\\\370\"\n" "" 0 "nasty name with -QE"
+	test_rawhide                    "$rh -Qb $d/abc*" "\"$d/abc\\\\a\\\\b\\\\t\\\\n\\\\v\\\\f\\\\rd'e\\\\\"f\\\\\\\\ghi\\\\001\\\\006\\\\016\\\\037jkl\\\\370\"\n" "" 0 "nasty name with -Qb"
+	test_rawhide                    "$rh -Qq $d/abc*" "\"$d/abc???????d'e\\\\\"f\\\\\\\\ghi????jkl?\"\n"                                                           "" 0 "nasty name with -Qq"
 	rm $d/abc*
 fi
 
