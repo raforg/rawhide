@@ -1,0 +1,9 @@
+Ken Stauffer - Original creator, v2 1990, University of Calgary
+Guy Harris - Corrected many portability problems
+David MacKenzie - Manual revisions. Added getopt and glob pattern matching
+Norm Hutchinson - Fixed ungetit()
+raf <raf@raf.org> - New author, v3 21st century reboot, ongoing maintainer since 2021
+Tavian Barnes - Use `id -gn` in tests rather than `groups` for portability
+Stéphane Chazelas - Suggested {} and %s="$1" %S="%2" and ush and so many safety fixes
+github.com/hundertzwei - rawhide.spec for creating rpm packages
+Wolfgang Rohm - Requested that RAWHIDE_USER_SHELL support command line options
