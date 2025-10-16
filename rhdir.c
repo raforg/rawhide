@@ -31,7 +31,6 @@
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
-#include <fnmatch.h>
 #include <time.h>
 #include <dirent.h>
 #include <errno.h>
@@ -3464,7 +3463,8 @@ void visitf_format(void)
 
 					default: /* Invalid % */
 					{
-						fatal("invalid -L argument: %s (invalid conversion: %%%s)", ok(attr.format), oklen(f, 1));
+						int len = mbtowc(NULL, f, strlen(f));
+						fatal("invalid -L argument: %s (invalid conversion: %%%s)", ok(attr.format), oklen(f, (len == -1) ? 1 : len));
 					}
 				}
 

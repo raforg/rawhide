@@ -370,14 +370,14 @@ the double quotes).
 
 */
 
-void c_glob(llong i) { Stack[SP++] = fnmatch(&Strbuf[i], c_basename(), FNM_PATHNAME | FNM_EXTMATCH) == 0; }
-void c_path(llong i) { Stack[SP++] = fnmatch(&Strbuf[i], attr.fpath, FNM_EXTMATCH) == 0; }
-void c_link(llong i) { Stack[SP++] = (islink(attr.statbuf)) ? fnmatch(&Strbuf[i], read_symlink(), FNM_EXTMATCH) == 0 : 0; }
+void c_glob(llong i) { Stack[SP++] = attr.fnmatch(&Strbuf[i], c_basename(), FNM_PATHNAME | FNM_EXTMATCH) == 0; }
+void c_path(llong i) { Stack[SP++] = attr.fnmatch(&Strbuf[i], attr.fpath, FNM_EXTMATCH) == 0; }
+void c_link(llong i) { Stack[SP++] = (islink(attr.statbuf)) ? attr.fnmatch(&Strbuf[i], read_symlink(), FNM_EXTMATCH) == 0 : 0; }
 
 #ifdef FNM_CASEFOLD
-void c_i(llong i)     { Stack[SP++] = fnmatch(&Strbuf[i], c_basename(), FNM_PATHNAME | FNM_EXTMATCH | FNM_CASEFOLD) == 0; }
-void c_ipath(llong i) { Stack[SP++] = fnmatch(&Strbuf[i], attr.fpath, FNM_EXTMATCH | FNM_CASEFOLD) == 0; }
-void c_ilink(llong i) { Stack[SP++] = (islink(attr.statbuf)) ? fnmatch(&Strbuf[i], read_symlink(), FNM_EXTMATCH | FNM_CASEFOLD) == 0 : 0; }
+void c_i(llong i)     { Stack[SP++] = attr.fnmatch(&Strbuf[i], c_basename(), FNM_PATHNAME | FNM_EXTMATCH | FNM_CASEFOLD) == 0; }
+void c_ipath(llong i) { Stack[SP++] = attr.fnmatch(&Strbuf[i], attr.fpath, FNM_EXTMATCH | FNM_CASEFOLD) == 0; }
+void c_ilink(llong i) { Stack[SP++] = (islink(attr.statbuf)) ? attr.fnmatch(&Strbuf[i], read_symlink(), FNM_EXTMATCH | FNM_CASEFOLD) == 0 : 0; }
 #endif
 
 #ifdef HAVE_PCRE2
@@ -569,7 +569,7 @@ char *get_body(void)
 
 static void body_glob(llong i, int options)
 {
-	Stack[SP++] = get_body() ? fnmatch(&Strbuf[i], get_body(), FNM_EXTMATCH | options) == 0 : 0;
+	Stack[SP++] = get_body() ? attr.fnmatch(&Strbuf[i], get_body(), FNM_EXTMATCH | options) == 0 : 0;
 }
 
 void c_body(llong i)  { body_glob(i, 0); }
@@ -626,7 +626,7 @@ const char *get_what(void)
 
 static void what_glob(llong i, int options)
 {
-	Stack[SP++] = get_what() ? fnmatch(&Strbuf[i], get_what(), FNM_EXTMATCH | options) == 0 : 0;
+	Stack[SP++] = get_what() ? attr.fnmatch(&Strbuf[i], get_what(), FNM_EXTMATCH | options) == 0 : 0;
 }
 
 void c_what(llong i)  { what_glob(i, 0); }
@@ -684,7 +684,7 @@ const char *get_mime(void)
 
 static void mime_glob(llong i, int options)
 {
-	Stack[SP++] = get_mime() ? fnmatch(&Strbuf[i], get_mime(), FNM_EXTMATCH | options) == 0 : 0;
+	Stack[SP++] = get_mime() ? attr.fnmatch(&Strbuf[i], get_mime(), FNM_EXTMATCH | options) == 0 : 0;
 }
 
 void c_mime(llong i)  { mime_glob(i, 0); }
@@ -802,8 +802,8 @@ char *get_acl(int want)
 static void acl_glob(llong i, int options)
 {
 	Stack[SP++] = get_acl(1)
-		? fnmatch(&Strbuf[i], get_acl(1), FNM_EXTMATCH | options) == 0 ||
-			(attr.facl_verbose && fnmatch(&Strbuf[i], attr.facl_verbose, FNM_EXTMATCH | options) == 0)
+		? attr.fnmatch(&Strbuf[i], get_acl(1), FNM_EXTMATCH | options) == 0 ||
+			(attr.facl_verbose && attr.fnmatch(&Strbuf[i], attr.facl_verbose, FNM_EXTMATCH | options) == 0)
 		: 0;
 }
 
@@ -1414,7 +1414,7 @@ int has_real_ea(void)
 
 static void ea_glob(llong i, int options)
 {
-	Stack[SP++] = get_ea(1) && attr.fea_ok ? fnmatch(&Strbuf[i], get_ea(1), FNM_EXTMATCH | options) == 0 : 0;
+	Stack[SP++] = get_ea(1) && attr.fea_ok ? attr.fnmatch(&Strbuf[i], get_ea(1), FNM_EXTMATCH | options) == 0 : 0;
 }
 
 void c_ea(llong i)  { ea_glob(i, 0); }

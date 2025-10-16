@@ -158,7 +158,7 @@ a high-level interface to the built-in symbols mentioned above, and makes
        .acl          .iacl         .reacl        .reiacl
        .ea           .iea          .reea         .reiea
        .sh           .ush
-       Case-insensitive glob matching is available here (i)
+       Case-insensitive glob pattern matching is available here (i)
        Perl-compatible regular expressions are available here (re)
        File types and MIME types are available here (what, mime)
        Access control lists are available here (acl)

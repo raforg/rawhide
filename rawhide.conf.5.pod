@@ -1305,8 +1305,8 @@ by the C<-y> or C<-Y> options.
 Apply the glob pattern without case-sensitivity. This is available on most
 systems, but maybe not all.
 
-The output of S<C<rh --help>> states if case-insensitive glob matching is
-available on the local system.
+The output of S<C<rh --help>> states if case-insensitive glob pattern
+matching is available on the local system.
 
 =item C<ipath> (or C<ip>)
 

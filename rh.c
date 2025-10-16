@@ -43,6 +43,7 @@
 #include "rhdir.h"
 #include "rhstr.h"
 #include "rherr.h"
+#include "rhfnmatch.h"
 
 #ifdef NDEBUG
 #define debug(args)
@@ -145,8 +146,11 @@ static void help_message(void)
 	printf("\nGlob pattern notation:\n");
 	printf("  ? * [abc] [!abc] [a-c] [!a-c]\n");
 	#ifdef FNM_EXTMATCH
-	printf("  ?(a|b|c) *(a|b|c) +(a|b|c) @(a|b|c) !(a|b|c)\n");
-	printf("  Some ksh extended glob patterns are available here (see fnmatch(3))\n");
+	if (!attr.internal_fnmatch)
+	{
+		printf("  ?(a|b|c) *(a|b|c) +(a|b|c) @(a|b|c) !(a|b|c)\n");
+		printf("  Some ksh extended glob patterns are available here (see fnmatch(3))\n");
+	}
 	#endif
 
 	printf("\nPattern modifiers:\n");
@@ -168,7 +172,10 @@ static void help_message(void)
 			printf("  %-12s%s", s->name, (i++ % columns == columns - 1 || !s->next) ? "\n" : "");
 
 	#ifdef FNM_CASEFOLD
-	printf("  Case-insensitive glob matching is available here (i)\n");
+	printf("  Case-insensitive glob pattern matching is available here (i)\n");
+	#else
+	if (attr.internal_fnmatch)
+		printf("  Case-insensitive glob pattern matching is available here (i)\n");
 	#endif
 	#ifdef HAVE_PCRE2
 	printf("  Perl-compatible regular expressions are available here (re)\n");
@@ -556,6 +563,8 @@ int main(int argc, char *argv[])
 
 	attr.report_broken_symlinks = env_flag("RAWHIDE_REPORT_BROKEN_SYMLINKS");
 	attr.report_cycles = !env_flag("RAWHIDE_DONT_REPORT_CYCLES");
+	attr.internal_fnmatch = env_flag("RAWHIDE_INTERNAL_GLOB");
+	attr.fnmatch = (attr.internal_fnmatch) ? rhfnmatch : fnmatch;
 	attr.facl_solaris_no_trivial = env_flag("RAWHIDE_SOLARIS_ACL_NO_TRIVIAL");
 	attr.fea_solaris_no_sunwattr = env_flag("RAWHIDE_SOLARIS_EA_NO_SUNWATTR");
 	attr.fea_solaris_no_statinfo = env_flag("RAWHIDE_SOLARIS_EA_NO_STATINFO");
@@ -636,8 +645,10 @@ int main(int argc, char *argv[])
 
 			case 'e':
 			{
+				#if 0 /* Matched by case ':' */
 				if (!optarg) /* The argument may be empty (valid syntax) */
 					fatal("missing -e option argument (see %s -h for help)", prog_name);
+				#endif
 
 				if (opt_e)
 					fatal("too many -e options");
@@ -837,8 +848,10 @@ int main(int argc, char *argv[])
 
 			case 'L':
 			{
+				#if 0 /* Matched by case ':' */
 				if (!optarg) /* The argument can be empty (no output) */
 					fatal("missing -L option argument (see %s -h for help)", prog_name);
+				#endif
 
 				if (attr.format)
 					fatal("too many -L or -j options");

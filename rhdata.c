@@ -398,11 +398,7 @@ symbol_t *insert_symbol(char *name, int toktype, llong val)
 		return NULL;
 
 	if (!(sym->name = strdup(name)))
-	{
-		free(sym);
-
-		return NULL;
-	}
+		return free(sym), (void *)NULL;
 
 	sym->type = toktype;
 	sym->value = val;

@@ -120,7 +120,7 @@ I<rh> - (I<rawhide>) find files using pretty I<C> expressions
    .acl          .iacl         .reacl        .reiacl
    .ea           .iea          .reea         .reiea
    .sh           .ush
-   Case-insensitive glob matching is available here (i)
+   Case-insensitive glob pattern matching is available here (i)
    Perl-compatible regular expressions are available here (re)
    File types and MIME types are available here (what, mime)
    Access control lists are available here (acl)
@@ -234,7 +234,7 @@ pattern notation, pattern modifiers, built-in symbols, reference file
 fields, and the locations of configuration files.
 
 Some features are not available on all systems: I<ksh> extended glob
-patterns, case-insensitive glob matching, I<Perl>-compatible regular
+patterns, case-insensitive glob pattern matching, I<Perl>-compatible regular
 expressions (regexes), access control lists, and extended attributes. The
 help message states which optional features are available on the local
 system.
@@ -2199,7 +2199,7 @@ Sum the sizes of all regular files in the current directory (with I<jq(1)>):
     $ rh -rj f | jq .size | jq -s add
     $ rh -rj f | jq -s '[.[].size]|add'
 
-If you have non-UTF-8 filenames, the above should be:
+If you have non-UTF-8 file names, the above should be:
 
     $ rh -rj f | iconv -f LATIN1 -t UTF-8 | jq -s '[.[].size]|add'
 
@@ -2775,13 +2775,61 @@ accessed time is changed. It is only updated for other changes to the
 inode. This relates to the C<ctime> and C<tctime> built-in symbols, and the
 C<ctime> reference file field (see I<rawhide.conf(5)>).
 
-On older I<Linux> systems, glob matching via the standard C<fnmatch(3)>
-function only matches valid characters, but not all potential byte sequences
-are valid characters according to the user's locale. On such systems, if any
-candidate file name contains a byte sequence that isn't a valid character,
-then the C<"*"> glob pattern won't match it. The search criteria expression
-C<!"*"> would find any such files. But this is no longer the case on recent
-I<Linux> systems, so hopefully it won't be a problem.
+Glob pattern matching is implemented via the standard I<fnmatch(3)>
+function, but implementations of this function have a variety of bugs on
+different operating systems. These bugs relate to characters that are
+encoded as multiple bytes. For example, it seems that the pattern C<??> is
+fine on I<FreeBSD>, I<Solaris>, I<macOS> (depending on the locale), and
+I<Cygwin>. But it's wrong in different ways on I<Linux>, I<OpenBSD>, and
+I<NetBSD>. On I<Linux>, C<??> can match things that it should and things
+that it shouldn't (by mysteriously interpreting the target text first as
+multi-byte characters and then as single-byte characters), and on I<OpenBSD>
+and I<NetBSD> it can match things that it shouldn't and fail to match things
+that it should (by seemingly always treating the target text as single-byte
+characters, despite the locale's character set and encoding). On systems
+that use I<musl libc> for everything, I<fnmatch(3)> can't match anything
+containing non-I<UTF-8> bytes. Hopefully, the bugs will all be fixed one
+day. In the meantime, if this is a problem for you (i.e., if you have file
+names containing non-I<ASCII> characters), you can set the environment
+variable C<RAWHIDE_INTERNAL_GLOB=1>. This will replace the use of the local
+system's I<fnmatch(3)> implementation with an internal implementation which
+works correctly as far as the bugs mentioned above are concerned. But the
+internal implementation has its own problems. Like many I<fnmatch(3)> or
+regular expression implementations, it has woefully inadequate support for
+I<POSIX> character equivalents (e.g., C<"[[=e=]]">, which is just treated as
+C<"e">), and it has woefully inadequate support for I<POSIX> collating
+sequences (e.g., C<[[.ch.]]>, for which it does check for collation
+equivalence, but only for a single character, so C<"[[.e.]]"> would work
+(for what that's worth) but C<"[[.ch.]]"> in the Czech locale wouldn't). So
+this is probably only potentially useful on I<Linux>, I<OpenBSD>, and
+I<NetBSD>. Note, however, that the internal implementation does not support
+the I<ksh> extended glob patterns that are supported by C<Linux>'s
+I<fnmatch(3)> implementation. So there is a big trade-off when setting
+C<RAWHIDE_INTERNAL_GLOB=1> on I<Linux>. If you need the I<ksh> extended glob
+patterns on I<Linux>, but the local system's I<fnmatch(3)> implementation is
+unacceptable for your needs, then consider using regular expression matching
+in cases that would be affected by the buggy local system implementation of
+I<fnmatch(3)> (but note that regular expression matching also doesn't
+support I<POSIX> character equivalents or collating sequences, but it does
+have other amazing capabilities). Another quirk of the internal
+implementation is that it only really supports I<UTF-8>-encoded characters
+in patterns and file names, but it also supports bytes that are not part of
+a I<UTF-8>-encoded character by treating them as though they were I<LATIN-1>
+code points. So, a pattern containing a multi-byte character in the
+I<Latin-1 Supplement> will match that character encoded with I<UTF-8>, and
+it will also match the single byte corresponding to that character encoded
+as I<LATIN-1>. It can't tell the difference between the two, either in the
+pattern, or in the text being matched. This might not comply with I<POSIX>,
+but it seems potentially useful when faced with non-text (or at least
+non-I<UTF-8> text) file names.
+
+On older I<Linux> systems, glob pattern matching via the standard
+C<fnmatch(3)> function only matches valid characters, but not all potential
+byte sequences are valid characters according to the user's locale. On such
+systems, if any candidate file name contains a byte sequence that isn't a
+valid character, then the C<"*"> glob pattern won't match it. The search
+criteria expression C<!"*"> would find any such files. But this is no longer
+the case on recent I<Linux> systems, so hopefully it won't be a problem.
 
 =head1 EXIT STATUS
 
@@ -2976,6 +3024,20 @@ line options. No other parsing is done. The additional command line options
 cannot be quoted, and so cannot themselves contain any whitespace characters
 (nor can the path to the shell). No shell syntax is supported. It is just a
 vector of whitespace-separated strings.
+
+Setting the environment variable C<RAWHIDE_INTERNAL_GLOB=1> causes
+I<rawhide> to use an internal implementation of C<fnmatch(3)> for glob
+pattern matching, rather than using the local system's implementation of
+this standard function. There are a variety of bugs in the C<fnmatch(3)>
+implementation on several operating systems (see the B<CAVEAT> section above
+for details). This environment variable is definitely recommended on
+I<OpenBSD> and I<NetBSD>, and possibly recommended on I<Linux> except that
+the I<Linux> implementation supports some I<ksh> extended glob patterns,
+which the internal implementation doesn't. So you can fix the bugs, but only
+at the cost of losing the C<ksh> extended glob patterns. Note that the
+internal implementation has woefully inadequate support for I<POSIX>
+character equivalents (e.g., C<[[=e=]]>) and collating sequences (e.g.,
+C<[[.ch.]]>).
 
 =head1 FILES
 

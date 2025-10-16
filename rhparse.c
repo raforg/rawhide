@@ -1385,7 +1385,7 @@ static int _get_token(void)
 
 		if (!(tokensym = locate_symbol(buf)))
 			if (!(tokensym = insert_symbol(buf, IDENTIFIER, 0)))
-				parser_error("no more memory");
+				parser_error("out of memory");
 
 		tokenval = tokensym->value;
 

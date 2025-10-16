@@ -431,7 +431,7 @@ test_rawhide "$rh -L '%025S\n'          $d/f" "0000000000000000000000001\n"     
 test_rawhide "$rh -L '% 25S\n'          $d/f" "                        1\n"                ""                                         0 "-L '% 25S\\\\n'"
 test_rawhide "$rh -L '%+25S\n'          $d/f" "                       +1\n"                ""                                         0 "-L '%+25S\\\\n'"
 test_rawhide "$rh -L '%-25S\n'          $d/f" "1                        \n"                ""                                         0 "-L '%-25S\\\\n'"
-test_rawhide "$rh -L '%#25S\n'          $d/f" "                  1.00000\n"                ""                                         0 "-L '%#25S\\\\n'"
+test_rawhide "LANG=C $rh -L '%#25S\n'   $d/f" "                  1.00000\n"                ""                                         0 "-L '%#25S\\\\n'"
 test_rawhide "$rh -L '%.5S\n'           $d/f" "1\n"                                        ""                                         0 "-L '%.5S\\\\n'"
 test_rawhide "$rh -L '%25.5S\n'         $d/f" "                        1\n"                ""                                         0 "-L '%25.5S\\\\n'"
 test_rawhide "$rh -L '%-25.5S\n'        $d/f" "1                        \n"                ""                                         0 "-L '%-25.5S\\\\n'"
@@ -622,7 +622,7 @@ test_rawhide "RAWHIDE_TEST_TTY=1 $rh -L '%$(printf '\233')\n' $d/f" ""          
 
 if [ `locale charmap` = 'UTF-8' ]
 then
-	test_rawhide "                   $rh -L '%$(printf '\302\233')\n' $d/f" ""             "./rh: invalid -L argument: %%$(printf '\302\233')\\\\n (invalid conversion: %%$(printf '\302'))\n"   1 "-L '%\$(printf '\\\302\\\233')\\\\n' (error (with oklen) to non-tty with utf8 non-printable/control char CSI - note only first byte included at end)"
+	test_rawhide "                   $rh -L '%$(printf '\302\233')\n' $d/f" ""             "./rh: invalid -L argument: %%$(printf '\302\233')\\\\n (invalid conversion: %%$(printf '\302\233'))\n"   1 "-L '%\$(printf '\\\302\\\233')\\\\n' (error (with oklen) to non-tty with utf8 non-printable/control char CSI)"
 	test_rawhide "RAWHIDE_TEST_TTY=1 $rh -L '%$(printf '\302\233')\n' $d/f" ""             "./rh: invalid -L argument: %%?\\\\n (invalid conversion: %%?)\n"   1 "-L '%\$(printf '\\\302\\\233')\\\\n' (error (with oklen) to tty with utf8 non-printable/control char CSI)"
 fi
 

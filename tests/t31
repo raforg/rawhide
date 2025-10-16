@@ -1,0 +1,129 @@
+#!/bin/sh
+#
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+# https://codeberg.org/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022-2023 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20231013 raf <raf@raf.org>
+
+. tests/.common
+
+label="internal fnmatch"
+
+# Note: Full testing is the responsibility of the musl libc project.
+# We do basic testing, mainly to make sure that the known fnmatch bugs
+# that are present in Linux, OpenBSD, and NetBSD are not present here,
+# and that the local fixes for musl fnmatch bugs/omissions are ok, and
+# for test coverage (with a little cheating - see RHFNM_ONLY). But note
+# that not everything was fixed in the local version of musl fnmatch
+# (i.e., character equivalents are only barely supported and collating
+# sequences are not supported at all).
+
+test_rawhide_post_hook() { test_rh_sort_post_hook; }
+
+if [ `locale charmap` = UTF-8 ]
+then
+	touch $d/e $d/ee $d/é $d/éé
+	test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"?\"' $d" "$d/e\n$d/é\n" "" 0 "internal glob ?"
+	test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"??\"' $d" "$d/ee\n$d/éé\n" "" 0 "internal glob ??"
+	rm $d/e $d/ee $d/é $d/éé
+fi
+
+touch "$d/$(printf '\370')" 2>/dev/null
+if [ $? = 0 ]
+then
+	test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"?\"'  $d" "$d/$(printf '\370')\n"     "" 0 "internal glob \"?\" with invalid bytes"
+	test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '!\"?\"' $d" "$d\n"                      "" 0 "internal glob !\"'?\" with invalid bytes"
+	test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"*\"'  $d" "$d\n$d/$(printf '\370')\n" "" 0 "internal glob \"*\" with invalid bytes"
+	test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '!\"*\"' $d" ""                          "" 0 "internal glob !\"*\" with invalid bytes"
+	rm "$d/$(printf '\370')"
+fi
+
+touch $d/abc $d/def
+test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"[a-c][a-c][a-c]\"'          $d" "$d/abc\n"     "" 0 "internal glob \"[a-c]\""
+test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"[^a-c][!a-c][^a-c]\"'       $d" "$d/def\n"     "" 0 "internal glob \"[^a-c]\""
+test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"d[[=e=]]f\"'                $d" "$d/def\n"     "" 0 "internal glob \"[[=e=]]\" (character equivalents are only barely supported)"
+test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"d[[=$(printf '\370')=]]f\"' $d" ""             "" 0 "internal glob \"[[=\\370=]]\" (character equivalents are only barely supported)"
+test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"d[^[:digit:]]f\"'           $d" "$d/def\n"     "" 0 "internal glob \"[^[:digit:]]\""
+touch $d/d0f
+test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"d[[:digit:]]f\"'            $d" "$d/d0f\n"     "" 0 "internal glob \"[[:digit:]]\""
+rm $d/d0f
+test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"d[^[.ch.]]f\"'              $d" "$d/def\n"     "" 0 "internal glob \"[^[.ch.]]\" (collating sequences are only barely supported)"
+test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"d[[.e.]]f\"'                $d" "$d/def\n"     "" 0 "internal glob \"[[.e.]]\" (collating sequences are only barely supported)"
+rm $d/abc $d/def
+
+touch $d/']' $d/-
+test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"[]]\"'               $d" "$d/]\n" "" 0 "internal glob \"[]]\""
+test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"[-]\"'               $d" "$d/-\n" "" 0 "internal glob \"[-]\""
+rm $d/']' $d/-
+
+if [ `locale charmap` = UTF-8 ]
+then
+	touch $d/'?' $d/'*' $d/é
+	test_rawhide "GRR=1 RAWHIDE_INTERNAL_GLOB=1 $rh '\"\\?\"'              $d" "$d/?\n" "" 0 "internal glob \"\\?\""
+	test_rawhide "GRR=1 RAWHIDE_INTERNAL_GLOB=1 $rh '\"\\*\"'              $d" "$d/*\n" "" 0 "internal glob \"\\*\""
+	test_rawhide "GRR=1 RAWHIDE_INTERNAL_GLOB=1 $rh '\"\\é\"'              $d" "$d/é\n" "" 0 "internal glob \"\\é\""
+	test_rawhide "GRR=1 RAWHIDE_INTERNAL_GLOB=1 $rh '\"\\é\".i'            $d" "$d/é\n" "" 0 "internal glob \"\\é\".i"
+	test_rawhide "GRR=1 RAWHIDE_INTERNAL_GLOB=1 $rh '\"\\É\".i'            $d" "$d/é\n" "" 0 "internal glob \"\\É\".i"
+	test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"[é]\"'              $d" "$d/é\n" "" 0 "internal glob \"[é]\""
+	test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"$(printf '\370')\"' $d" ""       "" 0 "internal glob \"\\\\370\""
+	rm $d/'?' $d/'*' $d/é
+
+	touch $d/abcd $d/abcé $d/abcéé $d/abcdé $d/abc$(printf '\342\205\240') $d/abc$(printf '\360\237\231\202')
+	touch $d/abc$(printf '\370') $d/abc$(printf '\360\237\231\202')$(printf '\370')$(printf '\342\205\240') 2>/dev/null
+	test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"a*c*d\"'             $d" "$d/abcd\n"                     "" 0 "internal glob \"a*c*d\" with backtracking"
+	test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"a*c*dddddddddd\"'    $d" ""                              "" 0 "internal glob \"a*c*ddddddddddddd\" without enough chars for stail"
+	test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"a*c*[é]\"'           $d" "$d/abcdé\n$d/abcé\n$d/abcéé\n" "" 0 "internal glob \"a*c*[é]\" with backtracking"
+	test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"a*c*[é]*[é]\"'       $d" "$d/abcéé\n"                    "" 0 "internal glob \"a*c*[é]*[é]\" with backtracking"
+	rm $d/abcd $d/abcé $d/abcéé $d/abcdé $d/abc$(printf '\342\205\240') $d/abc$(printf '\360\237\231\202')
+	rm $d/abc$(printf '\370') $d/abc$(printf '\360\237\231\202')$(printf '\370')$(printf '\342\205\240') 2>/dev/null
+
+	touch $d/a$(printf '\370\370')céé 2>/dev/null
+	if [ $? = 0 ]
+	then
+		test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"a*c*[é]*[é]*\"'      $d" "$d/a$(printf '\370\370')céé\n" "" 0 "internal glob \"a*c*[é]*[é]\""
+		rm $d/a$(printf '\370\370')céé
+	fi
+
+	touch $d/a $d/ad # $d/acd $d/a1c2d
+	test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"a*c*d\"'             $d" ""                "" 0 "internal glob \"a*c*d\" with no match"
+	rm $d/a $d/ad # $d/acd $d/a1c2d
+
+	touch $d/$(printf '\351') 2>/dev/null
+	if [ $? = 0 ]
+	then
+		touch $d/é
+		test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"$(printf '\351')\"'  $d" "$d/é\n$d/$(printf '\351')\n" "" 0 "internal glob search for latin1 é finds latin1 é and utf8 é"
+		test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"é\"'                 $d" "$d/é\n$d/$(printf '\351')\n" "" 0 "internal glob search for utf8 é finds latin1 é and utf8 é"
+		rm $d/$(printf '\351') $d/é
+	fi
+fi
+
+mkdir $d/a $d/a/b
+test_rawhide "                        $rh '\"*/*/*/*\".ipath'       $d" "$d/a/b\n"          "" 0 "external glob \"*/*/*/*\".ipath"
+test_rawhide "RAWHIDE_INTERNAL_GLOB=1 $rh '\"*/*/*/*\".ipath'       $d" "$d/a/b\n"          "" 0 "internal glob \"*/*/*/*\".ipath"
+rmdir $d/a/b $d/a
+
+test_rawhide_post_hook() { true; }
+
+finish
+
+exit $errors
+
+# vi:set ts=4 sw=4:

@@ -35,6 +35,9 @@ test_rawhide      "./rh --help"    "usage: rh [options] [--] [path...]\n" "" 0 "
 test_rawhide_grep "./rh -V"        "^rh-[0-9.]+[a-z]?$"                   "" 0 "-V option"
 test_rawhide_grep "./rh --version" "^rh-[0-9.]+[a-z]?$"                   "" 0 "--version option"
 
+test_rawhide  "./rh -e" "" "./rh: missing -e option argument (see ./rh -h for help)\n" 1 "invalid -e option without argument"
+test_rawhide  "./rh -L" "" "./rh: missing -L option argument (see ./rh -h for help)\n" 1 "invalid -L option without argument"
+
 test_rawhide "./rh -!" "" "./rh: invalid option: -! (see ./rh -h for help)\n" 1 "invalid option"
 
 finish
