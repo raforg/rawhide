@@ -449,7 +449,7 @@ test_rawhide "$rh -e 'gmtoday != now - now % day' $d" ""             "" 0 "gmtod
 
 test_rawhide "$rh -e 'ago(10) != now - 10' $d"          "" "" 0 "ago"
 test_rawhide "$rh -e 'old(10) != mtime <= now - 10' $d" "" "" 0 "old"
-test_rawhide "$rh -e 'past(10) != mtime >= now - 10' $d" "" "" 0 "past"
+test_rawhide "$rh -e 'past(10) != mtime >= now - 10 && !(mtime > now)' $d" "" "" 0 "past"
 test_rawhide "$rh -e 'future != mtime > now' $d" "" "" 0 "future"
 
 test_rawhide "$rh -e 'future' $d" "" "" 0 "future when false"

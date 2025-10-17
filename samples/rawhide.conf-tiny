@@ -189,12 +189,13 @@ mine { uid == $$ }
 ours { gid == @@ }
 broken { l && !texists }
 dangling { broken }
+
 gmtoday { now - now % day }
+future    { mtime > now }
 
 ago(sec)  { now - sec }
 old(sec)  { mtime <= ago(sec) }
-past(sec) { mtime >= ago(sec) }
-future    { mtime > now }
+past(sec) { mtime >= ago(sec) && !future }
 
 min(x, y) { (x < y) ? x : y }
 max(x, y) { (x > y) ? x : y }

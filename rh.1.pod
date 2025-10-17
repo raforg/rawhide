@@ -1743,8 +1743,8 @@ aliases for I<stat(2)> structure fields and other built-ins (e.g., C<inode>,
 C<user>, C<group>, C<modified>, C<accessed>, C<imayread>, C<ir>,
 C<imaywrite>, C<iw>, ...); size units (e.g., C<KiB>, C<MiB>, C<GiB>, C<KB>,
 C<MB>, C<GB>, ...); and miscellaneous helper functions (e.g., C<ago()>,
-C<old()>, C<past()>, C<empty>, C<roots>, C<mine>, C<broken>, C<gmtoday>,
-...).
+C<old()>, C<past()>, C<future>, C<empty>, C<roots>, C<mine>, C<ours>,
+C<broken>, C<dangling>, C<gmtoday>, ...).
 
 On I<Linux> systems, there is an additional library of functions in
 C</etc/rawhide.conf.d/attributes>. It contains constants and predicates for
@@ -2500,9 +2500,9 @@ twenty-four hours.
 
   $ find $HOME -mtime 0
 
-  $ rh $HOME 'mtime >= now - 24 * hour'
-  $ rh $HOME 'mtime >= ago(24 * hours)'
-  $ rh $HOME 'modified >= ago(day)'
+  $ rh $HOME 'mtime >= now - 24 * hour && mtime <= now'
+  $ rh $HOME 'mtime >= ago(24 * hours) && mtime <= now'
+  $ rh $HOME 'modified >= ago(day) && !future'
   $ rh $HOME 'past(day)'
 
 =head2 Searching files by permissions

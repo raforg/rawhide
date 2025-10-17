@@ -2576,11 +2576,13 @@ This is the default C</etc/rawhide.conf> standard library:
   ours { gid == @@ }
   broken { symlink && !texists }
   dangling { broken }
+
   gmtoday { now - now % day }
+  future { mtime > now }
   
   ago(sec)  { now - sec }
   old(sec)  { mtime <= ago(sec) }
-  past(sec) { mtime >= ago(sec) }
+  past(sec) { mtime >= ago(sec) && !future }
   
   min(x, y) { (x < y) ? x : y }
   max(x, y) { (x > y) ? x : y }
