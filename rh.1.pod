@@ -2901,10 +2901,11 @@ names, paths, symlink target paths, access control lists, and extended
 attributes that they match against, are encoded as I<UTF-8>. When this
 environment variable is set, individual regular expression patterns can
 still enable I<UTF-8> interpretation with a leading C<(*UTF)>. This I<UTF-8>
-assumption is made when the locale uses I<UTF-8> (i.e., when the C<$LANG>
-environment variable includes C<"UTF-8">). When the locale doesn't use
-I<UTF-8>, and you want I<rh> to assume that everything is I<UTF-8> anyway,
-set the environment variable C<RAWHIDE_PCRE2_UTF8_DEFAULT=1>.
+assumption is made when the locale uses I<UTF-8> (i.e., when the environment
+variable C<LC_ALL>, C<LC_CTYPE>, or C<LANG>, includes C<"UTF-8">). When the
+locale doesn't use I<UTF-8>, and you want I<rh> to assume that everything is
+I<UTF-8> anyway, set the environment variable
+C<RAWHIDE_PCRE2_UTF8_DEFAULT=1>.
 
 Setting the environment variable C<RAWHIDE_PCRE2_DOTALL_ALWAYS=1> causes
 regular expression patterns to always treat the subject text as a single

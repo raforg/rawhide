@@ -252,14 +252,13 @@ then
 		fi
 	fi
 
-	case "$LANG" in
-		*.UTF-8)
-			test_rawhide "$rh -e 'uid == \$áêìöç-notauser'  $d" "" "./rh: command line: -e 'uid == \$áêìöç-notauser': line 1 byte 27: no such user: áêìöç-notauser\n" 1 "username with multibyte utf-8 characters"
-			test_rawhide "$rh -e 'gid == @áêìöç-notagroup'  $d" "" "./rh: command line: -e 'gid == @áêìöç-notagroup': line 1 byte 28: no such group: áêìöç-notagroup\n" 1 "groupname with multibyte utf-8 characters"
-			test_rawhide "$rh -e 'uid == \$🙂-notauser'     $d" "" "./rh: command line: -e 'uid == \$🙂-notauser': line 1 byte 21: no such user: 🙂-notauser\n" 1 "username with multibyte utf-8 emoji"
-			test_rawhide "$rh -e 'gid == @🙂-notagroup'     $d" "" "./rh: command line: -e 'gid == @🙂-notagroup': line 1 byte 22: no such group: 🙂-notagroup\n" 1 "groupname with multibyte utf-8 emoji"
-			;;
-	esac
+	if [ `locale charmap` = UTF-8 ]
+	then
+		test_rawhide "$rh -e 'uid == \$áêìöç-notauser'  $d" "" "./rh: command line: -e 'uid == \$áêìöç-notauser': line 1 byte 27: no such user: áêìöç-notauser\n" 1 "username with multibyte utf-8 characters"
+		test_rawhide "$rh -e 'gid == @áêìöç-notagroup'  $d" "" "./rh: command line: -e 'gid == @áêìöç-notagroup': line 1 byte 28: no such group: áêìöç-notagroup\n" 1 "groupname with multibyte utf-8 characters"
+		test_rawhide "$rh -e 'uid == \$🙂-notauser'     $d" "" "./rh: command line: -e 'uid == \$🙂-notauser': line 1 byte 21: no such user: 🙂-notauser\n" 1 "username with multibyte utf-8 emoji"
+		test_rawhide "$rh -e 'gid == @🙂-notagroup'     $d" "" "./rh: command line: -e 'gid == @🙂-notagroup': line 1 byte 22: no such group: 🙂-notagroup\n" 1 "groupname with multibyte utf-8 emoji"
+	fi
 fi
 
 # Function, parameter, field, undefined identifiers
@@ -285,13 +284,12 @@ test_rawhide "$rh -e 'fn(x,y,z) { x+y+z } fn(!size,!size,!mtime)' $d" "$d/e\n"  
 test_rawhide "$rh -e 'fn() { undef } 1' $d" "" "./rh: command line: -e 'fn() { undef } 1': line 1 byte 12: undefined identifier: identifier undef\n" 1 "identifiers: undef"
 test_rawhide "$rh -e 'fn() { 1 } undef' $d" "" "./rh: command line: -e 'fn() { 1 } undef': line 1 byte 17: expected '(' or '{', found eof (possible attempt to call an undefined function)\n" 1 "identifiers: undef"
 
-case "$LANG" in
-	*.UTF-8)
-		test_rawhide "$rh -e 'áêìöç { 1 } áêìöç'           $d" "$d\n$d/e\n" "" 0 "function name with multibyte utf-8 characters"
-		test_rawhide "$rh -e 'áêìöç(üüü) { üüü } áêìöç(1)' $d" "$d\n$d/e\n" "" 0 "function/parameter names with multibyte utf-8 characters"
-		test_rawhide "$rh -e '🙂(🙃) { 🙃 } 🙂(1)'         $d" "$d\n$d/e\n" "" 0 "function/parameter names with multibyte utf-8 emoji"
-		;;
-esac
+if [ `locale charmap` = UTF-8 ]
+then
+	test_rawhide "$rh -e 'áêìöç { 1 } áêìöç'           $d" "$d\n$d/e\n" "" 0 "function name with multibyte utf-8 characters"
+	test_rawhide "$rh -e 'áêìöç(üüü) { üüü } áêìöç(1)' $d" "$d\n$d/e\n" "" 0 "function/parameter names with multibyte utf-8 characters"
+	test_rawhide "$rh -e '🙂(🙃) { 🙃 } 🙂(1)'         $d" "$d\n$d/e\n" "" 0 "function/parameter names with multibyte utf-8 emoji"
+fi
 
 # Datetimes
 

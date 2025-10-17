@@ -179,16 +179,15 @@ test_rawhide "$rh -M0 -X 'echo %%' $d" "%%\n" "" 0 "-X with %%"
 test_rawhide "$rh -x 'echo %Q' $d" "" "./rh: invalid shell command: echo %%Q (after '%%' expected 's', 'S' or '%%')\n" 1 "-x with invalid %Q"
 test_rawhide "$rh -X 'echo %Q' $d" "" "./rh: invalid shell command: echo %%Q (after '%%' expected 's', 'S' or '%%')\n" 1 "-X with invalid %Q"
 
-case "$LANG" in
-	*.UTF-8)
-		rm -r $d/d1
-		touch $d/'áêìöç-🙂'
-		test_rawhide "$rh -v -x 'echo %s' $d/" "echo \"\$1\" # 1=./$d 2=./.$t\n./$d\necho \"\$1\" # 1=./$d/áêìöç-🙂 2=./áêìöç-🙂\n./$d/áêìöç-🙂\n" "" 0 "-v -x %s with multi-byte characters/emoji"
-		test_rawhide "$rh -v -x 'echo %S' $d/" "echo \"\$2\" # 1=./$d 2=./.$t\n./.$t\necho \"\$2\" # 1=./$d/áêìöç-🙂 2=./áêìöç-🙂\n./áêìöç-🙂\n"   "" 0 "-v -x %S with multi-byte characters/emoji"
-		test_rawhide "$rh -v -X 'echo %s' $d/" "echo \"\$1\" # 1=./$d 2=./.$t\n./$d\necho \"\$1\" # 1=./$d/áêìöç-🙂 2=./áêìöç-🙂\n./$d/áêìöç-🙂\n" "" 0 "-v -X %s with multi-byte characters/emoji"
-		test_rawhide "$rh -v -X 'echo %S' $d/" "echo \"\$2\" # 1=./$d 2=./.$t\n./.$t\necho \"\$2\" # 1=./$d/áêìöç-🙂 2=./áêìöç-🙂\n./áêìöç-🙂\n"   "" 0 "-v -X %S with multi-byte characters/emoji"
-		;;
-esac
+if [ `locale charmap` = UTF-8 ]
+then
+	rm -r $d/d1
+	touch $d/'áêìöç-🙂'
+	test_rawhide "$rh -v -x 'echo %s' $d/" "echo \"\$1\" # 1=./$d 2=./.$t\n./$d\necho \"\$1\" # 1=./$d/áêìöç-🙂 2=./áêìöç-🙂\n./$d/áêìöç-🙂\n" "" 0 "-v -x %s with multi-byte characters/emoji"
+	test_rawhide "$rh -v -x 'echo %S' $d/" "echo \"\$2\" # 1=./$d 2=./.$t\n./.$t\necho \"\$2\" # 1=./$d/áêìöç-🙂 2=./áêìöç-🙂\n./áêìöç-🙂\n"   "" 0 "-v -x %S with multi-byte characters/emoji"
+	test_rawhide "$rh -v -X 'echo %s' $d/" "echo \"\$1\" # 1=./$d 2=./.$t\n./$d\necho \"\$1\" # 1=./$d/áêìöç-🙂 2=./áêìöç-🙂\n./$d/áêìöç-🙂\n" "" 0 "-v -X %s with multi-byte characters/emoji"
+	test_rawhide "$rh -v -X 'echo %S' $d/" "echo \"\$2\" # 1=./$d 2=./.$t\n./.$t\necho \"\$2\" # 1=./$d/áêìöç-🙂 2=./áêìöç-🙂\n./áêìöç-🙂\n"   "" 0 "-v -X %S with multi-byte characters/emoji"
+fi
 
 finish
 

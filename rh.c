@@ -36,6 +36,7 @@
 #include <errno.h>
 #include <pwd.h>
 #include <sys/stat.h>
+#include <langinfo.h>
 
 #include "rh.h"
 #include "rhparse.h"
@@ -553,7 +554,7 @@ int main(int argc, char *argv[])
 	attr.tty = isatty(STDOUT_FILENO) || env_flag("RAWHIDE_TEST_TTY");
 	attr.ttyerr = isatty(STDERR_FILENO) || env_flag("RAWHIDE_TEST_TTY");
 
-	if (getenv("LANG") && strstr(getenv("LANG"), "UTF-8"))
+	if (!strcmp(nl_langinfo(CODESET), "UTF-8"))
 		attr.utf = !env_flag("RAWHIDE_PCRE2_NOT_UTF8_DEFAULT");
 	else
 		attr.utf = env_flag("RAWHIDE_PCRE2_UTF8_DEFAULT");

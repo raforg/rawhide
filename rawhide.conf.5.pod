@@ -1439,9 +1439,10 @@ environment variable C<RAWHIDE_PCRE2_NOT_UTF8_DEFAULT=1>. When this
 environment variable is set, individual regex patterns can still enable
 I<UTF-8> interpretation with a leading C<(*UTF)>. This I<UTF-8> assumption
 is made when the locale uses I<UTF-8> (i.e., when the environment variable
-C<LANG> includes C<"UTF-8">). When the locale doesn't use I<UTF-8>, and you
-want I<rh> to assume that everything is I<UTF-8> anyway, set the environment
-variable C<RAWHIDE_PCRE2_UTF8_DEFAULT=1>.
+C<LC_ALL>, C<LC_CTYPE>, or C<LANG>, includes C<"UTF-8">). When the locale
+doesn't use I<UTF-8>, and you want I<rh> to assume that everything is
+I<UTF-8> anyway, set the environment variable
+C<RAWHIDE_PCRE2_UTF8_DEFAULT=1>.
 
 =item C<repath> (or C<rep>)
 
