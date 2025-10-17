@@ -1427,13 +1427,6 @@ or tab in a character class requires quoting it with a preceding backslash
 character (C<"\">). Complex character classes can be made more readable this
 way. This is like I<Perl>'s C</xx> modifier.
 
-=item C<PCRE2_NO_AUTO_CAPTURE>
-
-Prevent parentheses from automatically capturing matching text (i.e., always
-treat C<(>I<...>C<)> as C<(?:>I<...>C<)>). There are no uses for captures in
-I<rh(1)>, and this should make matching ever so slightly smaller and faster,
-without the explicit C<?:>. This is like I<Perl>'s C</n> modifier.
-
 =back
 
 Note that the regex pattern and the text being matched are generally assumed

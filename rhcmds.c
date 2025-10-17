@@ -483,7 +483,6 @@ static int rematch(const char *pattern, const char *subject, size_t subject_leng
 	options |= PCRE2_DOLLAR_ENDONLY;    /* $ matches only at the end of the subject */
 	options |= PCRE2_EXTENDED;          /* Ignore whitespace and # comments (except in character classes) (like /x) */
 	options |= PCRE2_EXTENDED_MORE;     /* Ignore space and tab inside character classes as well (like /xx) */
-	options |= PCRE2_NO_AUTO_CAPTURE;   /* Prevent automatic numbered capturing parentheses (like /n) */
 
 	re = pcre2_compile_cached(pattern, options);
 
