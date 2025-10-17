@@ -1221,7 +1221,8 @@ glob pattern string with no pattern modifier does contain a slash character
 (e.g., C<"/">), then instead of attempting (and failing) to match it against
 the file's base name, an implicit C<path> pattern modifier is assumed (e.g.,
 C<"/".path>), and it will be matched against the file's full path starting
-from the search directory instead.
+from the search directory instead. This behaviour can be suppressed by
+setting the environment variable C<RAWHIDE_NO_IMPLICIT_PATH_MODIFIER=1>.
 
 =item C<link> (or C<l>)
 
@@ -1318,7 +1319,9 @@ glob pattern string with the C<i> pattern modifier does contain a slash
 character (e.g., C<"/".i>), then instead of attempting (and failing) to
 match it against the file's base name, an implicit C<ipath> pattern modifier
 is assumed (e.g., C<"/".ipath>), and it will be matched against the file's
-full path starting from the search directory instead.
+full path starting from the search directory instead. This behaviour can be
+suppressed by setting the environment variable
+C<RAWHIDE_NO_IMPLICIT_PATH_MODIFIER=1>.
 
 =item C<ilink> (or C<il>)
 
@@ -1456,7 +1459,9 @@ regex pattern string with the C<re> pattern modifier does contain a slash
 character (e.g., C<"/".re>), then instead of attempting (and failing) to
 match it against the file's base name, an implicit C<repath> pattern
 modifier is assumed (e.g., C<"/".repath>), and it will be matched against
-the file's full path starting from the search directory instead.
+the file's full path starting from the search directory instead. This
+behaviour can be suppressed by setting the environment variable
+C<RAWHIDE_NO_IMPLICIT_PATH_MODIFIER=1>.
 
 =item C<relink> (or C<rel>)
 
@@ -1510,7 +1515,9 @@ regex pattern string with the C<rei> pattern modifier does contain a slash
 character (e.g., C<"/".rei>), then instead of attempting (and failing) to
 match it against the file's base name, an implicit C<reipath> pattern
 modifier is assumed (e.g., C<"/".reipath>), and it will be matched against
-the file's full path starting from the search directory instead.
+the file's full path starting from the search directory instead. This
+behaviour can be suppressed by setting the environment variable
+C<RAWHIDE_NO_IMPLICIT_PATH_MODIFIER=1>.
 
 =item C<reilink> (or C<reil>)
 
@@ -1826,8 +1833,8 @@ contains any ASCII whitespace characters, the command is split into the
 absolute path to the alternative shell, and its whitespace-separated command
 line options. No other parsing is done. The additional command line options
 cannot be quoted, and so cannot themselves contain any whitespace characters
-(nor can the path to the shell). No shell syntax is supported. It is just a
-vector of whitespace-separated strings.
+(nor can the path to the shell itself). No shell syntax is supported. It is
+just a vector of whitespace-separated strings.
 
 B<Warning:> Search criteria expressions that use the C<ush> "pattern"
 modifier are not portable.

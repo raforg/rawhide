@@ -564,8 +564,6 @@ int main(int argc, char *argv[])
 
 	attr.report_broken_symlinks = env_flag("RAWHIDE_REPORT_BROKEN_SYMLINKS");
 	attr.report_cycles = !env_flag("RAWHIDE_DONT_REPORT_CYCLES");
-	attr.internal_fnmatch = env_flag("RAWHIDE_INTERNAL_GLOB");
-	attr.fnmatch = (attr.internal_fnmatch) ? rhfnmatch : fnmatch;
 	attr.facl_solaris_no_trivial = env_flag("RAWHIDE_SOLARIS_ACL_NO_TRIVIAL");
 	attr.fea_solaris_no_sunwattr = env_flag("RAWHIDE_SOLARIS_EA_NO_SUNWATTR");
 	attr.fea_solaris_no_statinfo = env_flag("RAWHIDE_SOLARIS_EA_NO_STATINFO");
@@ -573,6 +571,9 @@ int main(int argc, char *argv[])
 	attr.implicit_expr_heuristic = env_flag("RAWHIDE_ALLOW_IMPLICIT_EXPR_HEURISTIC");
 	attr.user_shell = getenv("RAWHIDE_USER_SHELL");
 	attr.user_shell_like_csh = env_flag("RAWHIDE_USER_SHELL_LIKE_CSH");
+	attr.internal_fnmatch = env_flag("RAWHIDE_INTERNAL_GLOB");
+	attr.fnmatch = (attr.internal_fnmatch) ? rhfnmatch : fnmatch;
+	attr.no_implicit_path = env_flag("RAWHIDE_NO_IMPLICIT_PATH_MODIFIER");
 
 	attr.test_cmd_max = env_int("RAWHIDE_TEST_CMD_MAX", 1, -1, -1);
 	attr.test_attr_format = env_flag("RAWHIDE_TEST_ATTR_FORMAT");

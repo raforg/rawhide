@@ -245,6 +245,7 @@ struct runtime_t
 	int report_cycles;      /* Does the user want to report filesystem cycles (default)? */
 	int internal_fnmatch;   /* Does the user want the internal fnmatch rather than the system one? */
 	int (*fnmatch)(const char *pattern, const char *string, int flags); /* fnmatch() or rhfnmatch() */
+	int no_implicit_path;   /* Does the user want to suppress implicit path pattern modifiers? */
 
 	int linkstat_done;      /* Have we attempted to stat the current candidate symlink target yet? */
 	int linkstat_ok;        /* Did statting the current candidate symlink target work? */

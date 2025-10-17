@@ -1477,9 +1477,9 @@ static int _get_token(void)
 		{
 			ungetch(c);
 
-			/* Assume "".path when / is present */
+			/* Assume "".path when / is present (unless suppressed) */
 
-			if (!strchr(Strbuf + tokenval, '/'))
+			if (attr.no_implicit_path || !strchr(Strbuf + tokenval, '/'))
 				return STRING;
 
 			tokensym = locate_symbol(".path");
@@ -1515,11 +1515,11 @@ static int _get_token(void)
 		if (!tokensym || (tokensym->type != REFFILE && tokensym->type != PATMOD))
 			parser_error("invalid string suffix: %s (expected pattern modifier or reference file field)", ok(Strbuf + reffield));
 
-		/* When / is present, replace i with ipath, re with repath, and rei with reipath */
+		/* When / is present, replace i with ipath, re with repath, and rei with reipath (unless suppressed) */
 
 		if (tokensym->type == PATMOD)
 		{
-			if (strchr(Strbuf + tokenval, '/'))
+			if (!attr.no_implicit_path && strchr(Strbuf + tokenval, '/'))
 			{
 				#ifdef FNM_CASEFOLD
 				if (!strcmp(tokensym->name, ".i"))

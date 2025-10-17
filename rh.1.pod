@@ -3040,6 +3040,18 @@ internal implementation has woefully inadequate support for I<POSIX>
 character equivalents (e.g., C<[[=e=]]>) and collating sequences (e.g.,
 C<[[.ch.]]>).
 
+Setting the environment variable C<RAWHIDE_NO_IMPLICIT_PATH_MODIFIER=1>
+causes I<rawhide> to not interpret a file base name pattern string literal
+that contains a forward slash character (C<"/">) as an implicit match
+against the file path instead by assuming the corresponding path-related
+pattern modifier. By default, I<rawhide> will interpret an unmodified string
+literal as C<.path>, and C<.i> as C<.ipath>, and C<.re> as C<.repath>, and
+C<.rei> as C<.reipath>, if the string literal contains a slash, in order to
+save the user some keystrokes in the typical case where slashes are only
+used in path searches. But you might not like I<rawhide> trying to be
+helpful, and there can be cases where this behaviour just isn't helpful. So
+setting this environment variable will suppress this behaviour.
+
 =head1 FILES
 
 The following source/configuration files are read by default:
