@@ -518,9 +518,9 @@ mutually exclusive.
 
 =item C<-x> C<'>I<cmd>C<'>
 
-Execute the shell command specified by I<cmd> as if via I<system(3)> (i.e.,
-via C</bin/sh>) for each matching entry. It is an error to supply the C<-x>
-option more than once.
+Execute the shell command specified by I<cmd> as if by I<system(3)> (i.e.,
+by C</bin/sh> or some other I<POSIX>-compliant shell) for each matching
+entry. It is an error to supply the C<-x> option more than once.
 
 If any command exits with a non-zero exit status, I<rh> itself will
 continue, but it will eventually exit with a non-zero exit status.
@@ -582,9 +582,9 @@ are all mutually exclusive.
 
 =item C<-X> C<'>I<cmd>C<'>
 
-Execute the shell command specified by I<cmd> as if via I<system(3)> (i.e.,
-via C</bin/sh>) for each matching entry. It is an error to supply the C<-X>
-option more than once.
+Execute the shell command specified by I<cmd> as if by I<system(3)> (i.e.,
+by C</bin/sh> or some other I<POSIX>-compliant shell) for each matching
+entry. It is an error to supply the C<-X> option more than once.
 
 If any command exits with a non-zero exit status, I<rh> itself will
 continue, but it will eventually exit with a non-zero exit status.

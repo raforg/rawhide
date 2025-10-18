@@ -1723,10 +1723,10 @@ Like the C<reea> modifier, but apply the regex without case-sensitivity.
 =item C<sh> (or C<s>)
 
 This interprets the string literal, not as a pattern at all, but as an
-external shell command to execute as if via I<system(3)> (i.e., via
-C</bin/sh>). It evaluates to the exit success status of the external shell command. If
-its exit status is zero, then the value is true (i.e., non-zero). Otherwise,
-it is false (i.e., zero).
+external shell command to execute as if by I<system(3)> (i.e., by C</bin/sh>
+or some other I<POSIX>-compliant shell). It evaluates to the exit success
+status of the external shell command. If its exit status is zero, then the
+value is true (i.e., non-zero). Otherwise, it is false (i.e., zero).
 
 This enables arbitrary command line utilities to contribute to the search
 criteria. But be warned, this can be slow, because it involves the creation
@@ -1790,7 +1790,8 @@ tree being searched, and so should not generally be used.
 
 Like the C<sh> modifier (see above), except that the command string is
 executed by the user's login shell, as specified in the C</etc/passwd> file,
-rather than as if by I<system(3)> (i.e., C</bin/sh>).
+rather than as if by I<system(3)> (i.e., by C</bin/sh> or some other
+I<POSIX>-compliant shell).
 
 If the environment variable C<RAWHIDE_USER_SHELL> is set, its value must
 specify the absolute path to an alternative shell to use instead of the

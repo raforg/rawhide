@@ -1445,6 +1445,37 @@ void visitf_long(void)
 
 /*
 
+static char *init_posix_shell();
+
+Call this the first time we need to interpolate a command to be executed via
+the system POSIX shell (/bin/sh on most systems, /usr/xpg4/bin/sh on
+Solaris).
+
+*/
+
+static char *init_posix_shell()
+{
+	struct stat statbuf[1];
+
+	return attr.posix_shell = (stat("/usr/xpg4/bin/sh", statbuf) == 0) ? "/usr/xpg4/bin/sh" : "/bin/sh";
+}
+
+/*
+
+static char *posix_shell();
+
+Call this when we need to interpolate a command to be executed via the
+system POSIX shell (/bin/sh on most systems, /usr/xpg4/bin/sh on Solaris).
+
+*/
+
+static char *posix_shell()
+{
+	return (attr.posix_shell) ? attr.posix_shell : init_posix_shell();
+}
+
+/*
+
 static void init_user_shell();
 
 Call this the first time we need to interpolate a command to be executed
@@ -1484,7 +1515,7 @@ static void init_user_shell()
 	{
 		struct passwd *pwd = getpwuid(getuid());
 
-		attr.user_shellv[0] = (pwd && pwd->pw_shell && *pwd->pw_shell == '/') ? pwd->pw_shell : "/bin/sh";
+		attr.user_shellv[0] = (pwd && pwd->pw_shell && *pwd->pw_shell == '/') ? pwd->pw_shell : posix_shell();
 		attr.user_shellv[1] = NULL;
 	}
 
@@ -2003,7 +2034,7 @@ static int systeml(const char *command, ...)
 	const char *argv[ARGV_SIZE];
 	const char **av = argv;
 
-	*av++ = "/bin/sh";
+	*av++ = posix_shell();
 	*av++ = "-c";
 	#ifndef HAVE_FREEBSD_EA /* FreeBSD's /bin/sh doesn't work with -- here */
 	*av++ = "--";
