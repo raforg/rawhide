@@ -179,6 +179,7 @@ struct runtime_t
 	int fea_solaris_no_statinfo; /* Suppress artificial stat(2) info EAs on Solaris? */
 	int implicit_expr_heuristic; /* Allow implicit search criteria expression heuristic */
 
+	char *posix_shell;       /* The path to a POSIX shell, /bin/sh on most systems, /usr/xpg4/bin/sh on Solaris */
 	char *user_shell;        /* The value of $RAWHIDE_USER_SHELL to override the user's login shell, for .ush */
 	int user_shell_like_csh; /* The value of $RAWHIDE_USER_SHELL_LIKE_CSH (i.e., shell doesn't take $0 argument, or --) */
 	int user_shell_init_done;/* Have we obtained the user shell details? */
