@@ -206,9 +206,71 @@ test_rawhide "$rh  -lQp $d" "\"$d\"/\n\"$d/sym\" -> /etc/passwd\n"  "" 0 "-l -Q 
 test_rawhide "$rh  -lQt $d" "\"$d\"/\n\"$d/sym\"@ -> /etc/passwd\n" "" 0 "-l -Q -t with symlink"
 test_rawhide "$rh  -lQF $d" "\"$d\"/\n\"$d/sym\"@ -> /etc/passwd\n" "" 0 "-l -Q -F with symlink"
 
-test_rawhide_post_hook() { true; }
-
 rm $d/sym
+
+mkdir $d/d
+touch $d/ux $d/gx $d/ox
+chmod 700 $d/ux
+chmod 670 $d/gx
+chmod 607 $d/ox
+ln -s d $d/symdir
+ln -s symdir $d/symsym
+ln -s ux $d/symux
+ln -s gx $d/symgx
+ln -s ox $d/symox
+sock="$($rh -e sock /tmp 2>/dev/null | head -1)"
+[ -n "$sock" ] && ln -s "$sock" $d/symsock
+[ -n "`command -v mkfifo`" ] && mkfifo $d/fifo >/dev/null 2>/dev/null && ln -s fifo $d/symfifo
+
+test_rawhide "$rh -l $d/symdir" "$d/symdir -> d\n"                         "" 0 "-l with symlink to dir"
+test_rawhide "$rh -l $d/symsym" "$d/symsym -> symdir\n"                    "" 0 "-l with symlink to symlink"
+test_rawhide "$rh -l $d/symux" "$d/symux -> ux\n"                          "" 0 "-l with symlink to ux"
+test_rawhide "$rh -l $d/symgx" "$d/symgx -> gx\n"                          "" 0 "-l with symlink to gx"
+test_rawhide "$rh -l $d/symox" "$d/symox -> ox\n"                          "" 0 "-l with symlink to ox"
+[ -n "$sock" ] && test_rawhide "$rh -l $d/symsock" "$d/symsock -> $sock\n" "" 0 "-l with symlink to socket"
+[ -e $d/fifo ] && test_rawhide "$rh -l $d/symfifo" "$d/symfifo -> fifo\n"  "" 0 "-l with symlink to fifo"
+
+test_rawhide "$rh -lp $d/symdir" "$d/symdir -> d/\n"                        "" 0 "-lp with symlink to dir"
+# Note: Arguably, this next test should output "symsym -> symdir\n" because
+# symsym links to a symlink, not to a directory, but this behaviour is
+# consistent with the rest of the program (i.e., the symlink target
+# built-ins).
+test_rawhide "$rh -lp $d/symsym" "$d/symsym -> symdir/\n"                   "" 0 "-lp with symlink to symlink"
+test_rawhide "$rh -lp $d/symux" "$d/symux -> ux\n"                          "" 0 "-lp with symlink to ux"
+test_rawhide "$rh -lp $d/symgx" "$d/symgx -> gx\n"                          "" 0 "-lp with symlink to gx"
+test_rawhide "$rh -lp $d/symox" "$d/symox -> ox\n"                          "" 0 "-lp with symlink to ox"
+[ -n "$sock" ] && test_rawhide "$rh -lp $d/symsock" "$d/symsock -> $sock\n" "" 0 "-lp with symlink to socket"
+[ -e $d/fifo ] && test_rawhide "$rh -lp $d/symfifo" "$d/symfifo -> fifo\n"  "" 0 "-lp with symlink to fifo"
+
+test_rawhide "$rh -lt $d/symdir" "$d/symdir@ -> d/\n"                        "" 0 "-lt with symlink to dir"
+# Note: Arguably, this next test should output "symsym@ -> symdir@\n" because
+# symsym links to a symlink, not to a directory, but this behaviour is
+# consistent with the rest of the program (i.e., the symlink target
+# built-ins).
+test_rawhide "$rh -lt $d/symsym" "$d/symsym@ -> symdir/\n"                    "" 0 "-lt with symlink to symlink"
+test_rawhide "$rh -lt $d/symux" "$d/symux@ -> ux\n"                           "" 0 "-lt with symlink to ux"
+test_rawhide "$rh -lt $d/symgx" "$d/symgx@ -> gx\n"                           "" 0 "-lt with symlink to gx"
+test_rawhide "$rh -lt $d/symox" "$d/symox@ -> ox\n"                           "" 0 "-lt with symlink to ox"
+[ -n "$sock" ] && test_rawhide "$rh -lt $d/symsock" "$d/symsock@ -> $sock=\n" "" 0 "-lt with symlink to socket"
+# Note: On Cygwin, this is wierd. It outputs "fifo@" not "fifo|". Why?
+[ -e $d/fifo ] && test_rawhide "$rh -lt $d/symfifo" "$d/symfifo@ -> fifo|\n"  "" 0 "-lt with symlink to fifo"
+
+test_rawhide "$rh -lF $d/symdir" "$d/symdir@ -> d/\n"                        "" 0 "-lF with symlink to dir"
+# Note: Arguably, this next test should output "symsym@ -> symdir@\n" because
+# symsym links to a symlink, not to a directory, but this behaviour is
+# consistent with the rest of the program (i.e., the symlink target
+# built-ins).
+test_rawhide "$rh -lF $d/symsym" "$d/symsym@ -> symdir/\n"                    "" 0 "-lF with symlink to symlink"
+test_rawhide "$rh -lF $d/symux" "$d/symux@ -> ux*\n"                          "" 0 "-lF with symlink to ux"
+test_rawhide "$rh -lF $d/symgx" "$d/symgx@ -> gx*\n"                          "" 0 "-lF with symlink to gx"
+test_rawhide "$rh -lF $d/symox" "$d/symox@ -> ox*\n"                          "" 0 "-lF with symlink to ox"
+[ -n "$sock" ] && test_rawhide "$rh -lF $d/symsock" "$d/symsock@ -> $sock=\n" "" 0 "-lF with symlink to socket"
+# Note: On Cygwin, this is wierd. It outputs "fifo@" not "fifo|". Why?
+[ -e $d/fifo ] && test_rawhide "$rh -lF $d/symfifo" "$d/symfifo@ -> fifo|\n"  "" 0 "-lF with symlink to fifo"
+
+rm -r $d/d $d/ux $d/gx $d/ox $d/fifo $d/symdir $d/symsym $d/symux $d/symgx $d/symox $d/symsock $d/symfifo
+
+test_rawhide_post_hook() { true; }
 
 test_rawhide_grep "$rh -l'#'  $d" "^$mode$__$nlink$__$num$__$num$__$size$__$time$__$name\$"                                                                         "" 0 "-l -#"
 test_rawhide_grep "$rh -lT    $d" "^$mode$__$nlink$__$user$__$group$__$size$__$isotime$__$name\$"                                                                   "" 0 "-lT"

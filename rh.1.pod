@@ -696,7 +696,9 @@ unsorted). The details included are the file type, permissions, existence of
 an access control list and/or extended attributes, number of hard links,
 user/owner, group, size (or comma-separated C<rdev> major and minor device
 numbers), modified time, and path. For symlinks, the target path is also
-included at the end (preceded by S<C<< " -> " >>>).
+included at the end (preceded by S<C<< " -> " >>>). If any of the C<-p>,
+C<-t>, or C<-F> options has also been supplied (see below), the target path
+will be followed by the appropriate type indicator.
 
 Note that, unlike S<C<ls -l>>, for readable directories, the reported size
 is the number of entries they contain (excluding C<.> and C<..>). For
@@ -1520,17 +1522,22 @@ This option and the C<-E>/C<-b> option are mutually exclusive.
 =item C<-p>
 
 Output C<"/"> after matching directory paths so as to indicate that they are
-directories.
+directories. If the C<-l> option has also been supplied (see above), also
+output C<"/"> after the target paths of matching symlinks to directories.
 
 =item C<-t>
 
 Output most of the type indicators after matching paths (i.e., one of
-C<"/">, C<"@">, C<"=">, C<"|">, or C<< ">" >>).
+C<"/">, C<"@">, C<"=">, C<"|">, or C<< ">" >>). If the C<-l> option has also
+been supplied (see above), also output most of the type indicators as
+appropriate after the target paths of matching symlinks.
 
 =item C<-F>
 
 Output all of the type indicators after matching paths (i.e., one of C<"*">,
-C<"/">, C<"@">, C<"=">, C<"|">, or C<< ">" >>).
+C<"/">, C<"@">, C<"=">, C<"|">, or C<< ">" >>). If the C<-l> option has also
+been supplied (see above), also output all of the type indicators as
+appropriate after the target paths of matching symlinks.
 
 The type indicators have the following meanings:
 

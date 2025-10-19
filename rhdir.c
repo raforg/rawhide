@@ -825,6 +825,27 @@ void visitf_default(void)
 		{
 			linkbuf[nbytes] = '\0';
 			pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, " -> %s", linkbuf);
+
+			if (attr.dir_indicator || attr.most_indicators || attr.all_indicators)
+			{
+				prepare_target();
+
+				if (attr.linkstat_ok)
+				{
+					if (isdir(attr.linkstatbuf))
+						pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "/");
+					else if (islink(attr.linkstatbuf) && (attr.most_indicators || attr.all_indicators))
+						pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "@");
+					else if (issock(attr.linkstatbuf) && (attr.most_indicators || attr.all_indicators))
+						pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "=");
+					else if (isfifo(attr.linkstatbuf) && (attr.most_indicators || attr.all_indicators))
+						pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "|");
+					else if (isdoor(attr.linkstatbuf) && (attr.most_indicators || attr.all_indicators))
+						pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, ">");
+					else if (attr.linkstatbuf->st_mode & (S_IXUSR | S_IXGRP | S_IXOTH) && attr.all_indicators)
+						pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "*");
+				}
+			}
 		}
 	}
 
