@@ -880,11 +880,19 @@ The supported backslash escape sequences are:
 
 =item C<\v>   Vertical tab (I<VT>)
 
-=item C<\0>   Null byte (I<NUL>)
+=item C<\e>   Escape (I<ESC>)
 
 =item C<\\>   A literal backslash (C<"\">)
 
+=item C<\0>   Null byte (I<NUL>)
+
 =item C<\>I<NNN> The byte whose numeric value is I<NNN> (1-3 octal digits)
+
+=item C<\x>I<HH> The byte whose numeric value is I<HH> (1-2 hexadecimal digits)
+
+=item C<\u>I<HHHH> The I<Unicode> character whose code point is I<HHHH> (1-4 hexadecimal digits)
+
+=item C<\U>I<HHHHHHHH> The I<Unicode> character whose code point is I<HHHHHHHH> (1-8 hexadecimal digits)
 
 =back
 

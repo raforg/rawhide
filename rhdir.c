@@ -39,6 +39,7 @@
 #include <wchar.h>
 #include <pwd.h>
 #include <grp.h>
+#include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -2835,7 +2836,9 @@ void visitf_format(void)
 					case 'r': putchar('\r'); break;
 					case 't': putchar('\t'); break;
 					case 'v': putchar('\v'); break;
+					case 'e': putchar('\033'); break;
 					case '\\': putchar('\\'); break;
+
 					case '0':
 					case '1':
 					case '2':
@@ -2848,6 +2851,42 @@ void visitf_format(void)
 							ch <<= 3, ch |= *f - '0';
 
 						putchar(ch);
+						--f;
+
+						break;
+					}
+
+					case 'x':
+					{
+						char *start;
+						int ch;
+
+						for (start = ++f, ch = 0; f - start < 2 && ((*f >= '0' && *f <= '9') || (*f >= 'a' && *f <= 'f') || (*f >= 'A' && *f <= 'F')); ++f)
+							ch <<= 4, ch |= (*f >= '0' && *f <= '9') ? *f - '0' : (*f >= 'a' && *f <= 'f') ? *f - 'a' + 10 : *f - 'A' + 10;
+
+						putchar(ch);
+						--f;
+
+						break;
+					}
+
+					case 'u':
+					case 'U':
+					{
+						int digits = (*f == 'u') ? 4 : 8;
+						char *start;
+						wchar_t wbuf[2] = { 0, 0 };
+						wchar_t *wc = wbuf;
+						char buf[MB_LEN_MAX+1];
+
+						for (start = ++f; f - start < digits && ((*f >= '0' && *f <= '9') || (*f >= 'a' && *f <= 'f') || (*f >= 'A' && *f <= 'F')); ++f)
+							*wc <<= 4, *wc |= (*f >= '0' && *f <= '9') ? *f - '0' : (*f >= 'a' && *f <= 'f') ? *f - 'a' + 10 : *f - 'A' + 10;
+
+						if (wcstombs(buf, wbuf, MB_LEN_MAX+1) == (size_t)-1)
+							printf("%.*s", (int)(f - (start - 2)), start - 2);
+						else
+							printf("%s", buf);
+
 						--f;
 
 						break;
