@@ -268,7 +268,7 @@ test_rawhide "$rh -lF $d/symox" "$d/symox@ -> ox*\n"                          ""
 # Note: On Cygwin, this is wierd. It outputs "fifo@" not "fifo|". Why?
 [ -e $d/fifo ] && test_rawhide "$rh -lF $d/symfifo" "$d/symfifo@ -> fifo|\n"  "" 0 "-lF with symlink to fifo"
 
-rm -r $d/d $d/ux $d/gx $d/ox $d/fifo $d/symdir $d/symsym $d/symux $d/symgx $d/symox $d/symsock $d/symfifo
+rm -rf $d/d $d/ux $d/gx $d/ox $d/fifo $d/symdir $d/symsym $d/symux $d/symgx $d/symox $d/symsock $d/symfifo
 
 test_rawhide_post_hook() { true; }
 

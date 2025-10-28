@@ -1151,7 +1151,7 @@ backslash, both backslashes need to be quoted in the string literal with
 backslashes.
 
 The following subset of I<ksh> extended glob pattern notation is supported
-on platforms with I<GNU glibc> (i.e., I<Linux>):
+on platforms with S<I<GNU glibc>> (i.e., I<Linux>):
 
 =over 4
 
@@ -1853,10 +1853,8 @@ allow you to use I<perl> as the user shell:
 But this is getting silly now. Although, it's only 2.73 times slower than
 C</bin/sh>, so maybe it's not so silly. The I<python3> equivalent (no
 wrapper script needed, just C<RAWHIDE_USER_SHELL_LIKE_CSH=1>) is 16.72 times
-slower than C</bin/sh>. The I<raku> equivalent (with a wrapper script) is
-3.08 times faster than C</bin/sh>. But don't read too much into these
-timings. They aren't meaningful tests. They're only testing process startup
-times.
+slower than C</bin/sh>. But don't read too much into these timings. They
+aren't meaningful tests. They're only testing process startup times.
 
 =back
 

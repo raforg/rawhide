@@ -234,6 +234,141 @@ test_rawhide "$rh -L '%-8f\n'           $d/f" "f       \n"                      
 test_rawhide "$rh -L '%8.0f\n'          $d/f" "        \n"                                 ""                                         0 "-L '%8.5f\\\\n'"
 test_rawhide "$rh -L '%-8.0f\n'         $d/f" "        \n"                                 ""                                         0 "-L '%-8.5f\\\\n'"
 
+if [ `locale charmap` = UTF-8 ]
+then
+	# Test -L field width/precision for strings with multi-byte and multi-charwidth characters
+	#
+	# Note: macOS won't create non-utf8 file names so we just skip these tests there
+	# Note: NetBSD's wcwidth() is broken (it returns -1 instead of 2 for emojis)
+	# Note: Solaris is like NetBSD but worse. It also thinks Roman Numeral One is two characters wide
+	# Note: Cygwin doesn't work either.
+	#
+	# Apparently, wcwidth() is notoriously broken, and fundamentally useless
+	# when faced with complex grapheme clusters.
+	# We should be using wcswidth instead but apparently that is broken too.
+	# And it would need to be done repeatedly so it would be slower.
+	#
+	# There are attempts to generate a working wcwidth from Unicode data but they don't work for me.
+	#
+	# But this is still a big improvement for accented latin characters and asian
+	# characters on all systems, and for simple emoji on Linux, FreeBSD, OpenBSD, and macOS.
+
+	case "`uname`" in
+		Darwin|NetBSD|SunOS|CYGWIN*)
+			;;
+		*)
+			mkdir $d/d
+			touch $d/d/$(printf 'abcdéf')
+			touch $d/d/$(printf 'abc\370def')
+			touch $d/d/$(printf 'abc\342\205\240def')
+			touch $d/d/$(printf 'abc\360\237\231\202def')
+			touch $d/d/$(printf 'abc\370\342\205\240\360\237\231\202def')
+			test_rawhide_post_hook() { test_rh_sort_post_hook; }
+
+			test_rawhide "$rh -m1 -L '%f.\n'          $d/d" "abcdéf.\nabc\342\205\240def.\nabc\360\237\231\202def.\nabc\370def.\nabc\370\342\205\240\360\237\231\202def.\n"         "" 0 "-L '%f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%9f.\n'         $d/d" "   abcdéf.\n  abc\342\205\240def.\n  abc\370def.\n abc\360\237\231\202def.\nabc\370\342\205\240\360\237\231\202def.\n" "" 0 "-L '%9f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%-9f.\n'        $d/d" "abcdéf   .\nabc\342\205\240def  .\nabc\360\237\231\202def .\nabc\370def  .\nabc\370\342\205\240\360\237\231\202def.\n" "" 0 "-L '%-9f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%9.0f.\n'       $d/d" "         .\n         .\n         .\n         .\n         .\n"                                                          "" 0 "-L '%9.0f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%-9.0f.\n'      $d/d" "         .\n         .\n         .\n         .\n         .\n"                                                          "" 0 "-L '%-9.0f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%9.1f.\n'       $d/d" "        a.\n        a.\n        a.\n        a.\n        a.\n"                                                          "" 0 "-L '%9.1f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%9.2f.\n'       $d/d" "       ab.\n       ab.\n       ab.\n       ab.\n       ab.\n"                                                          "" 0 "-L '%9.2f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%9.3f.\n'       $d/d" "      abc.\n      abc.\n      abc.\n      abc.\n      abc.\n"                                                          "" 0 "-L '%9.3f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%9.4f.\n'       $d/d" "      abc.\n     abcd.\n     abc$(printf '\342\205\240').\n     abc$(printf '\370').\n     abc$(printf '\370').\n"     "" 0 "-L '%9.4f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%9.5f.\n'       $d/d" "    abcdé.\n    abc\342\205\240d.\n    abc\360\237\231\202.\n    abc\370d.\n    abc\370\342\205\240.\n"                "" 0 "-L '%9.5f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%9.6f.\n'       $d/d" "    abc\370\342\205\240.\n   abcdéf.\n   abc\342\205\240de.\n   abc\360\237\231\202d.\n   abc\370de.\n"                "" 0 "-L '%9.6f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%9.7f.\n'       $d/d" "   abcdéf.\n  abc\342\205\240def.\n  abc\360\237\231\202de.\n  abc\370def.\n  abc\370\342\205\240\360\237\231\202.\n"  "" 0 "-L '%9.7f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%9.8f.\n'       $d/d" "   abcdéf.\n  abc\342\205\240def.\n  abc\370def.\n abc\360\237\231\202def.\n abc\370\342\205\240\360\237\231\202d.\n"  "" 0 "-L '%9.8f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%9.9f.\n'       $d/d" "   abcdéf.\n  abc\342\205\240def.\n  abc\370def.\n abc\360\237\231\202def.\nabc\370\342\205\240\360\237\231\202de.\n"  "" 0 "-L '%9.9f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%9.10f.\n'      $d/d" "   abcdéf.\n  abc\342\205\240def.\n  abc\370def.\n abc\360\237\231\202def.\nabc\370\342\205\240\360\237\231\202def.\n" "" 0 "-L '%9.10f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%9.11f.\n'      $d/d" "   abcdéf.\n  abc\342\205\240def.\n  abc\370def.\n abc\360\237\231\202def.\nabc\370\342\205\240\360\237\231\202def.\n" "" 0 "-L '%9.11f\\\\n' multi-byte multi-width chars"
+
+			test_rawhide "$rh -m1 -L '%10f.\n'        $d/d" "    abcdéf.\n   abc\342\205\240def.\n   abc\370def.\n  abc\360\237\231\202def.\nabc\370\342\205\240\360\237\231\202def.\n" "" 0 "-L '%10f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%-10f.\n'       $d/d" "abcdéf    .\nabc\342\205\240def   .\nabc\360\237\231\202def  .\nabc\370def   .\nabc\370\342\205\240\360\237\231\202def.\n" "" 0 "-L '%-10f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%10.0f.\n'      $d/d" "          .\n          .\n          .\n          .\n          .\n"                                                         "" 0 "-L '%10.0f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%-10.0f.\n'     $d/d" "          .\n          .\n          .\n          .\n          .\n"                                                         "" 0 "-L '%-10.0f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%10.1f.\n'      $d/d" "         a.\n         a.\n         a.\n         a.\n         a.\n"                                                         "" 0 "-L '%10.1f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%10.2f.\n'      $d/d" "        ab.\n        ab.\n        ab.\n        ab.\n        ab.\n"                                                         "" 0 "-L '%10.2f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%10.3f.\n'      $d/d" "       abc.\n       abc.\n       abc.\n       abc.\n       abc.\n"                                                         "" 0 "-L '%10.3f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%10.4f.\n'      $d/d" "       abc.\n      abcd.\n      abc$(printf '\342\205\240').\n      abc$(printf '\370').\n      abc$(printf '\370').\n"    "" 0 "-L '%10.4f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%10.5f.\n'      $d/d" "     abcdé.\n     abc\342\205\240d.\n     abc\360\237\231\202.\n     abc\370d.\n     abc\370\342\205\240.\n"               "" 0 "-L '%10.5f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%10.6f.\n'      $d/d" "     abc\370\342\205\240.\n    abcdéf.\n    abc\342\205\240de.\n    abc\360\237\231\202d.\n    abc\370de.\n"               "" 0 "-L '%10.6f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%10.7f.\n'      $d/d" "    abcdéf.\n   abc\342\205\240def.\n   abc\360\237\231\202de.\n   abc\370def.\n   abc\370\342\205\240\360\237\231\202.\n" "" 0 "-L '%10.7f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%10.8f.\n'      $d/d" "    abcdéf.\n   abc\342\205\240def.\n   abc\370def.\n  abc\360\237\231\202def.\n  abc\370\342\205\240\360\237\231\202d.\n" "" 0 "-L '%10.8f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%10.9f.\n'      $d/d" "    abcdéf.\n   abc\342\205\240def.\n   abc\370def.\n  abc\360\237\231\202def.\n abc\370\342\205\240\360\237\231\202de.\n" "" 0 "-L '%10.9f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%10.10f.\n'     $d/d" "    abcdéf.\n   abc\342\205\240def.\n   abc\370def.\n  abc\360\237\231\202def.\nabc\370\342\205\240\360\237\231\202def.\n" "" 0 "-L '%10.10f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%10.11f.\n'     $d/d" "    abcdéf.\n   abc\342\205\240def.\n   abc\370def.\n  abc\360\237\231\202def.\nabc\370\342\205\240\360\237\231\202def.\n" "" 0 "-L '%10.11f\\\\n' multi-byte multi-width chars"
+
+			test_rawhide "$rh -m1 -L '%11f.\n'        $d/d" "     abcdéf.\n    abc\342\205\240def.\n    abc\370def.\n   abc\360\237\231\202def.\n abc\370\342\205\240\360\237\231\202def.\n" "" 0 "-L '%11f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%-11f.\n'       $d/d" "abcdéf     .\nabc\342\205\240def    .\nabc\360\237\231\202def   .\nabc\370def    .\nabc\370\342\205\240\360\237\231\202def .\n" "" 0 "-L '%-11f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%11.0f.\n'      $d/d" "           .\n           .\n           .\n           .\n           .\n"                                                         "" 0 "-L '%11.0f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%-11.0f.\n'     $d/d" "           .\n           .\n           .\n           .\n           .\n"                                                         "" 0 "-L '%-11.0f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%11.1f.\n'      $d/d" "          a.\n          a.\n          a.\n          a.\n          a.\n"                                                         "" 0 "-L '%11.1f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%11.2f.\n'      $d/d" "         ab.\n         ab.\n         ab.\n         ab.\n         ab.\n"                                                         "" 0 "-L '%11.2f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%11.3f.\n'      $d/d" "        abc.\n        abc.\n        abc.\n        abc.\n        abc.\n"                                                         "" 0 "-L '%11.3f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%11.4f.\n'      $d/d" "        abc.\n       abcd.\n       abc$(printf '\342\205\240').\n       abc$(printf '\370').\n       abc$(printf '\370').\n"    "" 0 "-L '%11.4f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%11.5f.\n'      $d/d" "      abcdé.\n      abc\342\205\240d.\n      abc\360\237\231\202.\n      abc\370d.\n      abc\370\342\205\240.\n"               "" 0 "-L '%11.5f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%11.6f.\n'      $d/d" "      abc\370\342\205\240.\n     abcdéf.\n     abc\342\205\240de.\n     abc\360\237\231\202d.\n     abc\370de.\n"               "" 0 "-L '%11.6f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%11.7f.\n'      $d/d" "     abcdéf.\n    abc\342\205\240def.\n    abc\360\237\231\202de.\n    abc\370def.\n    abc\370\342\205\240\360\237\231\202.\n" "" 0 "-L '%11.7f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%11.8f.\n'      $d/d" "     abcdéf.\n    abc\342\205\240def.\n    abc\370def.\n   abc\360\237\231\202def.\n   abc\370\342\205\240\360\237\231\202d.\n" "" 0 "-L '%11.8f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%11.9f.\n'      $d/d" "     abcdéf.\n    abc\342\205\240def.\n    abc\370def.\n   abc\360\237\231\202def.\n  abc\370\342\205\240\360\237\231\202de.\n" "" 0 "-L '%11.9f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%11.10f.\n'     $d/d" "     abcdéf.\n    abc\342\205\240def.\n    abc\370def.\n   abc\360\237\231\202def.\n abc\370\342\205\240\360\237\231\202def.\n" "" 0 "-L '%11.10f\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%11.11f.\n'     $d/d" "     abcdéf.\n    abc\342\205\240def.\n    abc\370def.\n   abc\360\237\231\202def.\n abc\370\342\205\240\360\237\231\202def.\n" "" 0 "-L '%11.11f\\\\n' multi-byte multi-width chars"
+
+			test_rawhide "$rh -m1 -L '%p.\n'          $d/d" "$d/d/abcdéf.\n$d/d/abc\342\205\240def.\n$d/d/abc\360\237\231\202def.\n$d/d/abc\370def.\n$d/d/abc\370\342\205\240\360\237\231\202def.\n"         "" 0 "-L '%p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%22p.\n'        $d/d" "   $d/d/abcdéf.\n  $d/d/abc\342\205\240def.\n  $d/d/abc\370def.\n $d/d/abc\360\237\231\202def.\n$d/d/abc\370\342\205\240\360\237\231\202def.\n" "" 0 "-L '%22p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%-22p.\n'       $d/d" "$d/d/abcdéf   .\n$d/d/abc\342\205\240def  .\n$d/d/abc\360\237\231\202def .\n$d/d/abc\370def  .\n$d/d/abc\370\342\205\240\360\237\231\202def.\n" "" 0 "-L '%-22p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%22.0p.\n'      $d/d" "                      .\n                      .\n                      .\n                      .\n                      .\n"                                                          "" 0 "-L '%22.0p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%-22.0p.\n'     $d/d" "                      .\n                      .\n                      .\n                      .\n                      .\n"                                                          "" 0 "-L '%-22.0p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%22.14p.\n'     $d/d" "        $d/d/a.\n        $d/d/a.\n        $d/d/a.\n        $d/d/a.\n        $d/d/a.\n"                                                          "" 0 "-L '%22.14p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%22.15p.\n'     $d/d" "       $d/d/ab.\n       $d/d/ab.\n       $d/d/ab.\n       $d/d/ab.\n       $d/d/ab.\n"                                                          "" 0 "-L '%22.15p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%22.16p.\n'     $d/d" "      $d/d/abc.\n      $d/d/abc.\n      $d/d/abc.\n      $d/d/abc.\n      $d/d/abc.\n"                                                          "" 0 "-L '%22.16p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%22.17p.\n'     $d/d" "      $d/d/abc.\n     $d/d/abcd.\n     $d/d/abc$(printf '\342\205\240').\n     $d/d/abc$(printf '\370').\n     $d/d/abc$(printf '\370').\n"     "" 0 "-L '%22.17p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%22.18p.\n'     $d/d" "    $d/d/abcdé.\n    $d/d/abc\342\205\240d.\n    $d/d/abc\360\237\231\202.\n    $d/d/abc\370d.\n    $d/d/abc\370\342\205\240.\n"                "" 0 "-L '%22.18p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%22.19p.\n'     $d/d" "    $d/d/abc\370\342\205\240.\n   $d/d/abcdéf.\n   $d/d/abc\342\205\240de.\n   $d/d/abc\360\237\231\202d.\n   $d/d/abc\370de.\n"                "" 0 "-L '%22.19p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%22.20p.\n'     $d/d" "   $d/d/abcdéf.\n  $d/d/abc\342\205\240def.\n  $d/d/abc\360\237\231\202de.\n  $d/d/abc\370def.\n  $d/d/abc\370\342\205\240\360\237\231\202.\n"  "" 0 "-L '%22.20p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%22.21p.\n'     $d/d" "   $d/d/abcdéf.\n  $d/d/abc\342\205\240def.\n  $d/d/abc\370def.\n $d/d/abc\360\237\231\202def.\n $d/d/abc\370\342\205\240\360\237\231\202d.\n"  "" 0 "-L '%22.21p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%22.22p.\n'     $d/d" "   $d/d/abcdéf.\n  $d/d/abc\342\205\240def.\n  $d/d/abc\370def.\n $d/d/abc\360\237\231\202def.\n$d/d/abc\370\342\205\240\360\237\231\202de.\n"  "" 0 "-L '%22.22p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%22.23p.\n'     $d/d" "   $d/d/abcdéf.\n  $d/d/abc\342\205\240def.\n  $d/d/abc\370def.\n $d/d/abc\360\237\231\202def.\n$d/d/abc\370\342\205\240\360\237\231\202def.\n" "" 0 "-L '%22.23p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%22.24p.\n'     $d/d" "   $d/d/abcdéf.\n  $d/d/abc\342\205\240def.\n  $d/d/abc\370def.\n $d/d/abc\360\237\231\202def.\n$d/d/abc\370\342\205\240\360\237\231\202def.\n" "" 0 "-L '%22.24p\\\\n' multi-byte multi-width chars"
+
+			test_rawhide "$rh -m1 -L '%23p.\n'        $d/d" "    $d/d/abcdéf.\n   $d/d/abc\342\205\240def.\n   $d/d/abc\370def.\n  $d/d/abc\360\237\231\202def.\n$d/d/abc\370\342\205\240\360\237\231\202def.\n" "" 0 "-L '%23p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%-23p.\n'       $d/d" "$d/d/abcdéf    .\n$d/d/abc\342\205\240def   .\n$d/d/abc\360\237\231\202def  .\n$d/d/abc\370def   .\n$d/d/abc\370\342\205\240\360\237\231\202def.\n" "" 0 "-L '%-23p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%23.0p.\n'      $d/d" "                       .\n                       .\n                       .\n                       .\n                       .\n"                 "" 0 "-L '%23.0p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%-23.0p.\n'     $d/d" "                       .\n                       .\n                       .\n                       .\n                       .\n"                 "" 0 "-L '%-23.0p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%23.14p.\n'     $d/d" "         $d/d/a.\n         $d/d/a.\n         $d/d/a.\n         $d/d/a.\n         $d/d/a.\n"                                                         "" 0 "-L '%23.14p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%23.15p.\n'     $d/d" "        $d/d/ab.\n        $d/d/ab.\n        $d/d/ab.\n        $d/d/ab.\n        $d/d/ab.\n"                                                         "" 0 "-L '%23.15p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%23.16p.\n'     $d/d" "       $d/d/abc.\n       $d/d/abc.\n       $d/d/abc.\n       $d/d/abc.\n       $d/d/abc.\n"                                                         "" 0 "-L '%23.16p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%23.17p.\n'     $d/d" "       $d/d/abc.\n      $d/d/abcd.\n      $d/d/abc$(printf '\342\205\240').\n      $d/d/abc$(printf '\370').\n      $d/d/abc$(printf '\370').\n"    "" 0 "-L '%23.17p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%23.18p.\n'     $d/d" "     $d/d/abcdé.\n     $d/d/abc\342\205\240d.\n     $d/d/abc\360\237\231\202.\n     $d/d/abc\370d.\n     $d/d/abc\370\342\205\240.\n"               "" 0 "-L '%23.18p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%23.19p.\n'     $d/d" "     $d/d/abc\370\342\205\240.\n    $d/d/abcdéf.\n    $d/d/abc\342\205\240de.\n    $d/d/abc\360\237\231\202d.\n    $d/d/abc\370de.\n"               "" 0 "-L '%23.19p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%23.20p.\n'     $d/d" "    $d/d/abcdéf.\n   $d/d/abc\342\205\240def.\n   $d/d/abc\360\237\231\202de.\n   $d/d/abc\370def.\n   $d/d/abc\370\342\205\240\360\237\231\202.\n" "" 0 "-L '%23.20p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%23.21p.\n'     $d/d" "    $d/d/abcdéf.\n   $d/d/abc\342\205\240def.\n   $d/d/abc\370def.\n  $d/d/abc\360\237\231\202def.\n  $d/d/abc\370\342\205\240\360\237\231\202d.\n" "" 0 "-L '%23.21p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%23.22p.\n'     $d/d" "    $d/d/abcdéf.\n   $d/d/abc\342\205\240def.\n   $d/d/abc\370def.\n  $d/d/abc\360\237\231\202def.\n $d/d/abc\370\342\205\240\360\237\231\202de.\n" "" 0 "-L '%23.22p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%23.23p.\n'     $d/d" "    $d/d/abcdéf.\n   $d/d/abc\342\205\240def.\n   $d/d/abc\370def.\n  $d/d/abc\360\237\231\202def.\n$d/d/abc\370\342\205\240\360\237\231\202def.\n" "" 0 "-L '%23.23p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%23.24p.\n'     $d/d" "    $d/d/abcdéf.\n   $d/d/abc\342\205\240def.\n   $d/d/abc\370def.\n  $d/d/abc\360\237\231\202def.\n$d/d/abc\370\342\205\240\360\237\231\202def.\n" "" 0 "-L '%23.24p\\\\n' multi-byte multi-width chars"
+
+			test_rawhide "$rh -m1 -L '%24p.\n'        $d/d" "     $d/d/abcdéf.\n    $d/d/abc\342\205\240def.\n    $d/d/abc\370def.\n   $d/d/abc\360\237\231\202def.\n $d/d/abc\370\342\205\240\360\237\231\202def.\n" "" 0 "-L '%24p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%-24p.\n'       $d/d" "$d/d/abcdéf     .\n$d/d/abc\342\205\240def    .\n$d/d/abc\360\237\231\202def   .\n$d/d/abc\370def    .\n$d/d/abc\370\342\205\240\360\237\231\202def .\n" "" 0 "-L '%-24p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%24.0p.\n'      $d/d" "                        .\n                        .\n                        .\n                        .\n                        .\n"                 "" 0 "-L '%24.0p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%-24.0p.\n'     $d/d" "                        .\n                        .\n                        .\n                        .\n                        .\n"                 "" 0 "-L '%-24.0p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%24.14p.\n'     $d/d" "          $d/d/a.\n          $d/d/a.\n          $d/d/a.\n          $d/d/a.\n          $d/d/a.\n"                                                         "" 0 "-L '%24.14p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%24.15p.\n'     $d/d" "         $d/d/ab.\n         $d/d/ab.\n         $d/d/ab.\n         $d/d/ab.\n         $d/d/ab.\n"                                                         "" 0 "-L '%24.15p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%24.16p.\n'     $d/d" "        $d/d/abc.\n        $d/d/abc.\n        $d/d/abc.\n        $d/d/abc.\n        $d/d/abc.\n"                                                         "" 0 "-L '%24.16p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%24.17p.\n'     $d/d" "        $d/d/abc.\n       $d/d/abcd.\n       $d/d/abc$(printf '\342\205\240').\n       $d/d/abc$(printf '\370').\n       $d/d/abc$(printf '\370').\n"    "" 0 "-L '%24.17p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%24.18p.\n'     $d/d" "      $d/d/abcdé.\n      $d/d/abc\342\205\240d.\n      $d/d/abc\360\237\231\202.\n      $d/d/abc\370d.\n      $d/d/abc\370\342\205\240.\n"               "" 0 "-L '%24.18p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%24.19p.\n'     $d/d" "      $d/d/abc\370\342\205\240.\n     $d/d/abcdéf.\n     $d/d/abc\342\205\240de.\n     $d/d/abc\360\237\231\202d.\n     $d/d/abc\370de.\n"               "" 0 "-L '%24.19p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%24.20p.\n'     $d/d" "     $d/d/abcdéf.\n    $d/d/abc\342\205\240def.\n    $d/d/abc\360\237\231\202de.\n    $d/d/abc\370def.\n    $d/d/abc\370\342\205\240\360\237\231\202.\n" "" 0 "-L '%24.20p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%24.21p.\n'     $d/d" "     $d/d/abcdéf.\n    $d/d/abc\342\205\240def.\n    $d/d/abc\370def.\n   $d/d/abc\360\237\231\202def.\n   $d/d/abc\370\342\205\240\360\237\231\202d.\n" "" 0 "-L '%24.21p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%24.22p.\n'     $d/d" "     $d/d/abcdéf.\n    $d/d/abc\342\205\240def.\n    $d/d/abc\370def.\n   $d/d/abc\360\237\231\202def.\n  $d/d/abc\370\342\205\240\360\237\231\202de.\n" "" 0 "-L '%24.22p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%24.23p.\n'     $d/d" "     $d/d/abcdéf.\n    $d/d/abc\342\205\240def.\n    $d/d/abc\370def.\n   $d/d/abc\360\237\231\202def.\n $d/d/abc\370\342\205\240\360\237\231\202def.\n" "" 0 "-L '%24.23p\\\\n' multi-byte multi-width chars"
+			test_rawhide "$rh -m1 -L '%24.24p.\n'     $d/d" "     $d/d/abcdéf.\n    $d/d/abc\342\205\240def.\n    $d/d/abc\370def.\n   $d/d/abc\360\237\231\202def.\n $d/d/abc\370\342\205\240\360\237\231\202def.\n" "" 0 "-L '%24.24p\\\\n' multi-byte multi-width chars"
+
+			test_rawhide_post_hook() { true; }
+			rm -r $d/d
+			;;
+	esac
+fi
+
 grpch="[a-zA-Z0-9._-]"
 grp="$grpch+"
 test_rawhide_grep "$rh -L '%g\n'        $d/f" "^$grp\$"                                    ""                                         0 "-L '%g\\\\n' (ok to fail with bizarre group name)"

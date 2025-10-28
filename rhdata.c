@@ -22,7 +22,7 @@
 * 20231013 raf <raf@raf.org>
 */
 
-#define _GNU_SOURCE /* For FNM_EXTMATCH and FNM_CASEFOLD in <fnmatch.h> */
+#define _GNU_SOURCE /* For FNM_CASEFOLD in <fnmatch.h> */
 #define _FILE_OFFSET_BITS 64 /* For 64-bit off_t on 32-bit systems (Not AIX) */
 
 #include <stdlib.h>

@@ -22,7 +22,7 @@
 * 20231013 raf <raf@raf.org>
 */
 
-#define _GNU_SOURCE /* For FNM_EXTMATCH and FNM_CASEFOLD in <fnmatch.h> and wcswidth() in <wchar.h> */
+#define _GNU_SOURCE /* For wcswidth() and wcwidth() in <wchar.h> */
 #define _FILE_OFFSET_BITS 64 /* For 64-bit off_t on 32-bit systems (Not AIX) */
 
 #include <stdlib.h>
@@ -334,6 +334,100 @@ static ssize_t wcoffset(const char *str)
 	/* The offset is the difference between the bytes and the width */
 
 	return (width == -1) ? 0 : num_bytes - width;
+}
+
+/*
+
+static size_t cwtow(int width_char_widths, int length_char_widths, const char *str);
+
+Given a field width and precision/length expressed as numbers of character
+widths, and the string being output, return the field width translated into
+bytes for use with printf().
+
+*/
+
+static size_t cwtow(int width_char_widths, int length_char_widths, const char *str)
+{
+	const char *s, *e;
+	size_t w;
+	wchar_t wc;
+	int bytes, wcw;
+
+	/* Measure the character widths in str */
+
+	for (s = str, e = strchr(s, '\0'), w = 0; *s; s += bytes, w += wcw)
+	{
+		/* Decode the character, and reset the shift state (in case of error) */
+
+		wc = (wchar_t)0;
+
+		if ((bytes = mbtowc(&wc, s, e - s)) == -1)
+			bytes = 1;
+
+		mbtowc(NULL, NULL, 0);
+
+		/* Get this character's width, or 1 for invalid or non-printable (for ? to tty, or raw byte) */
+
+		if (wc == (wchar_t)0 || (wcw = wcwidth((wint_t)wc)) == -1)
+			wcw = 1;
+
+		/* If this character is too wide for the specified length, stop early */
+
+		if (length_char_widths != -1 && w + wcw > length_char_widths)
+			break;
+	}
+
+	/* If padding is needed, return the length and one byte per padding space */
+
+	if (w < width_char_widths)
+		return (size_t)(s - str) + (size_t)(width_char_widths - w);
+
+	/* If no padding is needed, just return the length */
+
+	return (size_t)(s - str);
+}
+
+/*
+
+static size_t cwtol(int length_char_widths, const char *str);
+
+Given the precision/length expressed as a number of character widths, and
+the string being output, return the length translated into bytes for use
+with printf().
+
+*/
+
+static size_t cwtol(int length_char_widths, const char *str)
+{
+	const char *s, *e;
+	wchar_t wc;
+	int bytes, wcw;
+
+	/* Measure the bytes that represent the given number of character widths */
+
+	for (s = str, e = strchr(s, '\0'); length_char_widths > 0 && *s; s += bytes, length_char_widths -= wcw)
+	{
+		/* Decode the character, and reset the shift state (in case of error) */
+
+		wc = (wchar_t)0;
+
+		if ((bytes = mbtowc(&wc, s, e - s)) == -1)
+			bytes = 1;
+
+		mbtowc(NULL, NULL, 0);
+
+		/* Get this character's width, or 1 for invalid or non-printable (for ? to tty, or raw byte) */
+
+		if (wc == (wchar_t)0 || (wcw = wcwidth((wint_t)wc)) == -1)
+			wcw = 1;
+
+		/* If this character is too wide, stop early */
+
+		if (wcw > length_char_widths)
+			break;
+	}
+
+	return (size_t)(s - str);
 }
 
 /*
@@ -2905,6 +2999,8 @@ void visitf_format(void)
 				#define OFMTSIZE 33
 				#define BUFSIZE 128
 				char ofmt[OFMTSIZE], *o = ofmt;
+				char onum[BUFSIZE], *on;
+				char owp[BUFSIZ], *owpp;
 				char buf[BUFSIZE];
 				char tfmt[3];
 
@@ -2913,21 +3009,43 @@ void visitf_format(void)
 				tfmt[2] = '\0';
 
 				#define ofmt_space() (o - ofmt < OFMTSIZE - 1)
-				#define ofmt_add(c) if (ofmt_space()) { *o++ = (c); *o = '\0'; } else fatal("invalid -L argument: %s (conversion flags/width/precision too long)", ok(attr.format))
+				#define ofmt_fatal() fatal("invalid -L argument: %s (conversion flags/width/precision too long)", ok(attr.format))
+				#define ofmt_add(c) if (ofmt_space()) { *o++ = (c); *o = '\0'; } else ofmt_fatal()
 				#define ofmt_add_lld() ofmt_add('l'); ofmt_add('l'); ofmt_add('d')
+				#define ofmt_add_wp() for (owpp = owp; ofmt_space() && *owpp; *o++ = *owpp++); if (*owpp) ofmt_fatal()
+				#define ofmt_add_num(n) snprintf(on = onum, BUFSIZE, "%u", (unsigned int)n); while (ofmt_space() && *on) *o++ = *on++; if (*on) ofmt_fatal()
+				#define ofmt_add_wl(w, l, s) if (w != -1) { ofmt_add_num(cwtow(w, l, s)); } if (l != -1) { ofmt_add('.'); ofmt_add_num(cwtol(l, s)); }
+				#define owp_space() (owpp - owp < BUFSIZE - 1)
+				#define owp_add(c) if (owp_space()) { *owpp++ = (c); *owpp = '\0'; } else ofmt_fatal()
+				#define add_digit(n, d) if (n == -1) n = 0; n *= 10; n += d - '0'
+				#define is_digit(c) isdigit((int)(unsigned char)c)
 
 				while (ofmt_space() && f[1] && strchr(" -+#0", f[1]))
 					*o++ = *++f;
 
-				while (ofmt_space() && isdigit((int)(unsigned char)f[1]))
-					*o++ = *++f;
+				/* Parse width.precision into width and length to be treated as character widths for string conversions. */
+				/* Copy width.precision into owp buffer to be copied for non-string conversions. */
 
-				if (ofmt_space() && f[1] == '.')
+				int width = -1;
+				int length = -1;
+				owpp = owp;
+				*owpp = '\0';
+
+				while (is_digit(f[1]))
 				{
-					*o++ = *++f;
+					add_digit(width, *++f);
+					owp_add(*f);
+				}
 
-					while (ofmt_space() && isdigit((int)(unsigned char)f[1]))
-						*o++ = *++f;
+				if (f[1] == '.')
+				{
+					owp_add(*++f);
+
+					while (is_digit(f[1]))
+					{
+						add_digit(length, *++f);
+						owp_add(*f);
+					}
 				}
 
 				/* Process conversion: finish ofmt then use it */
@@ -2944,11 +3062,11 @@ void visitf_format(void)
 
 					case 'a': /* Accessed time in ctime format */
 					{
-						ofmt_add('s');
-
 						if (strftime(buf, BUFSIZE, "%a %b %e %H:%M:%S %Y", localtime(&attr.statbuf->st_atime)) == 0)
 							*buf = '\0';
 
+						ofmt_add_wl(width, length, buf);
+						ofmt_add('s');
 						debug_extra(("fmt %%a \"%s\", \"%s\"", ofmt, buf));
 						printf(ofmt, buf);
 
@@ -2959,6 +3077,7 @@ void visitf_format(void)
 					{
 						if (*++f == '@')
 						{
+							ofmt_add_wp();
 							ofmt_add_lld();
 							debug_extra(("fmt %%A@ \"%s\", %lld", ofmt, (llong)attr.statbuf->st_atime));
 							printf(ofmt, (llong)attr.statbuf->st_atime);
@@ -2969,12 +3088,13 @@ void visitf_format(void)
 						}
 						else
 						{
-							ofmt_add('s');
 							tfmt[1] = *f;
 
 							if (strftime(buf, BUFSIZE, tfmt, localtime(&attr.statbuf->st_atime)) == 0)
 								*buf = '\0';
 
+							ofmt_add_wl(width, length, buf);
+							ofmt_add('s');
 							debug_extra(("fmt %%A%c \"%s\", \"%s\"", tfmt[1], ofmt, buf));
 							printf(ofmt, buf);
 						}
@@ -2984,6 +3104,7 @@ void visitf_format(void)
 
 					case 'b': /* Blocks */
 					{
+						ofmt_add_wp();
 						ofmt_add_lld();
 						debug_extra(("fmt %%b \"%s\", %lld", ofmt, (llong)attr.statbuf->st_blocks));
 						printf(ofmt, (llong)attr.statbuf->st_blocks);
@@ -2993,6 +3114,7 @@ void visitf_format(void)
 
 					case 'B': /* Block size */
 					{
+						ofmt_add_wp();
 						ofmt_add_lld();
 						debug_extra(("fmt %%B \"%s\", %lld", ofmt, (llong)attr.statbuf->st_blksize));
 						printf(ofmt, (llong)attr.statbuf->st_blksize);
@@ -3002,11 +3124,11 @@ void visitf_format(void)
 
 					case 'c': /* Inode changed time in ctime format */
 					{
-						ofmt_add('s');
-
 						if (strftime(buf, BUFSIZE, "%a %b %e %H:%M:%S %Y", localtime(&attr.statbuf->st_ctime)) == 0)
 							*buf = '\0';
 
+						ofmt_add_wl(width, length, buf);
+						ofmt_add('s');
 						debug_extra(("fmt %%c \"%s\", \"%s\"", ofmt, buf));
 						printf(ofmt, buf);
 
@@ -3017,6 +3139,7 @@ void visitf_format(void)
 					{
 						if (*++f == '@')
 						{
+							ofmt_add_wp();
 							ofmt_add_lld();
 							debug_extra(("fmt %%C@ \"%s\", %lld", ofmt, (llong)attr.statbuf->st_ctime));
 							printf(ofmt, (llong)attr.statbuf->st_ctime);
@@ -3027,12 +3150,13 @@ void visitf_format(void)
 						}
 						else
 						{
-							ofmt_add('s');
 							tfmt[1] = *f;
 
 							if (strftime(buf, BUFSIZE, tfmt, localtime(&attr.statbuf->st_ctime)) == 0)
 								*buf = '\0';
 
+							ofmt_add_wl(width, length, buf);
+							ofmt_add('s');
 							debug_extra(("fmt %%C%c \"%s\", \"%s\"", tfmt[1], ofmt, buf));
 							printf(ofmt, buf);
 						}
@@ -3042,6 +3166,7 @@ void visitf_format(void)
 
 					case 'd': /* Depth relative to the starting search directory */
 					{
+						ofmt_add_wp();
 						ofmt_add('d');
 						debug_extra(("fmt %%d \"%s\", %d", ofmt, attr.depth));
 						printf(ofmt, attr.depth);
@@ -3051,6 +3176,7 @@ void visitf_format(void)
 
 					case 'D': /* Device number of the filesystem */
 					{
+						ofmt_add_wp();
 						ofmt_add_lld();
 						debug_extra(("fmt %%D \"%s\", %lld", ofmt, (llong)attr.statbuf->st_dev));
 						printf(ofmt, (llong)attr.statbuf->st_dev);
@@ -3060,6 +3186,7 @@ void visitf_format(void)
 
 					case 'E': /* Device number */
 					{
+						ofmt_add_wp();
 						ofmt_add_lld();
 						debug_extra(("fmt %%E \"%s\", %lld", ofmt, (llong)attr.statbuf->st_rdev));
 						printf(ofmt, (llong)attr.statbuf->st_rdev);
@@ -3069,10 +3196,10 @@ void visitf_format(void)
 
 					case 'f': /* Base name or "/" for / */
 					{
-						char *base;
+						char *base = ((base = strrchr(attr.fpath, '/')) && base[1]) ? base + 1 : attr.fpath;
 
+						ofmt_add_wl(width, length, base);
 						ofmt_add('s');
-						base = ((base = strrchr(attr.fpath, '/')) && base[1]) ? base + 1 : attr.fpath;
 						debug_extra(("fmt %%f \"%s\", \"%s\"", ofmt, base));
 						printf_sanitized(ofmt, base);
 
@@ -3083,16 +3210,18 @@ void visitf_format(void)
 					{
 						struct group *grp;
 
-						ofmt_add('s');
-
 						if ((grp = getgrgid(attr.statbuf->st_gid)))
 						{
+							ofmt_add_wl(width, length, grp->gr_name);
+							ofmt_add('s');
 							debug_extra(("fmt %%g \"%s\", \"%s\"", ofmt, grp->gr_name));
 							printf(ofmt, grp->gr_name);
 						}
 						else /* Any flags are %s based, not %d based */
 						{
 							snprintf(buf, BUFSIZE, "%d", (int)attr.statbuf->st_gid);
+							ofmt_add_wl(width, length, buf);
+							ofmt_add('s');
 							debug_extra(("fmt %%g \"%s\", \"%s\"", ofmt, buf));
 							printf(ofmt, buf);
 						}
@@ -3102,6 +3231,7 @@ void visitf_format(void)
 
 					case 'G': /* Group ID */
 					{
+						ofmt_add_wp();
 						ofmt_add('d');
 						debug_extra(("fmt %%G \"%s\", %d", ofmt, (int)attr.statbuf->st_gid));
 						printf(ofmt, (int)attr.statbuf->st_gid);
@@ -3113,8 +3243,6 @@ void visitf_format(void)
 					{
 						char *s, *e;
 						int local;
-
-						ofmt_add('s');
 
 						/* Find the last non-slash character (or "/") */
 
@@ -3138,6 +3266,8 @@ void visitf_format(void)
 							fatalsys("out of memory");
 
 						snprintf(attr.formatbuf, attr.fpath_size, "%.*s", (local) ? 1 : (int)(e - attr.fpath), (local) ? "." : attr.fpath);
+						ofmt_add_wl(width, length, attr.formatbuf);
+						ofmt_add('s');
 						debug_extra(("fmt %%h \"%s\", \"%s\"", ofmt, attr.formatbuf));
 						printf_sanitized(ofmt, attr.formatbuf);
 
@@ -3146,6 +3276,7 @@ void visitf_format(void)
 
 					case 'H': /* Starting search directory */
 					{
+						ofmt_add_wl(width, length, attr.search_path);
 						ofmt_add('s');
 						debug_extra(("fmt %%H \"%s\", \"%s\"", ofmt, attr.search_path));
 						printf_sanitized(ofmt, attr.search_path);
@@ -3155,6 +3286,7 @@ void visitf_format(void)
 
 					case 'i': /* Inode number */
 					{
+						ofmt_add_wp();
 						ofmt_add_lld();
 						debug_extra(("fmt %%i \"%s\", %lld", ofmt, (llong)attr.statbuf->st_ino));
 						printf(ofmt, (llong)attr.statbuf->st_ino);
@@ -3166,6 +3298,7 @@ void visitf_format(void)
 					{
 						char *j = json();
 
+						ofmt_add_wl(width, length, j);
 						ofmt_add('s');
 						debug_extra(("fmt %%j \"%s\", %s", ofmt, j));
 						printf(ofmt, j);
@@ -3177,6 +3310,7 @@ void visitf_format(void)
 					{
 						llong k = (attr.statbuf->st_blocks + attr.statbuf->st_blocks % 2) >> 1;
 
+						ofmt_add_wp();
 						ofmt_add_lld();
 						debug_extra(("fmt %%k \"%s\", %lld", ofmt, k));
 						printf(ofmt, k);
@@ -3186,15 +3320,19 @@ void visitf_format(void)
 
 					case 'l': /* Symlink target */
 					{
+						char *target = (islink(attr.statbuf)) ? read_symlink() : "";
+
+						ofmt_add_wl(width, length, buf);
 						ofmt_add('s');
-						debug_extra(("fmt %%l \"%s\", \"%s\"", ofmt, (islink(attr.statbuf)) ? read_symlink() : ""));
-						printf_sanitized(ofmt, (islink(attr.statbuf)) ? read_symlink() : "");
+						debug_extra(("fmt %%l \"%s\", \"%s\"", ofmt, target));
+						printf_sanitized(ofmt, target);
 
 						break;
 					}
 
 					case 'm': /* Permissions in octal */
 					{
+						ofmt_add_wp();
 						ofmt_add('o');
 						debug_extra(("fmt %%m \"%s\", %#o", ofmt, (int)attr.statbuf->st_mode & ~S_IFMT));
 						printf(ofmt, (int)attr.statbuf->st_mode & ~S_IFMT);
@@ -3204,15 +3342,19 @@ void visitf_format(void)
 
 					case 'M': /* Permissions in symbolic form */
 					{
+						const char *mode = modestr(attr.statbuf);
+
+						ofmt_add_wl(width, length, mode);
 						ofmt_add('s');
-						debug_extra(("fmt %%M \"%s\", \"%s\"", ofmt, modestr(attr.statbuf)));
-						printf(ofmt, modestr(attr.statbuf));
+						debug_extra(("fmt %%M \"%s\", \"%s\"", ofmt, mode));
+						printf(ofmt, mode);
 
 						break;
 					}
 
 					case 'n': /* Number of hard links */
 					{
+						ofmt_add_wp();
 						ofmt_add_lld();
 						debug_extra(("fmt %%n \"%s\", %lld", ofmt, (llong)attr.statbuf->st_nlink));
 						printf(ofmt, (llong)attr.statbuf->st_nlink);
@@ -3222,6 +3364,7 @@ void visitf_format(void)
 
 					case 'p': /* Path including the starting search directory */
 					{
+						ofmt_add_wl(width, length, attr.fpath);
 						ofmt_add('s');
 						debug_extra(("fmt %%p \"%s\", \"%s\"", ofmt, attr.fpath));
 						printf_sanitized(ofmt, attr.fpath);
@@ -3231,11 +3374,10 @@ void visitf_format(void)
 
 					case 'P': /* Path excluding the starting search directory */
 					{
-						char *s;
-
-						ofmt_add('s');
-						s = attr.fpath + attr.search_path_len;
+						char *s = attr.fpath + attr.search_path_len;
 						s += (*s == '/') ? 1 : 0;
+						ofmt_add_wl(width, length, s);
+						ofmt_add('s');
 						debug_extra(("fmt %%P \"%s\", \"%s\"", ofmt, s));
 						printf_sanitized(ofmt, s);
 
@@ -3244,6 +3386,7 @@ void visitf_format(void)
 
 					case 'r': /* Minor device number */
 					{
+						ofmt_add_wp();
 						ofmt_add_lld();
 						debug_extra(("fmt %%r \"%s\", %lld", ofmt, (llong)minor(attr.statbuf->st_rdev)));
 						printf(ofmt, (llong)minor(attr.statbuf->st_rdev));
@@ -3253,6 +3396,7 @@ void visitf_format(void)
 
 					case 'R': /* Major device number */
 					{
+						ofmt_add_wp();
 						ofmt_add_lld();
 						debug_extra(("fmt %%R \"%s\", %lld", ofmt, (llong)major(attr.statbuf->st_rdev)));
 						printf(ofmt, (llong)major(attr.statbuf->st_rdev));
@@ -3262,6 +3406,7 @@ void visitf_format(void)
 
 					case 's': /* Size */
 					{
+						ofmt_add_wp();
 						ofmt_add_lld();
 						set_dirsize(); /* Make st_size for directories more useful */
 						debug_extra(("fmt %%s \"%s\", %lld", ofmt, (llong)attr.statbuf->st_size));
@@ -3272,6 +3417,7 @@ void visitf_format(void)
 
 					case 'S': /* Sparseness: size ? blocks * 512 / size : 1 */
 					{
+						ofmt_add_wp();
 						ofmt_add('g');
 						set_dirsize(); /* Make st_size for directories more useful */
 						debug_extra(("fmt %%S \"%s\", %g", ofmt, (attr.statbuf->st_size) ? (double)attr.statbuf->st_blocks * 512 / attr.statbuf->st_size : 1.0));
@@ -3282,12 +3428,12 @@ void visitf_format(void)
 
 					case 't': /* Modification time in ctime format */
 					{
-						ofmt_add('s');
-
 						if (strftime(buf, BUFSIZE, "%a %b %e %H:%M:%S %Y", localtime(&attr.statbuf->st_mtime)) == 0)
 							*buf = '\0';
 
-						debug_extra(("fmt %t \"%s\", \"%s\"", ofmt, buf));
+						ofmt_add_wl(width, length, buf);
+						ofmt_add('s');
+						debug_extra(("fmt %%t \"%s\", \"%s\"", ofmt, buf));
 						printf(ofmt, buf);
 
 						break;
@@ -3297,6 +3443,7 @@ void visitf_format(void)
 					{
 						if (*++f == '@')
 						{
+							ofmt_add_wp();
 							ofmt_add_lld();
 							debug_extra(("fmt %%T@ \"%s\", %lld", ofmt, (llong)attr.statbuf->st_mtime));
 							printf(ofmt, (llong)attr.statbuf->st_mtime);
@@ -3307,12 +3454,13 @@ void visitf_format(void)
 						}
 						else
 						{
-							ofmt_add('s');
 							tfmt[1] = *f;
 
 							if (strftime(buf, BUFSIZE, tfmt, localtime(&attr.statbuf->st_mtime)) == 0)
 								*buf = '\0';
 
+							ofmt_add_wl(width, length, buf);
+							ofmt_add('s');
 							debug_extra(("fmt %%T%c \"%s\", \"%s\"", tfmt[1], ofmt, buf));
 							printf(ofmt, buf);
 						}
@@ -3324,16 +3472,18 @@ void visitf_format(void)
 					{
 						struct passwd *pwd;
 
-						ofmt_add('s');
-
 						if ((pwd = getpwuid(attr.statbuf->st_uid)))
 						{
+							ofmt_add_wl(width, length, pwd->pw_name);
+							ofmt_add('s');
 							debug_extra(("fmt %%u \"%s\", \"%s\"", ofmt, pwd->pw_name));
 							printf(ofmt, pwd->pw_name);
 						}
 						else /* Any flags are %s based, not %d based */
 						{
 							snprintf(buf, BUFSIZE, "%d", (int)attr.statbuf->st_uid);
+							ofmt_add_wl(width, length, buf);
+							ofmt_add('s');
 							debug_extra(("fmt %%u \"%s\", \"%s\"", ofmt, buf));
 							printf(ofmt, buf);
 						}
@@ -3343,6 +3493,7 @@ void visitf_format(void)
 
 					case 'U': /* User ID */
 					{
+						ofmt_add_wp();
 						ofmt_add('d');
 						debug_extra(("fmt %%U \"%s\", %d", ofmt, (int)attr.statbuf->st_uid));
 						printf(ofmt, (int)attr.statbuf->st_uid);
@@ -3352,6 +3503,7 @@ void visitf_format(void)
 
 					case 'v': /* Minor device number of the device the file resides on */
 					{
+						ofmt_add_wp();
 						ofmt_add_lld();
 						debug_extra(("fmt %%v \"%s\", %lld", ofmt, (llong)minor(attr.statbuf->st_dev)));
 						printf(ofmt, (llong)minor(attr.statbuf->st_dev));
@@ -3361,6 +3513,7 @@ void visitf_format(void)
 
 					case 'V': /* Major device number of the device the file resides on */
 					{
+						ofmt_add_wp();
 						ofmt_add_lld();
 						debug_extra(("fmt %%V \"%s\", %lld", ofmt, (llong)major(attr.statbuf->st_dev)));
 						printf(ofmt, (llong)major(attr.statbuf->st_dev));
@@ -3370,18 +3523,24 @@ void visitf_format(void)
 
 					case 'w': /* File type description */
 					{
+						const char *w = get_what() ? attr.what : "";
+
+						ofmt_add_wl(width, length, w);
 						ofmt_add('s');
-						debug_extra(("fmt %%w \"%s\", \"%s\"", ofmt, get_what() ? attr.what : ""));
-						printf_sanitized(ofmt, get_what() ? attr.what : "");
+						debug_extra(("fmt %%w \"%s\", \"%s\"", ofmt, w));
+						printf_sanitized(ofmt, w);
 
 						break;
 					}
 
 					case 'W': /* MIME type */
 					{
+						const char *m = get_mime() ? attr.mime : "";
+
+						ofmt_add_wl(width, length, m);
 						ofmt_add('s');
-						debug_extra(("fmt %%W \"%s\", \"%s\"", ofmt, get_mime() ? attr.mime : ""));
-						printf_sanitized(ofmt, get_mime() ? attr.mime : "");
+						debug_extra(("fmt %%W \"%s\", \"%s\"", ofmt, m));
+						printf_sanitized(ofmt, m);
 
 						break;
 					}
@@ -3401,23 +3560,20 @@ void visitf_format(void)
 
 							if (s > attr.fea && !*s && s[-1] == ',')
 								s[-1] = '\0';
+						}
 
-							ofmt_add('s');
-							debug_extra(("fmt %%x \"%s\", \"%s\"", ofmt, attr.fea));
-							printf(ofmt, attr.fea); /* Sanitized earlier by cescape() */
-						}
-						else
-						{
-							ofmt_add('s');
-							debug_extra(("fmt %%x \"%s\", \"%s\"", ofmt, ""));
-							printf(ofmt, "");
-						}
+						ea = (ea && attr.fea_ok) ? attr.fea : "";
+						ofmt_add_wl(width, length, ea);
+						ofmt_add('s');
+						debug_extra(("fmt %%x \"%s\", \"%s\"", ofmt, ea));
+						printf(ofmt, ea); /* Sanitized earlier by cescape() */
 
 						break;
 					}
 
 					case 'X': /* ACL/EA indicator */
 					{
+						ofmt_add_wl(width, length, aclea());
 						ofmt_add('s');
 						debug_extra(("fmt %%X \"%s\", \"%s\"", ofmt, aclea()));
 						printf(ofmt, aclea());
@@ -3427,9 +3583,12 @@ void visitf_format(void)
 
 					case 'y': /* File type */
 					{
+						const char *y = ytypecode(attr.statbuf);
+
+						ofmt_add_wl(width, length, y);
 						ofmt_add('s');
-						debug_extra(("fmt %%y \"%s\", \"%s\"", ofmt, ytypecode(attr.statbuf)));
-						printf(ofmt, ytypecode(attr.statbuf));
+						debug_extra(("fmt %%y \"%s\", \"%s\"", ofmt, y));
+						printf(ofmt, y);
 
 						break;
 					}
@@ -3456,6 +3615,7 @@ void visitf_format(void)
 							ttype = ytypecode(attr.statbuf);
 						}
 
+						ofmt_add_wl(width, length, ttype);
 						ofmt_add('s');
 						debug_extra(("fmt %%Y \"%s\", \"%s\"", ofmt, ttype));
 						printf(ofmt, ttype);
@@ -3488,17 +3648,13 @@ void visitf_format(void)
 
 							if (s > attr.formatbuf && !*s && s[-1] == ',')
 								s[-1] = '\0';
+						}
 
-							ofmt_add('s');
-							debug_extra(("fmt %%z \"%s\", \"%s\"", ofmt, attr.formatbuf));
-							printf(ofmt, attr.formatbuf);
-						}
-						else
-						{
-							ofmt_add('s');
-							debug_extra(("fmt %%z \"%s\", \"%s\"", ofmt, ""));
-							printf(ofmt, "");
-						}
+						z = (z) ? attr.formatbuf : "";
+						ofmt_add_wl(width, length, z);
+						ofmt_add('s');
+						debug_extra(("fmt %%z \"%s\", \"%s\"", ofmt, z));
+						printf(ofmt, z);
 
 						break;
 					}
@@ -3507,6 +3663,7 @@ void visitf_format(void)
 					{
 						char *selinux = (get_ea(1) && attr.fea_ok && attr.fea_selinux) ? attr.fea_selinux : "";
 
+						ofmt_add_wl(width, length, selinux);
 						ofmt_add('s');
 						debug_extra(("fmt %%Z \"%s\", \"%s\"", ofmt, selinux));
 						printf(ofmt, selinux);
@@ -3518,6 +3675,7 @@ void visitf_format(void)
 					{
 						char *a = attributes();
 
+						ofmt_add_wl(width, length, a);
 						ofmt_add('s');
 						debug_extra(("fmt %%e \"%s\", \"%s\"", ofmt, a));
 						printf(ofmt, a);
@@ -3529,6 +3687,7 @@ void visitf_format(void)
 					{
 						unsigned long proj = get_proj();
 
+						ofmt_add_wp();
 						ofmt_add_lld();
 						debug_extra(("fmt %%J \"%s\", %lld", ofmt, (llong)proj));
 						printf(ofmt, (llong)proj);
@@ -3540,6 +3699,7 @@ void visitf_format(void)
 					{
 						unsigned long gen = get_gen();
 
+						ofmt_add_wp();
 						ofmt_add_lld();
 						debug_extra(("fmt %%I \"%s\", %lld", ofmt, (llong)gen));
 						printf(ofmt, (llong)gen);
@@ -3555,6 +3715,7 @@ void visitf_format(void)
 					default: /* Invalid % */
 					{
 						int len = mbtowc(NULL, f, strlen(f));
+						mbtowc(NULL, NULL, 0);
 						fatal("invalid -L argument: %s (invalid conversion: %%%s)", ok(attr.format), oklen(f, (len == -1) ? 1 : len));
 					}
 				}

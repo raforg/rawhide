@@ -387,8 +387,8 @@ expression to appear to the left of any command line options on (most)
 systems where all non-option command line arguments must appear to the right
 of all command line options and their arguments (e.g.,
 S<C<rh -e '>I<expr>C<' -X '>I<cmd>C< %S' >I<dir>>). This doesn't apply to
-I<Linux> with I<GNU glibc>, which provides more flexible command line option
-parsing.
+I<Linux> with S<I<GNU glibc>>, which provides more flexible command line
+option parsing.
 
 If no file test expression is supplied anywhere, the default file test
 expression is C<1>, which matches all filesystem entries.
@@ -629,10 +629,10 @@ C<./>.
 For this option, the C<%S> interpolation is more likely to be useful than
 the C<%s> interpolation.
 
-This option is similar to the C<-execdir> action in I<GNU find(1)>, and so
-does not suffer from the same large number of path-based race conditions as
-the C<-exec> action in I<POSIX> I<find(1)>. It is much safer than the C<-x>
-option, and should generally be used in preference.
+This option is similar to the C<-execdir> action in S<I<GNU find(1)>>, and
+so does not suffer from the same large number of path-based race conditions
+as the C<-exec> action in I<POSIX> I<find(1)>. It is much safer than the
+C<-x> option, and should generally be used in preference.
 
 And if the user's C<$PATH> environment variable includes the current working
 directory, or any other non-absolute paths, that could be dangerous, so they
@@ -1428,7 +1428,23 @@ All of the ISO I<C printf(3)> conversion flags are available (i.e., C<"#">,
 C<"0">, C<"-">, S<C<" ">>, and C<"+">), as well as field width and precision
 specifiers. These behave differently depending on the type of underlying
 I<printf(3)> conversion that they are applied to. See I<printf(3)> for
-details.
+details. But note that the field width and precision specifiers for string
+conversions (e.g., C<%9p>, C<%.9n>) are semantically different than with
+I<printf(3)>. Instead of specifying the field width of a string conversion
+as a number of bytes, it is specified as the minimum number of character
+widths. Similarly, the precision of a string conversion is specified as the
+maximum number of character widths to include from the string, rather than
+as a number of bytes. This isn't really compatible with I<printf(3)> (or
+with S<I<GNU find(1)>>), but it is in keeping with the original intent of
+field widths and precisions in I<printf(3)> in days of yore when every
+character was encoded in a single byte, and every character was one
+character width wide. These semantics are more useful nowadays. This makes
+it possible to use field widths and precisions to specify columns when there
+are characters of different widths that are encoded in a variable number of
+bytes. But note that this doesn't work correctly for complex grapheme
+clusters, and on some systems (i.e., I<NetBSD>, I<Solaris>, and I<Cygwin>),
+it gets even simple emojis wrong. It's better on I<Linux>, I<FreeBSD>,
+I<OpenBSD>, and C<macOS>. But most non-emoji text seems to work everywhere.
 
 The above conversions that output text use an underlying I<printf(3)> C<%s>
 string conversion. Those that output an integer use an underlying C<%d> or
@@ -1445,7 +1461,7 @@ an underlying C<%d> integer conversion, but all other C<%A>I<k>, C<%C>I<k>,
 and C<%T>I<k> conversions use an underlying C<%s> string conversion (because
 I<strftime(3)> produces strings).
 
-This option is mostly but not entirely compatible with I<GNU find(1)>'s
+This option is mostly but not entirely compatible with S<I<GNU find(1)>>'s
 C<-printf> action. I<rh> doesn't do I<find(1)>'s C<%F> (filesystem type),
 and I<find(1)> doesn't do I<rh>'s
 C<%z> (access control list),
@@ -1476,10 +1492,10 @@ if conversion flags and precisions are not used, there is no difference.
 And I<rh>'s C<%s> (size) conversion outputs the size of readable directories
 as the number of entries they contain (excluding C<.> and C<..>), rather
 than the usual (undocumented) C<st_size> field of the corresponding
-I<stat(2)> structure. This is arguably compatible, but not identical. This
-also makes the output of the C<%S> (sparseness) conversion different for
-readable directories (but it isn't meaningful for directories, so that
-shouldn't matter).
+I<stat(2)> structure. This is arguably compatible, but semantically
+different. This also makes the output of the C<%S> (sparseness) conversion
+different for readable directories (but it isn't meaningful for directories,
+so that shouldn't matter).
 
 =item C<-j>
 
@@ -1566,8 +1582,8 @@ The type indicators have the following meanings:
 
 For the block size, space, and size columns, use "human readable"
 traditional computer storage units, based on 1024 bytes, rather than just
-numbers of bytes. This is like the C<-h> option in I<GNU ls(1)>. Implies the
-C<-l> option.
+numbers of bytes. This is like the C<-h> option in S<I<GNU ls(1)>>. Implies
+the C<-l> option.
 
 If the size is below 1024, it is output in the usual way as a number of
 bytes. Otherwise, the appropriate scale is determined (i.e., C<K>, C<M>,
@@ -1587,7 +1603,8 @@ This option and the C<-I> option are mutually exclusive.
 
 For the block size, space, and size columns, use the International System of
 Units (SI) prefixes, based on 1000 bytes, rather than just numbers of
-bytes. This is like the C<--si> option in I<GNU ls(1)>. Implies the C<-l> option.
+bytes. This is like the C<--si> option in S<I<GNU ls(1)>>. Implies the C<-l>
+option.
 
 If the size is below 1000, it is output in the usual way as a number of
 bytes. Otherwise, the appropriate scale is determined (i.e., C<k>, C<m>,
@@ -2451,7 +2468,7 @@ Some command line shell syntactic sugar to save keystrokes:
 
 =head1 FIND(1) COMPARISON EXAMPLES
 
-The following subsections are the examples from the I<GNU find(1)> manual
+The following subsections are the examples from the S<I<GNU find(1)>> manual
 entry.
 
   find - search for files in a directory hierarchy
@@ -3114,8 +3131,8 @@ the source code in my old C<~/News/Comp.sources.unix> file. After 32 years,
 it only took an hour or so to get it compiling and working again. Yay! But
 of course, that wasn't enough. It had a bug or two, and so many security
 flaws (it actually was 1990, after all), and so many missing features that
-were needed to make it a viable modern alternative to I<GNU find(1)> for all
-my file-finding needs. So I spent the next month or so fixing it all up,
+were needed to make it a viable modern alternative to S<I<GNU find(1)>> for
+all my file-finding needs. So I spent the next month or so fixing it all up,
 enhancing it in many fun ways, testing it ruthlessly, and documenting it
 thoroughly. It now has a lean flexible command line interface, many new
 capabilities (and even some novel ones), and a standard library of functions

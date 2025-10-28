@@ -66,7 +66,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *       Trivial/inadequate POSIX collating sequences
  */
 
-#define _GNU_SOURCE /* For FNM_EXTMATCH and FNM_CASEFOLD in <fnmatch.h> */
+#define _GNU_SOURCE /* For FNM_CASEFOLD in <fnmatch.h> */
 
 #include <string.h>
 #include <fnmatch.h>

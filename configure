@@ -225,7 +225,7 @@ case "`uname`" in
 		;;
 
 	SunOS*|Solaris) # prefix=/usr/local etcdir=/etc mandir=$prefix/man manzip=0
-		echo "Configuring for Solaris"
+		echo "Configuring for solaris"
 		editconf Makefile \
 			-e 's,^\(PREFIX = \).*$,\1/usr/local,' \
 			-e 's,^ETCDIR,#ETCDIR,' -e 's,^#\(ETCDIR = /etc\),\1,' \
