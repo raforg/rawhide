@@ -73,6 +73,8 @@ do
 			echo "  --disable-ubsan    - Disable the undefined behaviour sanitizer (default)"
 			echo "  --enable-asan      - Enable the address sanitizer (do not install)"
 			echo "  --disable-asan     - Disable the address sanitizer (default)"
+			echo "  --enable-msan      - Enable the memory sanitizer (do not install)"
+			echo "  --disable-msan     - Disable the memory sanitizer (default)"
 			echo "  --disable-cc-other - Forget non-default compiler (for distribution)"
 			echo "  --static=SIZE      - Adjust static memory: large (default), small, tiny"
 			echo "  --default          - Restore Makefile to its defaults (for distribution)"
@@ -162,7 +164,7 @@ case "$1" in
 			--destdir= --prefix=/usr/local --etcdir=/etc --mandir='$(PREFIX)/share/man' \
 			--disable-pcre2 --disable-acl --disable-ea --disable-attr --disable-magic \
 			--disable-ndebug --disable-mangz --disable-major --disable-gcov \
-			--disable-ubsan --disable-asan --disable-cc-other --static=large
+			--disable-ubsan --disable-asan --disable-msan --disable-cc-other --static=large
 		;;
 esac
 
@@ -1199,6 +1201,20 @@ do
 				-e 's,^\(ASAN_LDFLAGS =.*\)$,#\1,' \
 				-e 's,^\(SAN_CFLAGS =.*\)$,#\1,' \
 				-e 's,^\(SAN_LDFLAGS =.*\)$,#\1,'
+			;;
+
+		--enable-msan)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^#\(MSAN_CFLAGS =.*\)$,\1,' \
+				-e 's,^#\(MSAN_LDFLAGS =.*\)$,\1,'
+			;;
+
+		--disable-msan)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^\(MSAN_CFLAGS =.*\)$,#\1,' \
+				-e 's,^\(MSAN_LDFLAGS =.*\)$,#\1,'
 			;;
 
 		--disable-cc-other)

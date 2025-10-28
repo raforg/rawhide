@@ -143,6 +143,10 @@ RAWHIDE_DEFINES = \
 #SAN_CFLAGS = -fsanitize=address
 #SAN_LDFLAGS = -fsanitize=address -static-libsan
 
+# Memory sanitizer: Uncomment this, run tests (as non-root and as root)
+#MSAN_CFLAGS = -fsanitize=memory
+#MSAN_LDFLAGS = -fsanitize=memor
+
 CC = cc
 #CC = gcc
 #CC = other
@@ -364,6 +368,13 @@ help:
 	@echo "  make"
 	@echo "  make quiet=1 test"
 	@echo "  sudo make quiet=1 asan=1 RAWHIDE_TEST_MULTIBYTE_USER_GROUP=1 test"
+	@echo
+	@echo "To run tests with the memory sanitizer (like valgrind but fast):"
+	@echo
+	@echo "  ./configure --enable-msan"
+	@echo "  make"
+	@echo "  make quiet=1 test"
+	@echo "  sudo make quiet=1 RAWHIDE_TEST_MULTIBYTE_USER_GROUP=1 test"
 	@echo
 	@echo "The asan=1 variable suppresses setuid/setgid tests that would trigger a"
 	@echo "fatal error for the LeakSanitizer which doesn't work with setuid/setgid"
