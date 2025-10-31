@@ -136,7 +136,7 @@ static void help_message(void)
 	printf("See the rh(1) and rawhide.conf(5) manual entries for more information.\n");
 
 	printf("\nC operators:\n");
-	printf("  ?:  ||  &&  |  ^  &  == !=  < > <= >=  << >>  + -  * / %%  - ~ !\n");
+	printf("  - ~ !  * / %%  + -  << >>  < > <= >=  == !=  &  ^  |  &&  ||  ?:  ,\n");
 
 	printf("\nRawhide tokens:\n");
 	printf("  \"pattern\"  \"pattern\".modifier  \"/path\".field  \"cmd\".sh  \"cmd\".ush\n");

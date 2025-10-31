@@ -102,7 +102,7 @@ These comments start with C<#> and end at the end of the line.
 
 The I<rawhide> search criteria language is like a tiny subset of the I<C>
 language's expression syntax, with a few domain-specific additions. All of
-I<C>'s conditional, logical, relational, equality, arithmetic, and bit
+I<C>'s conditional, logical, relational, equality, arithmetic, and bitwise
 operators are available. But the only type is integer. There are special
 tokens to represent various things, some built-in symbols, and user-defined
 functions.
@@ -142,7 +142,9 @@ liberties taken):
         "," <id-list>
       | EMPTY
 
-  <expression> ::= <or> "?" <expression> ":" <expression> | <or>
+  <expression> ::= <cond> "," <expression> | <cond>
+
+  <cond> ::= <or> "?" <cond> ":" <cond> | <or>
 
   <or> ::= <and> "||" <or> | <and>
 
@@ -259,15 +261,15 @@ liberties taken):
       IDENTIFIER <arguments>
 
   <arguments> ::=
-        "(" <expr-list> ")"
+        "(" <cond-list> ")"
       | "(" ")"
       | EMPTY
 
-  <expr-list> ::=
-      <expression> <expr-tail>
+  <cond-list> ::=
+      <cond> <cond-tail>
 
-  <expr-tail> ::=
-        "," <expr-list>
+  <cond-tail> ::=
+        "," <cond-list>
       | EMPTY
 
   <parameter> ::=
@@ -278,41 +280,47 @@ liberties taken):
 The following I<C> operators are available (presented in groups of
 increasing precedence):
 
-  ?:  Conditional (i.e., condition-expr ? if-expr : else-expr)
+  -   Minus (unary)
+  ~   Bitwise not (unary)
+  !   Logical not (unary)
 
-  ||  Logical or
+  *   Multiplication
+  /   Division
+  %   Modulo (remainder)
 
-  &&  Logical and
+  +   Addition
+  -   Subtraction
 
-  |   Bit or
-
-  ^   Bit exclusive or
-
-  &   Bit and
-
-  ==  Equals
-  !=  Not equals
+  <<  Bit shift left
+  >>  Bit shift right
 
   <   Less than
   >   Greater than
   <=  Less than or equal to
   >=  Greater than or equal to
 
-  <<  Bit shift left
-  >>  Bit shift right
+  ==  Equals
+  !=  Not equals
 
-  +   Addition
-  -   Subtraction
+  &   Bitwise and
 
-  *   Multiplication
-  /   Division
-  %   Modulo (remainder)
+  ^   Bitwise exclusive or
 
-  -   Minus (unary)
-  ~   Bit not (unary)
-  !   Logical not (unary)
+  |   Bitwise or
+
+  &&  Logical and
+
+  ||  Logical or
+
+  ?:  Conditional (i.e., condition-expr ? if-expr : else-expr)
+
+  ,   Sequence
 
 Parentheses override operator precedence (e.g., S<C<(1 + 2) * 3>>).
+
+With the I<sequence> operator (C<,>), both operands are executed. The value
+of the first operand is discarded. The result is the value of the second
+operand.
 
 Like in I<C>, the C<?:> and C<||> and C<&&> operators use "short-circuit"
 evaluation.

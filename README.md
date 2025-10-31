@@ -26,7 +26,7 @@ If no expression is specified, the default search criteria is the expression
 
 An *rh* expression is a *C*-like expression that can call user-defined
 functions. These expressions can contain all of *C*'s conditional, logical,
-relational, equality, arithmetic, and bit operators.
+relational, equality, arithmetic, and bitwise operators.
 
 Numeric constants can be decimal, octal, or hexadecimal integers. Decimal
 constants can have scale units (e.g., `10K`).
@@ -135,7 +135,7 @@ a high-level interface to the built-in symbols mentioned above, and makes
      See the rh(1) and rawhide.conf(5) manual entries for more information.
 
      C operators:
-       ?:  ||  &&  |  ^  &  == !=  < > <= >=  << >>  + -  * / %  - ~ !
+       - ~ !  * / %  + -  << >>  < > <= >=  == !=  &  ^  |  &&  ||  ?:  ,
 
      Rawhide tokens:
        "pattern"  "pattern".modifier  "/path".field  "cmd".sh  "cmd".ush

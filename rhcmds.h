@@ -46,6 +46,7 @@ void c_bitnot(llong i);
 void c_uniminus(llong i);
 void c_qm(llong i);
 void c_colon(llong i);
+void c_comma(llong i);
 void c_param(llong i);
 void c_func(llong i);
 void c_return(llong i);

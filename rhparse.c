@@ -63,6 +63,7 @@ static char *saved_expstr;
 static void parse_function(void);
 static int parse_parameters(void);
 static void parse_expression(void);
+static void parse_cond_expr(void);
 static void parse_or_expr(void);
 static void parse_and_expr(void);
 static void parse_bitor_expr(void);
@@ -415,15 +416,44 @@ static int parse_parameters(void)
 
 static void parse_expression(void);
 
-Parse an expression. The conditional operator:
+Parse an expression. The sequence operator:
 
-	<expression> ::= <or> "?" <expression> ":" <expression> | <or>
+	<expression> ::= <cond> "," <expression> | <cond>
 
 */
 
 static void parse_expression(void)
 {
 	debug(("expression()"));
+
+	parse_cond_expr();
+
+	for (;;)
+	{
+		if (token == ',')
+		{
+			token = get_token();
+			parse_cond_expr();
+			add_instruction(c_comma, 0);
+		}
+		else
+			break;
+	}
+}
+
+/*
+
+static void parse_cond_expr(void);
+
+Parse a conditional expression. The conditional operator:
+
+	<cond> ::= <or> "?" <cond> ":" <cond> | <or>
+
+*/
+
+static void parse_cond_expr(void)
+{
+	debug_extra(("cond_expr()"));
 
 	parse_or_expr();
 
@@ -435,7 +465,7 @@ static void parse_expression(void)
 		add_instruction(c_qm, 0);
 
 		token = get_token();
-		parse_expression();
+		parse_cond_expr();
 
 		if (token != ':')
 			parser_error("expected ':' after '?' (ternary operator), found %s", show_token());
@@ -444,7 +474,7 @@ static void parse_expression(void)
 		add_instruction(c_colon, 0);
 
 		token = get_token();
-		parse_expression();
+		parse_cond_expr();
 
 		Program[qm].value = colon;
 		Program[colon].value = PC - 1;
@@ -995,15 +1025,15 @@ static void parse_arguments(int argc);
 Parse function arguments:
 
 	<arguments> ::=
-		  "(" <expr-list> ")"
+		  "(" <cond-list> ")"
 		| "(" ")"
 		| EMPTY
 
-	<expr-list> ::=
-		<expression> <expr-tail>
+	<cond-list> ::=
+		<cond> <cond-tail>
 
-	<expr-tail> ::=
-		  "," <expr-list>
+	<cond-tail> ::=
+		  "," <cond-list>
 		| EMPTY
 
 The argc parameter is the number of arguments expected.
@@ -1032,7 +1062,7 @@ static void parse_arguments(int argc)
 
 	for (;;)
 	{
-		parse_expression();
+		parse_cond_expr();
 		argc--;
 
 		if (token == ')')

@@ -97,7 +97,7 @@ I<rh> - (I<rawhide>) find files using pretty I<C> expressions
  See the rh(1) and rawhide.conf(5) manual entries for more information.
 
  C operators:
-   ?:  ||  &&  |  ^  &  == !=  < > <= >=  << >>  + -  * / %  - ~ !
+   - ~ !  * / %  + -  << >>  < > <= >=  == !=  &  ^  |  &&  ||  ?:  ,
 
  Rawhide tokens:
    "pattern"  "pattern".modifier  "/path".field  "cmd".sh  "cmd".ush
@@ -183,7 +183,7 @@ expression C<1>, which matches all filesystem entries.
 
 An I<rh> expression is a I<C>-like expression that can call user-defined
 functions. These expressions can contain all of I<C>'s conditional, logical,
-relational, equality, arithmetic, and bit operators.
+relational, equality, arithmetic, and bitwise operators.
 
 Numeric constants can be decimal, octal, or hexadecimal integers. Decimal
 constants can have scale units (e.g., C<10K>).
@@ -1676,39 +1676,41 @@ There are expressions and functions. Expressions look like I<C>
 expressions. The only data type is integer. These I<C> operators are available (presented
 in groups of increasing precedence):
 
-    ?:  Conditional (i.e., condition-expr ? if-expr : else-expr)
+    -   Minus (unary)
+    ~   Bitwise not (unary)
+    !   Logical not (unary)
 
-    ||  Logical or
+    *   Multiplication
+    /   Division
+    %   Modulo (remainder)
 
-    &&  Logical and
+    +   Addition
+    -   Subtraction
 
-    |   Bit or
-
-    ^   Bit exclusive or
-
-    &   Bit and
-
-    ==  Equals
-    !=  Not equals
+    <<  Bit shift left
+    >>  Bit shift right
 
     <   Less than
     >   Greater than
     <=  Less than or equal to
     >=  Greater than or equal to
 
-    <<  Bit shift left
-    >>  Bit shift right
+    ==  Equals
+    !=  Not equals
 
-    +   Addition
-    -   Subtraction
+    &   Bitwise and
 
-    *   Multiplication
-    /   Division
-    %   Modulo (remainder)
+    ^   Bitwise exclusive or
 
-    -   Minus (unary)
-    ~   Bit not (unary)
-    !   Logical not (unary)
+    |   Bitwise or
+
+    &&  Logical and
+
+    ||  Logical or
+
+    ?:  Conditional (i.e., condition-expr ? if-expr : else-expr)
+
+    ,   Sequence
 
 Parentheses override operator precedence (e.g., S<C<(1 + 2) * 3>>).
 
@@ -2527,13 +2529,13 @@ Traverse the filesystem just once, listing set-user-ID files and directories
 into C</root/suid.txt> and large files into C</root/big.txt>.
 
   $ find / \
-    \( -perm -4000 -fprintf /root/suid.txt '%#m %u %p\n' \) , \
-    \( -size +100M -fprintf /root/big.txt '%-10s %p\n' \)
+      \( -perm -4000 -fprintf /root/suid.txt '%#m %u %p\n' \) , \
+      \( -size +100M -fprintf /root/big.txt '%-10s %p\n' \)
 
-  # rh -L '' / '
-    (setuid && "rh -M0 -L \"%%#m %%u %%p\n\" %s >>/root/suid.txt".sh) +
-    (size > 100M && "rh -M0 -L \"%%-10s %%p\n\" %s >>/root/big.txt".sh)
-  '
+  # rh -e '
+      setuid && {rh -M0 -L "%%#m %%u %%p\n" %s >>/root/suid.txt}.sh,
+      size > 100M && {rh -M0 -L "%%-10s %%p\n" %s >>/root/big.txt}.sh
+  ' -L '' /
 
 =head2 Searching files by age
 

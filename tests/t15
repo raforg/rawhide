@@ -43,6 +43,19 @@ rm $d/code
 
 # Operators
 
+test_rawhide "$rh -e '0'         $d" ""     "" 0 "0"
+test_rawhide "$rh -e '1'         $d" "$d\n" "" 0 "1"
+test_rawhide "$rh -e '0, 0'      $d" ""     "" 0 "0, 0"
+test_rawhide "$rh -e '0, 1'      $d" "$d\n" "" 0 "0, 1"
+test_rawhide "$rh -e '1, 0'      $d" ""     "" 0 "1, 0"
+test_rawhide "$rh -e '1, 1'      $d" "$d\n" "" 0 "1, 1"
+test_rawhide "$rh -e '(0, 1), 0' $d" ""     "" 0 "(0, 1), 0"
+test_rawhide "$rh -e '(1, 0), 1' $d" "$d\n" "" 0 "(1, 0), 1"
+test_rawhide "$rh -e '1, (0, 1)' $d" "$d\n" "" 0 "1, (0, 1)"
+test_rawhide "$rh -e '0, (1, 0)' $d" ""     "" 0 "0, (1, 0)"
+test_rawhide "$rh -e '1, 0, 1'   $d" "$d\n" "" 0 "1, 0, 1"
+test_rawhide "$rh -e '0, 1, 0'   $d" ""     "" 0 "0, 1, 0"
+
 test_rawhide "$rh -e '(0 ? 3 : 4) == 4' $d" "$d\n" "" 0 "0 ? 3 : 4"
 test_rawhide "$rh -e '(1 ? 3 : 4) == 3' $d" "$d\n" "" 0 "1 ? 3 : 4"
 

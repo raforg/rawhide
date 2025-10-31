@@ -107,6 +107,8 @@ void c_uniminus(llong i) { Stack[SP - 1] = -Stack[SP - 1]; }
 void c_qm(llong i)    { PC = (Stack[SP - 1]) ? PC : i; SP--; }
 void c_colon(llong i) { PC = i; }
 
+void c_comma(llong i) { Stack[SP - 2] = Stack[SP - 1]; SP--; }
+
 /* Functions */
 
 void c_func(llong i)
@@ -1652,6 +1654,7 @@ char *instruction_name(void (*func)(llong))
 		(func == c_uniminus) ? "uniminus" :
 		(func == c_qm) ? "qm" :
 		(func == c_colon) ? "colon" :
+		(func == c_comma) ? "comma" :
 		(func == c_param) ? "param" :
 		(func == c_func) ? "func" :
 		(func == c_return) ? "return" :
