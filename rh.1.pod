@@ -888,16 +888,17 @@ The supported backslash escape sequences are:
 
 =item C<\>I<NNN> The byte whose numeric value is I<NNN> (1-3 octal digits)
 
-=item C<\x>I<HH> The byte whose numeric value is I<HH> (1-2 hexadecimal digits)
+=item C<\x>I<HH> The byte whose numeric value is I<HH> (0-2 hexadecimal digits)
 
-=item C<\u>I<HHHH> The I<Unicode> character whose code point is I<HHHH> (1-4 hexadecimal digits)
+=item C<\u>I<HHHH> I<Unicode> code point I<HHHH> (0-4 hexadecimal digits)
 
-=item C<\U>I<HHHHHHHH> The I<Unicode> character whose code point is I<HHHHHHHH> (1-8 hexadecimal digits)
+=item C<\U>I<HHHHHHHH> I<Unicode> code point I<HHHHHHHH> (0-8 hexadecimal digits)
 
 =back
 
 A backslash character followed by any other character is treated as an
-ordinary character, and both characters are output.
+ordinary character, and both characters are output. A backslash character at
+the end of the format is treated as an ordinary character, and is output.
 
 The following C<%> format conversion specifiers are available:
 

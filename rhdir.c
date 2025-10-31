@@ -2976,7 +2976,9 @@ void visitf_format(void)
 						for (start = ++f; f - start < digits && ((*f >= '0' && *f <= '9') || (*f >= 'a' && *f <= 'f') || (*f >= 'A' && *f <= 'F')); ++f)
 							*wc <<= 4, *wc |= (*f >= '0' && *f <= '9') ? *f - '0' : (*f >= 'a' && *f <= 'f') ? *f - 'a' + 10 : *f - 'A' + 10;
 
-						if (wcstombs(buf, wbuf, MB_LEN_MAX+1) == (size_t)-1)
+						if (!*wc)
+							putchar((int)*wc);
+						else if (wcstombs(buf, wbuf, MB_LEN_MAX+1) == (size_t)-1)
 							printf("%.*s", (int)(f - (start - 2)), start - 2);
 						else
 							printf("%s", buf);
@@ -2985,6 +2987,8 @@ void visitf_format(void)
 
 						break;
 					}
+
+					case '\0': putchar('\\'); --f; break;
 
 					default: putchar('\\'); putchar(*f); break;
 				}
