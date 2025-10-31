@@ -2162,16 +2162,20 @@ The above functions can be defined as:
 =head1 COMMAND LINE EXAMPLES
 
 The C<-e> option argument usually supplies the file test expression. But it
-isn't usually necessary to actually include the C<-e> option itself. If no
-explicit file test expression is supplied via the C<-e> option, then any
-remaining command line arguments are examined to identify any implicit file
-test expression. The file test expression and search paths can appear in any
-order. The following examples are equivalent:
+isn't always necessary to actually include the C<-e> option itself. If the
+environment variable C<RAWHIDE_ALLOW_IMPLICIT_EXPR_HEURISTIC=1> (see above),
+and no explicit file test expression is supplied via the C<-e> option, then
+any remaining command line arguments are examined to identify any implicit
+file test expression. The file test expression and search paths can appear
+in any order. The following examples are equivalent:
 
     $ rh -e 'expr' dir1 dir2
     $ rh 'expr' dir1 dir2
     $ rh dir1 'expr' dir2
     $ rh dir1 dir2 'expr'
+
+The following examples in this section assume the default behaviour where
+any C<-e> option must be explicit.
 
 List the current directory in detail (like S<C<ls -lA>>, but unsorted):
 
@@ -2188,8 +2192,8 @@ List the current directory in detail, sorted by name (by cheating):
 
 Delete old backup files:
 
-    $ rh -UUU '"*.bak" && modified <= ago(month)'
-    $ rh -UUU '"*.bak" && old(month)'
+    $ rh -UUU -e '"*.bak" && modified <= ago(month)'
+    $ rh -UUU -e '"*.bak" && old(month)'
 
 I<grep(1)> for something only in recent files:
 
@@ -2198,27 +2202,27 @@ I<grep(1)> for something only in recent files:
 
 The same, but just list the files where I<grep(1)> found something:
 
-    $ rh 'f && modified >= ago(hour) && "grep -q something %S".sh'
-    $ rh 'f && past(hour)            && "grep -q something %S".sh'
+    $ rh -e 'f && modified >= ago(hour) && "grep -q something %S".sh'
+    $ rh -e 'f && past(hour)            && "grep -q something %S".sh'
 
 Show all access control lists:
 
-    $ rh -L '%p\n%z\n' '"?*".acl'
+    $ rh -e '"?*".acl' -L '%p\n%z\n'
 
 Show all extended attributes:
 
-    $ rh -L '%p\n%x\n' '"?*".ea'
+    $ rh -e '"?*".ea' -L '%p\n%x\n'
 
 Find the block device that the current directory resides on:
 
-    $ rh -l /dev 'b && rdev == ".".dev'
+    $ rh -le 'b && rdev == ".".dev' /dev
 
 Note: This doesn't work for filesystems like I<devtmpfs> that don't appear
 in C</dev>.
 
 Find regular files whose sizes are prime numbers (so silly):
 
-    $ rh -l '
+    $ rh -le '
     prime1(n, i) { (i * i > n) ? 1 : !(n % i) ? 0 : prime1(n, i + 2) }
     prime(n) { (n < 2) ? 0 : !(n % 2) ? n == 2 : prime1(n, 3) }
     file && prime(size)
@@ -2226,14 +2230,14 @@ Find regular files whose sizes are prime numbers (so silly):
 
 Sum the sizes of all regular files in the current directory (with I<jq(1)>):
 
-    $ rh -r -L '%j\n' f | jq .size | jq -s add
-    $ rh -r -L '%s\n' f | jq -s add
-    $ rh -rj f | jq .size | jq -s add
-    $ rh -rj f | jq -s '[.[].size]|add'
+    $ rh -r -L '%j\n' -ef | jq .size | jq -s add
+    $ rh -r -L '%s\n' -ef | jq -s add
+    $ rh -rjef | jq .size | jq -s add
+    $ rh -rjef | jq -s '[.[].size]|add'
 
 If you have non-UTF-8 file names, the above should be:
 
-    $ rh -rj f | iconv -f LATIN1 -t UTF-8 | jq -s '[.[].size]|add'
+    $ rh -rjef | iconv -f LATIN1 -t UTF-8 | jq -s '[.[].size]|add'
 
 Some command line shell syntactic sugar to save keystrokes:
 
@@ -2481,6 +2485,11 @@ Each example is followed by one or more equivalent I<rh> commands, for the
 purpose of comparison. Multiple alternative I<rh> commands typically use
 different functions from C</etc/rawhide.conf> (or similar). See
 I<rawhide.conf(5)> for details.
+
+For ease of comparison, the following I<rh> examples assume that the
+environment variable C<RAWHIDE_ALLOW_IMPLICIT_EXPR_HEURISTIC=1>. By default,
+any C<-e> option would have to be explicit, and on systems other than
+I<Linux>, search paths would have to appear after all command line options.
 
 =head2 Simple `find | xargs` approach
 
