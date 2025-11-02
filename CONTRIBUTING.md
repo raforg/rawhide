@@ -13,12 +13,13 @@ tested.
 
 When changing code and tests, please run all of the tests as both a
 non-`root` user, and as the `root` user, and consider running all tests on
-*Linux*, *FreeBSD*, *OpenBSD*, *NetBSD*, *Solaris*, *macOS*, and
-*Cygwin* (if possible). And on *Linux*, perform the undefined behaviour
-sanitizer tests (*ubsan*) and the address sanitizer tests (*asan*) that are
-described in the output of `make help`. Also consider running tests under
-*valgrind* (but it's slow and more of a hassle to analyze). Also perform
-coverage tests to make sure that all new code is covered (within reason).
+*Linux*, *FreeBSD*, *OpenBSD*, *NetBSD*, *Solaris*, *macOS*, and *Cygwin*
+(if possible). And on *Linux*, perform the undefined behaviour sanitizer
+tests (*ubsan*), and the address sanitizer tests (*asan*), and the memory
+sanitizer tests (msan) that are described in the output of `make help`. Also
+consider running tests under *valgrind* (but it's slow and more of a hassle
+to analyze). Also perform test coverage analysis (as described in the output
+of `make help`) to make sure that all new code is covered (within reason).
 
 An important thing to consider when changing documentation is to minimize
 the cognitive load on the reader. Always answer questions before they will
