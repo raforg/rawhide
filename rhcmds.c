@@ -75,6 +75,10 @@
 #include <ext2fs/ext2_fs.h>
 #endif
 
+#ifdef HAVE_SOLARIS_ATTR
+#include <attr.h>
+#endif
+
 #include "rh.h"
 #include "rhdir.h"
 #include "rherr.h"
@@ -227,6 +231,89 @@ void c_prune(llong i)   { Stack[SP++] = 1; attr.prune = attr.pruned = 1; }
 void c_trim(llong i)    { Stack[SP++] = 1; attr.prune = 1; }
 void c_exit(llong i)    { Stack[SP++] = 1; attr.exit = 1; }
 
+#if HAVE_SOLARIS_ATTR
+
+#define SOLARIS_A_HIDDEN         0x0001
+#define SOLARIS_A_SYSTEM         0x0002
+#define SOLARIS_A_READONLY       0x0004
+#define SOLARIS_A_ARCHIVE        0x0008
+#define SOLARIS_A_NOUNLINK       0x0010
+#define SOLARIS_A_IMMUTABLE      0x0020
+#define SOLARIS_A_APPENDONLY     0x0040
+#define SOLARIS_A_NODUMP         0x0080
+#define SOLARIS_A_AV_QUARANTINED 0x0100
+#define SOLARIS_A_AV_MODIFIED    0x0200
+#define SOLARIS_A_OFFLINE        0x0400
+#define SOLARIS_A_SPARSE         0x0800
+#define SOLARIS_A_SENSITIVE      0x1000
+#define SOLARIS_A_OPAQUE         0x2000
+#define SOLARIS_A_REPARSE_POINT  0x4000
+
+static void get_solaris_attr(const char *name, unsigned long *flags)
+{
+	nvlist_t *response = NULL;
+	nvpair_t *pair = NULL;
+	boolean_t val;
+
+	*flags = 0;
+
+	if (getattrat(AT_FDCWD, XATTR_VIEW_READONLY, name, &response) != -1)
+	{
+		while ((pair = nvlist_next_nvpair(response, pair)))
+		{
+			char *n = nvpair_name(pair);
+			data_type_t t = nvpair_type(pair);
+			val = 0;
+
+			if (!strcmp(n, A_OPAQUE) && t == DATA_TYPE_BOOLEAN_VALUE && nvpair_value_boolean_value(pair, &val) != -1 && val)
+				*flags |= SOLARIS_A_OPAQUE;
+			else if (!strcmp(n, A_REPARSE_POINT) && t == DATA_TYPE_BOOLEAN_VALUE && nvpair_value_boolean_value(pair, &val) != -1 && val)
+				*flags |= SOLARIS_A_REPARSE_POINT;
+		}
+	}
+
+	if (getattrat(AT_FDCWD, XATTR_VIEW_READWRITE, name, &response) != -1)
+	{
+		while ((pair = nvlist_next_nvpair(response, pair)))
+		{
+			char *n = nvpair_name(pair);
+			data_type_t t = nvpair_type(pair);
+			val = 0;
+
+			if (!strcmp(n, A_HIDDEN) && t == DATA_TYPE_BOOLEAN_VALUE && nvpair_value_boolean_value(pair, &val) != -1 && val)
+				*flags |= SOLARIS_A_HIDDEN;
+			else if (!strcmp(n, A_SYSTEM) && t == DATA_TYPE_BOOLEAN_VALUE && nvpair_value_boolean_value(pair, &val) != -1 && val)
+				*flags |= SOLARIS_A_SYSTEM;
+			else if (!strcmp(n, A_READONLY) && t == DATA_TYPE_BOOLEAN_VALUE && nvpair_value_boolean_value(pair, &val) != -1 && val)
+				*flags |= SOLARIS_A_READONLY;
+			else if (!strcmp(n, A_ARCHIVE) && t == DATA_TYPE_BOOLEAN_VALUE && nvpair_value_boolean_value(pair, &val) != -1 && val)
+				*flags |= SOLARIS_A_ARCHIVE;
+			else if (!strcmp(n, A_NOUNLINK) && t == DATA_TYPE_BOOLEAN_VALUE && nvpair_value_boolean_value(pair, &val) != -1 && val)
+				*flags |= SOLARIS_A_NOUNLINK;
+			else if (!strcmp(n, A_IMMUTABLE) && t == DATA_TYPE_BOOLEAN_VALUE && nvpair_value_boolean_value(pair, &val) != -1 && val)
+				*flags |= SOLARIS_A_IMMUTABLE;
+			else if (!strcmp(n, A_APPENDONLY) && t == DATA_TYPE_BOOLEAN_VALUE && nvpair_value_boolean_value(pair, &val) != -1 && val)
+				*flags |= SOLARIS_A_APPENDONLY;
+			else if (!strcmp(n, A_NODUMP) && t == DATA_TYPE_BOOLEAN_VALUE && nvpair_value_boolean_value(pair, &val) != -1 && val)
+				*flags |= SOLARIS_A_NODUMP;
+			else if (!strcmp(n, A_AV_QUARANTINED) && t == DATA_TYPE_BOOLEAN_VALUE && nvpair_value_boolean_value(pair, &val) != -1 && val)
+				*flags |= SOLARIS_A_AV_QUARANTINED;
+			else if (!strcmp(n, A_AV_MODIFIED) && t == DATA_TYPE_BOOLEAN_VALUE && nvpair_value_boolean_value(pair, &val) != -1 && val)
+				*flags |= SOLARIS_A_AV_MODIFIED;
+			else if (!strcmp(n, A_OFFLINE) && t == DATA_TYPE_BOOLEAN_VALUE && nvpair_value_boolean_value(pair, &val) != -1 && val)
+				*flags |= SOLARIS_A_OFFLINE;
+			else if (!strcmp(n, A_SPARSE) && t == DATA_TYPE_BOOLEAN_VALUE && nvpair_value_boolean_value(pair, &val) != -1 && val)
+				*flags |= SOLARIS_A_SPARSE;
+			else if (!strcmp(n, A_SENSITIVE) && t == DATA_TYPE_BOOLEAN_VALUE && nvpair_value_boolean_value(pair, &val) != -1 && val)
+				*flags |= SOLARIS_A_SENSITIVE;
+		}
+	}
+
+	nvlist_free(response);
+}
+
+#endif /* HAVE_SOLARIS_ATTR */
+
 unsigned long get_attr(void)
 {
 	if (!attr.attr_done)
@@ -236,6 +323,8 @@ unsigned long get_attr(void)
 		fgetflags(attr.fpath, &attr.attr);
 		#elif HAVE_FLAGS
 		attr.attr = (unsigned long)attr.statbuf->st_flags;
+		#elif HAVE_SOLARIS_ATTR
+		get_solaris_attr(attr.fpath, &attr.attr);
 		#endif
 	}
 
@@ -268,7 +357,7 @@ unsigned long get_gen(void)
 	return attr.gen;
 }
 
-#if HAVE_ATTR || HAVE_FLAGS
+#if HAVE_ATTR || HAVE_FLAGS || HAVE_SOLARIS_ATTR
 void c_attr(llong i) { Stack[SP++] = get_attr(); }
 #endif
 #if HAVE_ATTR
@@ -1574,6 +1663,21 @@ void r_attr(llong i)
 	Stack[SP++] = RefFile[i].attr;
 }
 
+#elif HAVE_SOLARIS_ATTR
+
+void r_attr(llong i)
+{
+	check_reference(i, "attr");
+
+	if (!RefFile[i].attr_done)
+	{
+		RefFile[i].attr_done = 1;
+		get_solaris_attr(Strbuf + RefFile[i].fpathi, &RefFile[i].attr);
+	}
+
+	Stack[SP++] = RefFile[i].attr;
+}
+
 #endif
 
 /* Symlink targets */
@@ -1676,7 +1780,7 @@ char *instruction_name(void (*func)(llong))
 		(func == c_atime) ? "atime" :
 		(func == c_mtime) ? "mtime" :
 		(func == c_ctime) ? "ctime" :
-		#if HAVE_ATTR || HAVE_FLAGS
+		#if HAVE_ATTR || HAVE_FLAGS || HAVE_SOLARIS_ATTR
 		(func == c_attr) ? "cattr" :
 		#endif
 		#if HAVE_ATTR
@@ -1777,7 +1881,7 @@ char *instruction_name(void (*func)(llong))
 		(func == r_atime) ? "ratime" :
 		(func == r_mtime) ? "rmtime" :
 		(func == r_ctime) ? "rctime" :
-		#if HAVE_ATTR || HAVE_FLAGS
+		#if HAVE_ATTR || HAVE_FLAGS || HAVE_SOLARIS_ATTR
 		(func == r_attr) ? "rattr" :
 		#endif
 		#if HAVE_ATTR

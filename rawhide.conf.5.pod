@@ -612,13 +612,13 @@ On I<Linux>, this is only available on systems with I<libe2p>. On I<Linux>
 systems without I<libe2p>, this is not a built-in symbol. Instead, this is a
 place-holder function that returns zero.
 
-This is also available on I<FreeBSD>, I<OpenBSD>, I<NetBSD>, and
-I<macOS>. The attributes/flags that are available vary from system to system. See
-I<chflags(1)> for details. See C</etc/rawhide.conf.d/attributes> for all the
-related predicate functions (e.g., C<uimmutable>, C<uappend>, C<nodump>,
-C<opaque>, ...).
+This is also available on I<FreeBSD>, I<OpenBSD>, I<NetBSD>, I<macOS>, and
+I<Solaris>. The attributes/flags that are available vary from system to
+system. See I<chflags(1)> (or I<chmod(1)> on I<Solaris>) for details. See
+C</etc/rawhide.conf.d/attributes> for all the related predicate functions
+(e.g., C<uimmutable>, C<uappend>, C<nodump>, C<opaque>, ...).
 
-On other systems, this doesn't exist at all.
+On other systems (e.g., I<Cygwin>), this doesn't exist at all.
 
 =item C<proj>
 
@@ -2094,11 +2094,11 @@ On I<Linux>, this is only available on systems with I<libe2p>. On I<Linux>
 systems without I<libe2p>, this is not a built-in symbol. Instead, this is a
 place-holder function that returns zero.
 
-This is also available on I<FreeBSD>, I<OpenBSD>, I<NetBSD>, and
-I<macOS>. The attributes/flags that are available vary from system to system. See
-I<chflags(1)> for details. See C</etc/rawhide.conf.d/attributes> for all the
-related predicate functions (e.g., C<uimmutable>, C<uappend>, C<nodump>,
-C<opaque>, ...).
+This is also available on I<FreeBSD>, I<OpenBSD>, I<NetBSD>, I<macOS>, and
+I<Solaris>. The attributes/flags that are available vary from system to
+system. See I<chflags(1)> (or I<chmod(1)> on I<Solaris>) for details. See
+C</etc/rawhide.conf.d/attributes> for all the related predicate functions
+(e.g., C<uimmutable>, C<uappend>, C<nodump>, C<opaque>, ...).
 
 On other systems, this doesn't exist at all.
 
@@ -2774,7 +2774,8 @@ C</etc/rawhide.conf.d/attributes> library:
   attr_F { casefold }
 
 On I<FreeBSD> systems, this is the C</etc/rawhide.conf.d/attributes>
-library. There is a similar file on I<OpenBSD>, I<NetBSD>, and I<macOS> systems:
+library. There is a similar file on I<OpenBSD>, I<NetBSD>, I<macOS>, and
+I<Solaris> systems:
 
   # /etc/rawhide.conf.d/attributes (FreeBSD)
   # See rh(1) and rawhide.conf(5) for more information.

@@ -71,7 +71,7 @@ void c_ctime(llong i);
 unsigned long get_attr(void);
 unsigned long get_proj(void);
 unsigned long get_gen(void);
-#if HAVE_ATTR || HAVE_FLAGS
+#if HAVE_ATTR || HAVE_FLAGS || HAVE_SOLARIS_ATTR
 void c_attr(llong i);
 #endif
 #if HAVE_ATTR
@@ -174,7 +174,7 @@ void r_blocks(llong i);
 void r_atime(llong i);
 void r_mtime(llong i);
 void r_ctime(llong i);
-#if HAVE_ATTR || HAVE_FLAGS
+#if HAVE_ATTR || HAVE_FLAGS || HAVE_SOLARIS_ATTR
 void r_attr(llong i);
 #endif
 #if HAVE_ATTR

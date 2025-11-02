@@ -476,8 +476,8 @@ Find files on *Linux* by their *selinux(8)* context (any):
         $ rh -e '"*security.selinux: *_u:*_r:*_t:s[0-3]*".ea'
         $ rh -e '"^security\.selinux:\ .*_u:.*_r:.*_t:s[0-3]".reea'
 
-Find files on *Linux*, *FreeBSD*, *OpenBSD*, *NetBSD*, or *macOS*, that are
-immutable or append-only:
+Find files on *Linux*, *FreeBSD*, *OpenBSD*, *NetBSD*, *macOS*, or
+*Solaris*, that are immutable or append-only:
 
         $ rh -e 'immutable || append' /
 

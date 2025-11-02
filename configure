@@ -799,12 +799,114 @@ test_attr_bsd()
 	return 0
 }
 
+# Look for Solaris attributes
+
+create_attr_solaris_code()
+{
+	cat > configchk.c << END
+
+#include <stdio.h>
+#include <string.h>
+#include <fcntl.h>
+#include <attr.h> /* -lnvpair */
+#include <sys/types.h>
+
+int main()
+{
+	nvlist_t *response = NULL;
+	nvpair_t *pair = NULL;
+
+	if (getattrat(AT_FDCWD, XATTR_VIEW_READONLY, ".", &response) != -1)
+	{
+		while ((pair = nvlist_next_nvpair(response, pair)))
+		{
+			char *n = nvpair_name(pair);
+			data_type_t t = nvpair_type(pair);
+
+			if ((!strcmp(n, A_OPAQUE)
+				|| !strcmp(n, A_REPARSE_POINT)) &&
+				t == DATA_TYPE_BOOLEAN_VALUE)
+			{
+				boolean_t val = 0;
+
+				if (nvpair_value_boolean_value(pair, &val) != -1)
+					printf("%s = %d\n", n, (int)val);
+			}
+		}
+	}
+
+	if (getattrat(AT_FDCWD, XATTR_VIEW_READWRITE, ".", &response) != -1)
+	{
+		while ((pair = nvlist_next_nvpair(response, pair)))
+		{
+			char *n = nvpair_name(pair);
+			data_type_t t = nvpair_type(pair);
+
+			if ((!strcmp(n, A_HIDDEN)
+				|| !strcmp(n, A_SYSTEM)
+				|| !strcmp(n, A_READONLY)
+				|| !strcmp(n, A_ARCHIVE)
+				|| !strcmp(n, A_NOUNLINK)
+				|| !strcmp(n, A_IMMUTABLE)
+				|| !strcmp(n, A_APPENDONLY)
+				|| !strcmp(n, A_NODUMP)
+				|| !strcmp(n, A_AV_QUARANTINED)
+				|| !strcmp(n, A_AV_MODIFIED)
+				|| !strcmp(n, A_OFFLINE)
+				|| !strcmp(n, A_SPARSE)
+				|| !strcmp(n, A_SENSITIVE)) &&
+				t == DATA_TYPE_BOOLEAN_VALUE
+			)
+			{
+				boolean_t val = 0;
+
+				if (nvpair_value_boolean_value(pair, &val) != -1)
+					printf("%s = %d\n", n, (int)val);
+			}
+			else if (!strcmp(n, A_CRTIME) && t == DATA_TYPE_UINT64_ARRAY)
+			{
+				uint64_t *val;
+				uint_t nelem;
+
+				if (nvpair_value_uint64_array(pair, &val, &nelem) != -1)
+				{
+					struct timespec ts;
+					ts.tv_sec = val[0];
+					ts.tv_nsec = val[1];
+					printf("crtime %ld.%ld %s", (long)ts.tv_sec, (long)ts.tv_nsec, ctime(&ts.tv_sec));
+				}
+			}
+		}
+	}
+
+	nvlist_free(response);
+}
+
+END
+}
+
+test_attr_solaris()
+{
+	create_attr_solaris_code
+	TEST_LDFLAGS="-lnvpair"
+	compile_test || return 1
+	echo "Configuring --enable-attr$attr_reason"
+	editconf Makefile \
+		-e 's:^#\(SOLARIS_ATTR_DEFINES =\).*$:\1 -DHAVE_SOLARIS_ATTR=1:' \
+		-e 's:^#\(SOLARIS_ATTR_CFLAGS =\)$:\1 '"$TEST_CFLAGS"':' \
+		-e 's:^#\(SOLARIS_ATTR_LDFLAGS =\)$:\1 '"$TEST_LDFLAGS"':'
+	HAVE_ATTR=1
+	TEST_CFLAGS=""
+	TEST_LDFLAGS=""
+	return 0
+}
+
 case "$*" in
 	*--disable-attr*|*--disable-flag*)
 		;;
 	*)
 		case "$*" in *--enable-attr*|*--enable-flag*) attr_reason="";; *) attr_reason=" (default)";; esac
-		test_attr_linux_libe2p || test_attr_bsd
+		test_attr_linux_libe2p || test_attr_bsd || test_attr_solaris
 		;;
 esac
 
@@ -1104,7 +1206,10 @@ do
 				-e 's,^\(ATTR_LDFLAGS =\).*$,#\1,' \
 				-e 's,^\(FLAG_DEFINES =\).*$,#\1,' \
 				-e 's,^\(FLAG_CFLAGS =\).*$,#\1,' \
-				-e 's,^\(FLAG_LDFLAGS =\).*$,#\1,'
+				-e 's,^\(FLAG_LDFLAGS =\).*$,#\1,' \
+				-e 's,^\(SOLARIS_ATTR_DEFINES =\).*$,#\1,' \
+				-e 's,^\(SOLARIS_ATTR_CFLAGS =\).*$,#\1,' \
+				-e 's,^\(SOLARIS_ATTR_LDFLAGS =\).*$,#\1,'
 			;;
 
 		--enable-magic)

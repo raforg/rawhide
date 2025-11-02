@@ -1134,11 +1134,13 @@ any non-printable/control characters to prevent terminal escape injection.
 
 =item C<%e>
 
-The I<Linux> I<ext2>-style file attributes, or I<BSD>-style file flags, as a
-space-separated list of attribute/flag names. This is available on I<Linux>
-systems with I<libe2p>. See I<chattr(1)> and I<lsattr(1)> for details. This
-is also available on I<FreeBSD>, I<OpenBSD>, I<NetBSD>, and I<macOS>. See
-I<chflags(1)> for details. On other systems, this is the empty string.
+The I<Linux> I<ext2>-style file attributes, or I<BSD>-style file flags, or
+I<Solaris> file attributes, as a space-separated list of attribute/flag
+names. This is available on I<Linux> systems with I<libe2p>. See
+I<chattr(1)> and I<lsattr(1)> for details. This is also available on
+I<FreeBSD>, I<OpenBSD>, I<NetBSD>, and I<macOS>. See I<chflags(1)> for
+details. This is also available on I<Solaris>. See I<chmod(1)> and I<ls(1)>
+for details. On other systems, this is the empty string.
 
 The possible I<Linux> I<ext2>-style file attribute names are:
 C<secrm>,
@@ -1225,6 +1227,23 @@ C<restricted>,
 C<snounlink>,
 C<firmlink>,
 and C<dataless>.
+
+The possible I<Solaris> file attribute names are:
+C<hidden>,
+C<system>,
+C<readonly>,
+C<archive>,
+C<nounlink>,
+C<immutable>,
+C<appendonly>,
+C<nodump>,
+C<av_quarantined>,
+C<av_modified>,
+C<offline>,
+C<sparse>,
+C<sensitive>,
+C<opaque>,
+and C<reparse_point>.
 
 =item C<%J>
 
@@ -1758,11 +1777,11 @@ by a file test expression, which is optionally terminated by a semicolon
 
 There are built-in symbols that represent the inode metadata (i.e.,
 I<stat(2)> structure fields) of candidate files (e.g., C<mode>, C<uid>,
-C<size>, C<mtime>, ...), I<Linux>/I<BSD> file attributes/flags (i.e.,
-C<attr>, C<proj>, C<gen>), other useful file information (e.g., C<nouser>,
-C<nogroup>, C<readable>, C<writable>, ...), control flow (i.e., C<prune>,
-C<trim>, C<exit>), useful values and constants (e.g., C<now>, C<today>,
-C<minute>, C<hour>, C<day>, ...), and more constants from I<C>'s
+C<size>, C<mtime>, ...), I<Linux>/I<BSD>/I<Solaris> file attributes/flags
+(i.e., C<attr>, C<proj>, C<gen>), other useful file information (e.g.,
+C<nouser>, C<nogroup>, C<readable>, C<writable>, ...), control flow (i.e.,
+C<prune>, C<trim>, C<exit>), useful values and constants (e.g., C<now>,
+C<today>, C<minute>, C<hour>, C<day>, ...), and more constants from I<C>'s
 C<< <sys/stat.h> >> header file (e.g., C<IFMT>, C<IFDIR>, C<IRUSR>,
 ...). There are also built-in symbols that represent the inode metadata of
 candidate symlink targets (e.g., C<tmode>, C<tuid>, C<tsize>, C<tmtime>,
@@ -1790,6 +1809,11 @@ On I<FreeBSD>, I<OpenBSD>, I<NetBSD>, and I<macOS> systems, there is an
 additional library of functions in C</etc/rawhide.conf.d/attributes>. It
 contains constants and predicates for I<BSD> file flags (e.g.,
 C<uimmutable>, C<uappend>, C<nodump>, C<opaque>, ...).
+
+On I<Solaris> systems, there is an additional library of functions in
+C</etc/rawhide.conf.d/attributes>. It contains constants and predicates for
+I<Solaris> file attributes (e.g., C<immutable>, C<appendonly>, C<nodump>,
+C<opaque>, ...).
 
 By default, string literals (C<">I<pattern>C<">) represent a file glob
 pattern match against the file name. Pattern modifiers
@@ -2091,8 +2115,8 @@ Find files on I<Linux> by their I<selinux(8)> context (any):
     $ rh -e '"*security.selinux: *_u:*_r:*_t:s[0-3]*".ea'
     $ rh -e '"^security\.selinux:\ .*_u:.*_r:.*_t:s[0-3]".reea'
 
-Find files on I<Linux>, I<FreeBSD>, I<OpenBSD>, I<NetBSD>, or I<macOS>, that
-are immutable or append-only:
+Find files on I<Linux>, I<FreeBSD>, I<OpenBSD>, I<NetBSD>, I<macOS>, or
+I<Solaris>, that are immutable or append-only:
 
     $ rh -e 'immutable || append' /
 

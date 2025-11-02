@@ -93,9 +93,9 @@ static symbol_t init_syms[] =
 	{ "mtime",   FIELD, 0, c_mtime,   NULL },
 	{ "ctime",   FIELD, 0, c_ctime,   NULL },
 
-	/* Linux ext2-style file attributes and BSD file flags */
+	/* Linux ext2-style file attributes, BSD file flags, Solaris file attributes */
 
-#if HAVE_ATTR || HAVE_FLAGS
+#if HAVE_ATTR || HAVE_FLAGS || HAVE_SOLARIS_ATTR
 	{ "attr",    FIELD, 0, c_attr,   NULL },
 #endif
 #if HAVE_ATTR
@@ -199,7 +199,7 @@ static symbol_t init_syms[] =
 	{ ".atime",    REFFILE, 0, r_atime,   NULL },
 	{ ".mtime",    REFFILE, 0, r_mtime,   NULL },
 	{ ".ctime",    REFFILE, 0, r_ctime,   NULL },
-#if HAVE_ATTR || HAVE_FLAGS
+#if HAVE_ATTR || HAVE_FLAGS || HAVE_SOLARIS_ATTR
 	{ ".attr",     REFFILE, 0, r_attr,    NULL },
 #endif
 #if HAVE_ATTR
@@ -216,7 +216,7 @@ static symbol_t init_syms[] =
 	{ ".accessed", REFFILE, 0, r_atime,   NULL },
 	{ ".modified", REFFILE, 0, r_mtime,   NULL },
 	{ ".changed",  REFFILE, 0, r_ctime,   NULL },
-#if HAVE_ATTR || HAVE_FLAGS
+#if HAVE_ATTR || HAVE_FLAGS || HAVE_SOLARIS_ATTR
 	{ ".attribute",  REFFILE, 0, r_attr,  NULL },
 #endif
 #if HAVE_ATTR

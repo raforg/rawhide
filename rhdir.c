@@ -2492,8 +2492,8 @@ static int add_field(char *buf, ssize_t sz, const char *name, const char *value)
 
 static char *attributes(void);
 
-Return the ext2-style file attributes or BSD-style file flags
-as a space-separated list of attribute/flag names.
+Return the ext2-style file attributes or BSD-style file flags or Solaris
+file attributs as a space-separated list of attribute/flag names.
 
 */
 
@@ -2791,6 +2791,55 @@ static char *attributes(void)
 		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "dataless");
 	#endif
 
+	#elif HAVE_SOLARIS_ATTR
+
+	#define SOLARIS_A_HIDDEN         0x0001
+	#define SOLARIS_A_SYSTEM         0x0002
+	#define SOLARIS_A_READONLY       0x0004
+	#define SOLARIS_A_ARCHIVE        0x0008
+	#define SOLARIS_A_NOUNLINK       0x0010
+	#define SOLARIS_A_IMMUTABLE      0x0020
+	#define SOLARIS_A_APPENDONLY     0x0040
+	#define SOLARIS_A_NODUMP         0x0080
+	#define SOLARIS_A_AV_QUARANTINED 0x0100
+	#define SOLARIS_A_AV_MODIFIED    0x0200
+	#define SOLARIS_A_OFFLINE        0x0400
+	#define SOLARIS_A_SPARSE         0x0800
+	#define SOLARIS_A_SENSITIVE      0x1000
+	#define SOLARIS_A_OPAQUE         0x2000
+	#define SOLARIS_A_REPARSE_POINT  0x4000
+
+	if (flags & SOLARIS_A_HIDDEN)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "hidden");
+	if (flags & SOLARIS_A_SYSTEM)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "system");
+	if (flags & SOLARIS_A_READONLY)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "readonly");
+	if (flags & SOLARIS_A_ARCHIVE)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "archive");
+	if (flags & SOLARIS_A_NOUNLINK)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "nounlink");
+	if (flags & SOLARIS_A_IMMUTABLE)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "immutable");
+	if (flags & SOLARIS_A_APPENDONLY)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "appendonly");
+	if (flags & SOLARIS_A_NODUMP)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "nodump");
+	if (flags & SOLARIS_A_AV_QUARANTINED)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "av_quarantined");
+	if (flags & SOLARIS_A_AV_MODIFIED)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "av_modified");
+	if (flags & SOLARIS_A_OFFLINE)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "offline");
+	if (flags & SOLARIS_A_SPARSE)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "sparse");
+	if (flags & SOLARIS_A_SENSITIVE)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "sensitive");
+	if (flags & SOLARIS_A_OPAQUE)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "opaque");
+	if (flags & SOLARIS_A_REPARSE_POINT)
+		pos += ssnprintf(buf + pos, ATTR_BUFSIZE - pos, "%s%s", (pos) ? " " : "", "reparse_point");
+
 	#endif
 
 	return buf;
@@ -2871,7 +2920,7 @@ static char *json(void)
 	if (get_mime())
 		pos += add_field(buf + pos, JSON_BUFSIZE - pos, "mimetype", get_mime());
 
-	#if HAVE_ATTR || HAVE_FLAGS
+	#if HAVE_ATTR || HAVE_FLAGS || HAVE_SOLARIS_ATTR
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"attributes\":\"%s\", ", attributes());
 	#endif
 
