@@ -98,8 +98,9 @@ typedef long long unsigned int ullong;
 #define isfifo(statbuf) (((statbuf)->st_mode & S_IFMT) == S_IFIFO)
 #ifdef S_IFDOOR /* Solaris only */
 #define isdoor(statbuf) (((statbuf)->st_mode & S_IFMT) == S_IFDOOR)
-#else
-#define isdoor(statbuf) (0)
+#endif
+#ifdef S_IFWHT /* macOS only */
+#define iswhiteout(statbuf) (((statbuf)->st_mode & S_IFMT) == S_IFWHT)
 #endif
 
 /* Define macros for user shell */

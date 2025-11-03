@@ -120,6 +120,7 @@ a high-level interface to the built-in symbols mentioned above, and makes
                         = socket
                         | fifo
                         > door (Solaris only)
+                        % whiteout (macOS only)
 
      other column format options:
        -H or -HH    - Output sizes like 1.2K 34M 5.6G etc., implies -l
@@ -174,14 +175,14 @@ a high-level interface to the built-in symbols mentioned above, and makes
        now           today         second        minute        hour
        day           week          month         year          IFREG
        IFDIR         IFLNK         IFCHR         IFBLK         IFSOCK
-       IFIFO         IFDOOR        IFMT          ISUID         ISGID
-       ISVTX         IRWXU         IRUSR         IWUSR         IXUSR
-       IRWXG         IRGRP         IWGRP         IXGRP         IRWXO
-       IROTH         IWOTH         IXOTH         texists       tdev
-       tmajor        tminor        tino          tmode         tnlink
-       tuid          tgid          trdev         trmajor       trminor
-       tsize         tblksize      tblocks       tatime        tmtime
-       tctime        tstrlen
+       IFIFO         IFDOOR        IFWHT         IFMT          ISUID
+       ISGID         ISVTX         IRWXU         IRUSR         IWUSR
+       IXUSR         IRWXG         IRGRP         IWGRP         IXGRP
+       IRWXO         IROTH         IWOTH         IXOTH         texists
+       tdev          tmajor        tminor        tino          tmode
+       tnlink        tuid          tgid          trdev         trmajor
+       trminor       tsize         tblksize      tblocks       tatime
+       tmtime        tctime        tstrlen
 
      Reference file fields:
        .exists       .dev          .major        .minor        .ino

@@ -121,6 +121,7 @@ static void help_message(void)
 	printf("                   = socket\n");
 	printf("                   | fifo\n");
 	printf("                   > door (Solaris only)\n");
+	printf("                   %% whiteout (macOS only)\n");
 	printf("\n");
 	printf("other column format options:\n");
 	printf("  -H or -HH    - Output sizes like 1.2K 34M 5.6G etc., implies -l\n");

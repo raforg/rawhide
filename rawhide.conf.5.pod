@@ -239,23 +239,23 @@ liberties taken):
       | "len"
 
   <built-in> ::=
-        "dev"    | "major"    | "minor"    | "ino"      | "mode"
-      | "nlink"  | "uid"      | "gid"      | "rdev"     | "rmajor"
-      | "rminor" | "size"     | "blksize"  | "blocks"   | "atime"
-      | "mtime"  | "ctime"    | "attr"     | "proj"     | "gen"
-      | "nouser" | "nogroup"  | "readable" | "writable" | "executable"
-      | "strlen" | "depth"    | "prune"    | "trim"     | "exit"
-      | "now"    | "today"    | "second"   | "minute"   | "hour"
-      | "day"    | "week"     | "month"    | "year"     | "IFREG"
-      | "IFDIR"  | "IFLNK"    | "IFCHR"    | "IFBLK"    | "IFSOCK"
-      | "IFIFO"  | "IFDOOR"   | "IFMT"     | "ISUID"    | "ISGID"
-      | "ISVTX"  | "IRWXU"    | "IRUSR"    | "IWUSR"    | "IXUSR"
-      | "IRWXG"  | "IRGRP"    | "IWGRP"    | "IXGRP"    | "IRWXO"
-      | "IROTH"  | "IWOTH"    | "IXOTH"    | "texists"  | "tdev"
-      | "tmajor" | "tminor"   | "tino"     | "tmode"    | "tnlink"
-      | "tuid"   | "tgid"     | "trdev"    | "trmajor"  | "trminor"
-      | "tsize"  | "tblksize" | "tblocks"  | "tatime"   | "tmtime"
-      | "tctime" | "tstrlen"
+        "dev"     | "major"   | "minor"    | "ino"      | "mode"
+      | "nlink"   | "uid"     | "gid"      | "rdev"     | "rmajor"
+      | "rminor"  | "size"    | "blksize"  | "blocks"   | "atime"
+      | "mtime"   | "ctime"   | "attr"     | "proj"     | "gen"
+      | "nouser"  | "nogroup" | "readable" | "writable" | "executable"
+      | "strlen"  | "depth"   | "prune"    | "trim"     | "exit"
+      | "now"     | "today"   | "second"   | "minute"   | "hour"
+      | "day"     | "week"    | "month"    | "year"     | "IFREG"
+      | "IFDIR"   | "IFLNK"   | "IFCHR"    | "IFBLK"    | "IFSOCK"
+      | "IFIFO"   | "IFDOOR"  | "IFWHT"    | "IFMT"     | "ISUID"
+      | "ISGID"   | "ISVTX"   | "IRWXU"    | "IRUSR"    | "IWUSR"
+      | "IXUSR"   | "IRWXG"   | "IRGRP"    | "IWGRP"    | "IXGRP"
+      | "IRWXO"   | "IROTH"   | "IWOTH"    | "IXOTH"    | "texists"
+      | "tdev"    | "tmajor"  | "tminor"   | "tino"     | "tmode"
+      | "tnlink"  | "tuid"    | "tgid"     | "trdev"    | "trmajor"
+      | "trminor" | "tsize"   | "tblksize" | "tblocks"  | "tatime"
+      | "tmtime"  | "tctime"  | "tstrlen"
 
   <function-call> ::=
       IDENTIFIER <arguments>
@@ -799,13 +799,13 @@ file. This bit mask represents the bits in the C<mode> that represent the
 file type. The file type is S<C<(mode & IFMT>)> (see next), and the file
 permissions are S<C<(mode & ~IFMT)>> (see below).
 
-=item C<IFREG>, C<IFDIR>, C<IFLNK>, C<IFCHR>, C<IFBLK>, C<IFSOCK>, C<IFIFO>, C<IFDOOR>
+=item C<IFREG>, C<IFDIR>, C<IFLNK>, C<IFCHR>, C<IFBLK>, C<IFSOCK>, C<IFIFO>, C<IFDOOR>, C<IFWHT>
 
 The same as the corresponding C<"S_"> values from I<C>'s C<< <sys/stat.h> >>
 header file. These values correspond to the different types of filesystem
 entry (i.e., regular file, directory, symbolic link, character device, block
-device, socket, fifo/pipe, and door, respectively). C<IFDOOR> only applies
-to I<Solaris>.
+device, socket, fifo/pipe, door, and whiteout, respectively). C<IFDOOR> only
+applies to I<Solaris>. C<IFWHT> only applies to I<macOS>.
 
 =item C<ISUID>, C<ISGID>, C<ISVTX>
 
@@ -2240,6 +2240,7 @@ This is the default C</etc/rawhide.conf> standard library:
   sock { type == IFSOCK }
   fifo { type == IFIFO }
   door { type == IFDOOR } # Solaris
+  wht  { type == IFWHT } # macOS
   
   file      { reg }
   directory { dir }
@@ -2251,6 +2252,7 @@ This is the default C</etc/rawhide.conf> standard library:
   socket    { sock }
   namedpipe { fifo }
   pipe      { fifo }
+  whiteout  { wht || (chr && !rdev) } # macOS, Linux
   
   f { reg }
   d { dir }
@@ -2260,6 +2262,7 @@ This is the default C</etc/rawhide.conf> standard library:
   s { sock }
   p { fifo }
   D { door } # Solaris
+  W { whiteout } # macOS, Linux
   
   
   // File permissions (canonical, aliases, helpers)
@@ -2337,7 +2340,7 @@ This is the default C</etc/rawhide.conf> standard library:
   accessed { atime }
   modified { mtime } # Refers to the contents
   changed  { ctime } # Refers to the inode
-  len      { strlen }
+  len      { strlen } # Length of the base name
   sz       { size }
   
   seconds  { second }
@@ -2369,6 +2372,7 @@ This is the default C</etc/rawhide.conf> standard library:
   tsock { ttype == IFSOCK }
   tfifo { ttype == IFIFO }
   tdoor { ttype == IFDOOR } # Solaris
+  twht  { ttype == IFWHT } # macOS
   
   tfile      { treg }
   tdirectory { tdir }
@@ -2378,6 +2382,7 @@ This is the default C</etc/rawhide.conf> standard library:
   tsocket    { tsock }
   tnamedpipe { tfifo }
   tpipe      { tfifo }
+  twhiteout  { twht || (tchr && !trdev) } # macOS, Linux
   
   tf { treg }
   td { tdir }
@@ -2386,6 +2391,7 @@ This is the default C</etc/rawhide.conf> standard library:
   ts { tsock }
   tp { tfifo }
   tD { tdoor } # Solaris
+  tW { twhiteout } # macOS, Linux
   
   target_type { ttype }
   
@@ -2396,6 +2402,7 @@ This is the default C</etc/rawhide.conf> standard library:
   target_sock { tsock }
   target_fifo { tfifo }
   target_door { tdoor } # Solaris
+  target_whiteout { twhiteout } # macOS, Linux
   
   target_file      { treg }
   target_directory { tdir }
@@ -2413,6 +2420,7 @@ This is the default C</etc/rawhide.conf> standard library:
   target_s { tsock }
   target_p { tfifo }
   target_D { tdoor }
+  target_W { twhiteout } # macOS, Linux
   
   
   // File permissions for symlink targets (canonical, aliases, helpers)

@@ -82,6 +82,7 @@ I<rh> - (I<rawhide>) find files using pretty I<C> expressions
                     = socket
                     | fifo
                     > door (Solaris only)
+                    % whiteout (macOS only)
 
  other column format options:
    -H or -HH    - Output sizes like 1.2K 34M 5.6G etc., implies -l
@@ -136,14 +137,14 @@ I<rh> - (I<rawhide>) find files using pretty I<C> expressions
    now           today         second        minute        hour
    day           week          month         year          IFREG
    IFDIR         IFLNK         IFCHR         IFBLK         IFSOCK
-   IFIFO         IFDOOR        IFMT          ISUID         ISGID
-   ISVTX         IRWXU         IRUSR         IWUSR         IXUSR
-   IRWXG         IRGRP         IWGRP         IXGRP         IRWXO
-   IROTH         IWOTH         IXOTH         texists       tdev
-   tmajor        tminor        tino          tmode         tnlink
-   tuid          tgid          trdev         trmajor       trminor
-   tsize         tblksize      tblocks       tatime        tmtime
-   tctime        tstrlen
+   IFIFO         IFDOOR        IFWHT         IFMT          ISUID
+   ISGID         ISVTX         IRWXU         IRUSR         IWUSR
+   IXUSR         IRWXG         IRGRP         IWGRP         IXGRP
+   IRWXO         IROTH         IWOTH         IXOTH         texists
+   tdev          tmajor        tminor        tino          tmode
+   tnlink        tuid          tgid          trdev         trmajor
+   trminor       tsize         tblksize      tblocks       tatime
+   tmtime        tctime        tstrlen
 
  Reference file fields:
    .exists       .dev          .major        .minor        .ino
@@ -1591,6 +1592,7 @@ The type indicators have the following meanings:
     = socket
     | fifo
     > door (Solaris only)
+    % whiteout (macOS only)
 
 =back
 

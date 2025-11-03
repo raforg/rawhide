@@ -69,6 +69,10 @@ FILE *expfile;  /* FILE handle corresponding to the -f option argument or curren
 #define S_IFDOOR 0150000
 #endif
 
+#ifndef S_IFWHT
+#define S_IFWHT 0xe000
+#endif
+
 /* Initial built-in symbol table */
 
 static symbol_t init_syms[] =
@@ -138,6 +142,7 @@ static symbol_t init_syms[] =
 	{ "IFSOCK", NUMBER, S_IFSOCK, c_number, NULL },
 	{ "IFIFO",  NUMBER, S_IFIFO,  c_number, NULL },
 	{ "IFDOOR", NUMBER, S_IFDOOR, c_number, NULL },
+	{ "IFWHT",  NUMBER, S_IFWHT,  c_number, NULL },
 	{ "IFMT",   NUMBER, S_IFMT,   c_number, NULL },
 	{ "ISUID",  NUMBER, S_ISUID,  c_number, NULL },
 	{ "ISGID",  NUMBER, S_ISGID,  c_number, NULL },

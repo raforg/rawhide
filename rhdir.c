@@ -894,8 +894,14 @@ void visitf_default(void)
 		pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "=");
 	else if (isfifo(attr.statbuf) && (attr.most_indicators || attr.all_indicators))
 		pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "|");
+	#ifdef S_IFDOOR
 	else if (isdoor(attr.statbuf) && (attr.most_indicators || attr.all_indicators))
 		pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, ">");
+	#endif
+	#ifdef S_IFWHT
+	else if (iswhiteout(attr.statbuf) && (attr.most_indicators || attr.all_indicators))
+		pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "%%");
+	#endif
 	else if (attr.statbuf->st_mode & (S_IXUSR | S_IXGRP | S_IXOTH) && attr.all_indicators)
 		pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "*");
 
@@ -935,8 +941,14 @@ void visitf_default(void)
 						pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "=");
 					else if (isfifo(attr.linkstatbuf) && (attr.most_indicators || attr.all_indicators))
 						pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "|");
+					#ifdef S_IFDOOR
 					else if (isdoor(attr.linkstatbuf) && (attr.most_indicators || attr.all_indicators))
 						pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, ">");
+					#endif
+					#ifdef S_IFWHT
+					else if (iswhiteout(attr.linkstatbuf) && (attr.most_indicators || attr.all_indicators))
+						pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "%%");
+					#endif
 					else if (attr.linkstatbuf->st_mode & (S_IXUSR | S_IXGRP | S_IXOTH) && attr.all_indicators)
 						pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "*");
 				}
@@ -1155,19 +1167,25 @@ format.
 
 static char *ftypecode(struct stat *statbuf)
 {
-	#ifndef S_IFDOOR
+	#if defined(S_IFDOOR)
 	static char *ftype[] =
 	{
-		"p", "c", "d", "b", "-", "l", "s", "?" /* The 1990 version had "t" at the end. I wonder why. */
+		"?", "p", "c", "?", "d", "?", "b", "?",
+		"-", "?", "l", "?", "s", "D", "P", "?" /* "P" is a Solaris event port which can't happen */
+	};
+	#define ftype_index(statbuf) ((statbuf)->st_mode >> 12)
+	#elif defined(S_IFWHT)
+	static char *ftype[] =
+	{
+		"p", "c", "d", "b", "-", "l", "s", "W"
 	};
 	#define ftype_index(statbuf) ((statbuf)->st_mode >> 13)
 	#else
 	static char *ftype[] =
 	{
-		"?", "p", "c", "?", "d", "?", "b", "?",
-		"-", "?", "l", "?", "s", "D" , "P", "?" /* "P" is a Solaris event port which can't happen */
+		"p", "c", "d", "b", "-", "l", "s", "?" /* The 1990 version had "t" at the end. I wonder why. */
 	};
-	#define ftype_index(statbuf) ((statbuf)->st_mode >> 12)
+	#define ftype_index(statbuf) ((statbuf)->st_mode >> 13)
 	#endif
 
 	return ftype[ftype_index(statbuf)];
