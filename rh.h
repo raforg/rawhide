@@ -109,6 +109,26 @@ typedef long long unsigned int ullong;
 #define FOR_SH  0
 #define FOR_USH 1
 
+/* Define macros for combining seconds and nanoseconds */
+/* Without 128-bit long long int, this will break in April 2262 */
+
+#define SECONDS(s) ((llong)(s) * 1000000000LL)
+#define TIMESTAMP(sec, nsec) (SECONDS(sec) + (nsec))
+
+#if HAVE_NSEC_POSIX /* Linux, FreeBSD, OpenBSD, NetBSD, Solaris, Cygwin */
+#define ATIME(st) TIMESTAMP((st)->st_atime, (st)->st_atim.tv_nsec)
+#define MTIME(st) TIMESTAMP((st)->st_mtime, (st)->st_mtim.tv_nsec)
+#define CTIME(st) TIMESTAMP((st)->st_ctime, (st)->st_ctim.tv_nsec)
+#elif HAVE_NSEC_SPEC /* macOS */
+#define ATIME(st) TIMESTAMP((st)->st_atime, (st)->st_atimespec.tv_nsec)
+#define MTIME(st) TIMESTAMP((st)->st_mtime, (st)->st_mtimespec.tv_nsec)
+#define CTIME(st) TIMESTAMP((st)->st_ctime, (st)->st_ctimespec.tv_nsec)
+#else /* Any? */
+#define ATIME(st) TIMESTAMP((st)->st_atime, 0)
+#define MTIME(st) TIMESTAMP((st)->st_mtime, 0)
+#define CTIME(st) TIMESTAMP((st)->st_ctime, 0)
+#endif
+
 /* Structure of a rawhide assembly instruction */
 
 typedef struct instr_t instr_t;
@@ -273,6 +293,7 @@ struct runtime_t
 	int nul;                /* Flag for the -0 option: nul byte rather than newline */
 	char *format;           /* Format for the -L option */
 
+	int column_width_init_done;  /* Have we checked env for column widths? */
 	int dev_major_column_width;  /* Maximum width of the dev major column so far */
 	int dev_minor_column_width;  /* Maximum width of the dev minor column so far */
 	int ino_column_width;        /* Maximum width of the inode column so far */
@@ -337,7 +358,8 @@ extern char *prog_name;     /* Name of this program for messages */
 extern symbol_t *symbols;   /* Symbol table */
 extern symbol_t *tokensym;  /* Current token symbol */
 extern llong tokenval;      /* Current token value */
-extern llong token;         /* Current token code */
+extern int token;           /* Current token code */
+extern int tokendigits;     /* Number of decimal digits (to check nanoseconds) */
 
 extern instr_t Program[];   /* Program instructions */
 extern llong PC;            /* Program counter */

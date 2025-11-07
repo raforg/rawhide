@@ -20,9 +20,9 @@ paths are given, the current working directory is searched.
 The search criteria expression can come from the command line (with the `-e`
 option), from a file (with the `-f` option), or from standard input
 (*stdin*) (with `-f-`). If there is no explicit `-e` option expression, *rh*
-looks for an implicit expression among any remaining command line arguments.
-If no expression is specified, the default search criteria is the expression
-`1`, which matches all filesystem entries.
+can look for an implicit expression among any remaining command line
+arguments. If no expression is specified, the default search criteria is the
+expression `1`, which matches all filesystem entries.
 
 An *rh* expression is a *C*-like expression that can call user-defined
 functions. These expressions can contain all of *C*'s conditional, logical,
@@ -111,8 +111,8 @@ a high-level interface to the built-in symbols mentioned above, and makes
        -b           - Same as -E (like ls(1) on many systems)
        -q           - Output ? for control characters (default if tty)
        -p           - Append / indicator to directories
-       -t           - Append most type indicators (one of / @ = | >)
-       -F           - Append all type indicators (one of * / @ = | >)
+       -t           - Append most type indicators (one of / @ = | > %)
+       -F           - Append all type indicators (one of * / @ = | > %)
 
                         * executable
                         / directory
@@ -142,7 +142,7 @@ a high-level interface to the built-in symbols mentioned above, and makes
        "pattern"  "pattern".modifier  "/path".field  "cmd".sh  "cmd".ush
        {pattern}  {pattern}.modifier  {/path}.field  {cmd}.sh  {cmd}.ush
        123 0777 0xffff  1K 2M 3G  1k 2m 3g  $user @group  $$ @@
-       [yyyy/mm/dd] [yyyy/mm/dd hh:mm:ss]
+       [yyyy/mm/dd] [yyyy/mm/dd hh:mm:ss.nnnnnnnnn]
 
      Glob pattern notation:
        ? * [abc] [!abc] [a-c] [!a-c]
@@ -159,6 +159,7 @@ a high-level interface to the built-in symbols mentioned above, and makes
        .acl          .iacl         .reacl        .reiacl
        .ea           .iea          .reea         .reiea
        .sh           .ush
+
        Case-insensitive glob pattern matching is available here (i)
        Perl-compatible regular expressions are available here (re)
        File types and MIME types are available here (what, mime)

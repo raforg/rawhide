@@ -159,13 +159,13 @@ test_rawhide "$rh -e 'mtime < today'             $d" ""           "" 0 "mtime <=
 
 # Time durations (Note: month and year are just averages)
 
-test_rawhide "$rh -e 'second != 1'      $d" "" "" 0 "second"
-test_rawhide "$rh -e 'minute != 60'     $d" "" "" 0 "minute"
-test_rawhide "$rh -e 'hour != 3600'     $d" "" "" 0 "hour"
-test_rawhide "$rh -e 'day != 86400'     $d" "" "" 0 "day"
-test_rawhide "$rh -e 'week != 604800'   $d" "" "" 0 "week"
-test_rawhide "$rh -e 'month != 2629746' $d" "" "" 0 "month"
-test_rawhide "$rh -e 'year != 31556952' $d" "" "" 0 "year"
+test_rawhide "$rh -e 'second != 1g'      $d" "" "" 0 "second"
+test_rawhide "$rh -e 'minute != 60g'     $d" "" "" 0 "minute"
+test_rawhide "$rh -e 'hour != 3600g'     $d" "" "" 0 "hour"
+test_rawhide "$rh -e 'day != 86400g'     $d" "" "" 0 "day"
+test_rawhide "$rh -e 'week != 604800g'   $d" "" "" 0 "week"
+test_rawhide "$rh -e 'month != 2629746g' $d" "" "" 0 "month"
+test_rawhide "$rh -e 'year != 31556952g' $d" "" "" 0 "year"
 
 # Miscellaneous functions, and control flow
 

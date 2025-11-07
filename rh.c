@@ -23,7 +23,8 @@
 */
 
 #define _GNU_SOURCE /* For FNM_EXTMATCH and FNM_CASEFOLD in <fnmatch.h> */
-#define _FILE_OFFSET_BITS 64 /* For 64-bit off_t on 32-bit systems (Not AIX) */
+#define _FILE_OFFSET_BITS 64 /* For 64-bit off_t on 32-bit systems */
+#define _TIME_BITS 64        /* For 64-bit time_t on 32-bit systems */
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -112,8 +113,8 @@ static void help_message(void)
 	printf("  -b           - Same as -E (like ls(1) on many systems)\n");
 	printf("  -q           - Output ? for control characters (default if tty)\n");
 	printf("  -p           - Append / indicator to directories\n");
-	printf("  -t           - Append most type indicators (one of / @ = | >)\n");
-	printf("  -F           - Append all type indicators (one of * / @ = | >)\n");
+	printf("  -t           - Append most type indicators (one of / @ = | > %%)\n");
+	printf("  -F           - Append all type indicators (one of * / @ = | > %%)\n");
 	printf("\n");
 	printf("                   * executable\n");
 	printf("                   / directory\n");
@@ -143,7 +144,7 @@ static void help_message(void)
 	printf("  \"pattern\"  \"pattern\".modifier  \"/path\".field  \"cmd\".sh  \"cmd\".ush\n");
 	printf("  {pattern}  {pattern}.modifier  {/path}.field  {cmd}.sh  {cmd}.ush\n");
 	printf("  123 0777 0xffff  1K 2M 3G  1k 2m 3g  $user @group  $$ @@\n");
-	printf("  [yyyy/mm/dd] [yyyy/mm/dd hh:mm:ss]\n");
+	printf("  [yyyy/mm/dd] [yyyy/mm/dd hh:mm:ss.nnnnnnnnn]\n");
 
 	printf("\nGlob pattern notation:\n");
 	printf("  ? * [abc] [!abc] [a-c] [!a-c]\n");
@@ -173,11 +174,10 @@ static void help_message(void)
 		if (s->type == PATMOD)
 			printf("  %-12s%s", s->name, (i++ % columns == columns - 1 || !s->next) ? "\n" : "");
 
+	printf("\n");
+
 	#ifdef FNM_CASEFOLD
 	printf("  Case-insensitive glob pattern matching is available here (i)\n");
-	#else
-	if (attr.internal_fnmatch)
-		printf("  Case-insensitive glob pattern matching is available here (i)\n");
 	#endif
 	#ifdef HAVE_PCRE2
 	printf("  Perl-compatible regular expressions are available here (re)\n");

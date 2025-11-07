@@ -22,7 +22,8 @@
 * 20231013 raf <raf@raf.org>
 */
 
-#define _FILE_OFFSET_BITS 64 /* For 64-bit off_t on 32-bit systems (Not AIX) */
+#define _FILE_OFFSET_BITS 64 /* For 64-bit off_t on 32-bit systems */
+#define _TIME_BITS 64        /* For 64-bit time_t on 32-bit systems */
 
 #include <stdlib.h>
 #include <stdio.h>

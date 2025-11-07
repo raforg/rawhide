@@ -23,7 +23,8 @@
 */
 
 #define _GNU_SOURCE /* For FNM_EXTMATCH and FNM_CASEFOLD in <fnmatch.h> */
-#define _FILE_OFFSET_BITS 64 /* For 64-bit off_t on 32-bit systems (Not AIX) */
+#define _FILE_OFFSET_BITS 64 /* For 64-bit off_t on 32-bit systems */
+#define _TIME_BITS 64        /* For 64-bit time_t on 32-bit systems */
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -223,9 +224,9 @@ void c_rminor(llong i)  { Stack[SP++] = minor(attr.statbuf->st_rdev); }
 void c_size(llong i)    { Stack[SP++] = isdir(attr.statbuf) ? dirsize() : attr.statbuf->st_size; }
 void c_blksize(llong i) { Stack[SP++] = attr.statbuf->st_blksize; }
 void c_blocks(llong i)  { Stack[SP++] = attr.statbuf->st_blocks; }
-void c_atime(llong i)   { Stack[SP++] = attr.statbuf->st_atime; }
-void c_mtime(llong i)   { Stack[SP++] = attr.statbuf->st_mtime; }
-void c_ctime(llong i)   { Stack[SP++] = attr.statbuf->st_ctime; }
+void c_atime(llong i)   { Stack[SP++] = ATIME(attr.statbuf); }
+void c_mtime(llong i)   { Stack[SP++] = MTIME(attr.statbuf); }
+void c_ctime(llong i)   { Stack[SP++] = CTIME(attr.statbuf); }
 void c_depth(llong i)   { Stack[SP++] = attr.depth; }
 void c_prune(llong i)   { Stack[SP++] = 1; attr.prune = attr.pruned = 1; }
 void c_trim(llong i)    { Stack[SP++] = 1; attr.prune = 1; }
@@ -1601,9 +1602,9 @@ void r_rminor(llong i)  { check_reference(i, "rminor");  Stack[SP++] = minor(Ref
 void r_size(llong i)    { check_reference(i, "size");    Stack[SP++] = isdir(RefFile[i].statbuf) ? rdirsize(i) : RefFile[i].statbuf->st_size; }
 void r_blksize(llong i) { check_reference(i, "blksize"); Stack[SP++] = RefFile[i].statbuf->st_blksize; }
 void r_blocks(llong i)  { check_reference(i, "blocks");  Stack[SP++] = RefFile[i].statbuf->st_blocks; }
-void r_atime(llong i)   { check_reference(i, "atime");   Stack[SP++] = RefFile[i].statbuf->st_atime; }
-void r_mtime(llong i)   { check_reference(i, "mtime");   Stack[SP++] = RefFile[i].statbuf->st_mtime; }
-void r_ctime(llong i)   { check_reference(i, "ctime");   Stack[SP++] = RefFile[i].statbuf->st_ctime; }
+void r_atime(llong i)   { check_reference(i, "atime");   Stack[SP++] = ATIME(RefFile[i].statbuf); }
+void r_mtime(llong i)   { check_reference(i, "mtime");   Stack[SP++] = MTIME(RefFile[i].statbuf); }
+void r_ctime(llong i)   { check_reference(i, "ctime");   Stack[SP++] = CTIME(RefFile[i].statbuf); }
 void r_type(llong i)    { check_reference(i, "type");    Stack[SP++] = RefFile[i].statbuf->st_mode & S_IFMT; }
 void r_perm(llong i)    { check_reference(i, "perm");    Stack[SP++] = RefFile[i].statbuf->st_mode & ~S_IFMT; }
 
@@ -1720,9 +1721,9 @@ void t_rminor(llong i)  { prepare_target(); Stack[SP++] = minor(attr.linkstatbuf
 void t_size(llong i)    { prepare_target(); Stack[SP++] = isdir(attr.linkstatbuf) ? tdirsize() : attr.linkstatbuf->st_size; }
 void t_blksize(llong i) { prepare_target(); Stack[SP++] = attr.linkstatbuf->st_blksize; }
 void t_blocks(llong i)  { prepare_target(); Stack[SP++] = attr.linkstatbuf->st_blocks; }
-void t_atime(llong i)   { prepare_target(); Stack[SP++] = attr.linkstatbuf->st_atime; }
-void t_mtime(llong i)   { prepare_target(); Stack[SP++] = attr.linkstatbuf->st_mtime; }
-void t_ctime(llong i)   { prepare_target(); Stack[SP++] = attr.linkstatbuf->st_ctime; }
+void t_atime(llong i)   { prepare_target(); Stack[SP++] = ATIME(attr.linkstatbuf); }
+void t_mtime(llong i)   { prepare_target(); Stack[SP++] = MTIME(attr.linkstatbuf); }
+void t_ctime(llong i)   { prepare_target(); Stack[SP++] = CTIME(attr.linkstatbuf); }
 
 #ifndef NDEBUG
 /*

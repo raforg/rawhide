@@ -23,7 +23,8 @@
 */
 
 #define _GNU_SOURCE /* For wcswidth() and wcwidth() in <wchar.h> */
-#define _FILE_OFFSET_BITS 64 /* For 64-bit off_t on 32-bit systems (Not AIX) */
+#define _FILE_OFFSET_BITS 64 /* For 64-bit off_t on 32-bit systems */
+#define _TIME_BITS 64        /* For 64-bit time_t on 32-bit systems */
 
 #include <stdlib.h>
 #include <stdarg.h>
@@ -709,7 +710,7 @@ required limits. Ignore invalid values.
 
 llong env_int(char *envname, llong min_value, llong max_value, llong default_value)
 {
-	char *env, *endptr;
+	char *env, *endptr = NULL;
 	llong e;
 
 	if ((env = getenv(envname)) && *env)
@@ -717,7 +718,7 @@ llong env_int(char *envname, llong min_value, llong max_value, llong default_val
 		errno = 0;
 		e = strtoll(env, &endptr, 10);
 
-		if ((endptr && !*endptr) && e != 0 && errno != ERANGE)
+		if ((endptr && !*endptr) && errno != ERANGE)
 			if ((min_value == -1 || e >= min_value) && (max_value == -1 || e <= max_value))
 				return e;
 	}
@@ -816,7 +817,7 @@ int rawhide_search(char *fpath)
 	if (attr.ttybuf_sanitized)
 	{
 		free(attr.ttybuf_sanitized);
-		attr.ttybuf = NULL;
+		attr.ttybuf_sanitized = NULL;
 	}
 
 	if (attr.body)
@@ -1285,8 +1286,9 @@ void visitf_long(void)
 
 	/* Initialize column widths */
 
-	if (attr.dev_major_column_width == 0)
+	if (attr.column_width_init_done == 0)
 	{
+		attr.column_width_init_done = 1;
 		attr.dev_major_column_width = env_int("RAWHIDE_COLUMN_WIDTH_DEV_MAJOR", 1, 99, 1);
 		attr.dev_minor_column_width = env_int("RAWHIDE_COLUMN_WIDTH_DEV_MINOR", 1, 99, 1);
 		attr.ino_column_width = env_int("RAWHIDE_COLUMN_WIDTH_INODE", 1, 99, 6);

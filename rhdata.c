@@ -23,7 +23,8 @@
 */
 
 #define _GNU_SOURCE /* For FNM_CASEFOLD in <fnmatch.h> */
-#define _FILE_OFFSET_BITS 64 /* For 64-bit off_t on 32-bit systems (Not AIX) */
+#define _FILE_OFFSET_BITS 64 /* For 64-bit off_t on 32-bit systems */
+#define _TIME_BITS 64        /* For 64-bit time_t on 32-bit systems */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -43,7 +44,8 @@ char *prog_name;                     /* Name of this program for messages */
 symbol_t *symbols;                   /* Symbol table */
 symbol_t *tokensym;                  /* Current token symbol */
 llong tokenval;                      /* Current token value */
-llong token;                         /* Current token code */
+int token;                           /* Current token code */
+int tokendigits;                     /* Number of decimal digits (to check nanoseconds) */
 
 instr_t Program[MAX_PROGRAM_SIZE];   /* Program instructions */
 llong PC;                            /* Program counter */
@@ -122,15 +124,15 @@ static symbol_t init_syms[] =
 
 	/* Time */
 
-	{ "now",    NUMBER, 0,                            c_number, NULL }, /* Set by rawhide_init() */
-	{ "today",  NUMBER, 0,                            c_number, NULL }, /* Set by rawhide_init() */
-	{ "second", NUMBER, 1,                            c_number, NULL },
-	{ "minute", NUMBER, 60,                           c_number, NULL },
-	{ "hour",   NUMBER, 60 * 60,                      c_number, NULL },
-	{ "day",    NUMBER, 60 * 60 * 24,                 c_number, NULL },
-	{ "week",   NUMBER, 60 * 60 * 24 * 7,             c_number, NULL },
-	{ "month",  NUMBER, 60 * 60 * 24 * 365.2425 / 12, c_number, NULL },
-	{ "year",   NUMBER, 60 * 60 * 24 * 365.2425,      c_number, NULL },
+	{ "now",    NUMBER, 0,                                     c_number, NULL }, /* Set by rawhide_init() */
+	{ "today",  NUMBER, 0,                                     c_number, NULL }, /* Set by rawhide_init() */
+	{ "second", NUMBER, SECONDS(1),                            c_number, NULL },
+	{ "minute", NUMBER, SECONDS(60),                           c_number, NULL },
+	{ "hour",   NUMBER, SECONDS(60 * 60),                      c_number, NULL },
+	{ "day",    NUMBER, SECONDS(60 * 60 * 24),                 c_number, NULL },
+	{ "week",   NUMBER, SECONDS(60 * 60 * 24 * 7),             c_number, NULL },
+	{ "month",  NUMBER, SECONDS(60 * 60 * 24 * 365.2425 / 12), c_number, NULL },
+	{ "year",   NUMBER, SECONDS(60 * 60 * 24 * 365.2425),      c_number, NULL },
 
 	/* Constants from <sys/stat.h> */
 
@@ -141,8 +143,8 @@ static symbol_t init_syms[] =
 	{ "IFBLK",  NUMBER, S_IFBLK,  c_number, NULL },
 	{ "IFSOCK", NUMBER, S_IFSOCK, c_number, NULL },
 	{ "IFIFO",  NUMBER, S_IFIFO,  c_number, NULL },
-	{ "IFDOOR", NUMBER, S_IFDOOR, c_number, NULL },
-	{ "IFWHT",  NUMBER, S_IFWHT,  c_number, NULL },
+	{ "IFDOOR", NUMBER, S_IFDOOR, c_number, NULL }, /* Solaris */
+	{ "IFWHT",  NUMBER, S_IFWHT,  c_number, NULL }, /* macOS */
 	{ "IFMT",   NUMBER, S_IFMT,   c_number, NULL },
 	{ "ISUID",  NUMBER, S_ISUID,  c_number, NULL },
 	{ "ISGID",  NUMBER, S_ISGID,  c_number, NULL },
@@ -328,28 +330,30 @@ void rawhide_init(void)
 {
 	symbol_t *sym;
 	struct tm *tm;
+	struct timespec ts[1];
 	time_t t;
 	int i;
 
 	symbols = &init_syms[0];
 
-	for (i = 0; i < sizeof(init_syms) / sizeof(symbol_t) - 1; i++)
+	for (i = 0; i < sizeof(init_syms) / sizeof(*init_syms) - 1; i++)
 		init_syms[i].next = &init_syms[i + 1];
 
 	/* Initialize "now" to the time right now */
 
 	sym = locate_symbol("now");
-	sym->value = (llong)time(&t);
+	clock_gettime(CLOCK_REALTIME, ts);
+	sym->value = TIMESTAMP(ts->tv_sec, ts->tv_nsec);
 
 	/* Initialize "today" to the time last midnight (local time) */
 
-	tm = localtime(&t);
+	tm = localtime(&ts->tv_sec);
 	tm->tm_hour = tm->tm_min = tm->tm_sec = 0;
 	tm->tm_isdst = -1;
 	t = mktime(tm);
 
 	sym = locate_symbol("today");
-	sym->value = (llong)t;
+	sym->value = SECONDS(t);
 
 	/* Initialize Program */
 
@@ -399,7 +403,7 @@ symbol_t *insert_symbol(char *name, int toktype, llong val)
 {
 	symbol_t *sym;
 
-	if (!(sym = malloc(sizeof(symbol_t))))
+	if (!(sym = malloc(sizeof(*sym))))
 		return NULL;
 
 	if (!(sym->name = strdup(name)))

@@ -205,10 +205,17 @@ liberties taken):
       | "@@"
 
   <date-time> ::=
+        <date>
+      | <date> <time>
+
+  <date> ::=
         DECIMAL "/" DECIMAL "/" DECIMAL
-      | DECIMAL "/" DECIMAL "/" DECIMAL DECIMAL
-      | DECIMAL "/" DECIMAL "/" DECIMAL DECIMAL ":" DECIMAL
-      | DECIMAL "/" DECIMAL "/" DECIMAL DECIMAL ":" DECIMAL ":" DECIMAL
+
+  <time> ::=
+        DECIMAL
+      | DECIMAL ":" DECIMAL
+      | DECIMAL ":" DECIMAL ":" DECIMAL
+      | DECIMAL ":" DECIMAL ":" DECIMAL "." DECIMAL
 
   <pattern> ::=
         STRING
@@ -278,7 +285,7 @@ liberties taken):
 =head2 Operators
 
 The following I<C> operators are available (presented in groups of
-increasing precedence):
+decreasing precedence):
 
   -   Minus (unary)
   ~   Bitwise not (unary)
@@ -304,7 +311,7 @@ increasing precedence):
 
   &   Bitwise and
 
-  ^   Bitwise exclusive or
+  ^   Bitwise exclusive or (xor)
 
   |   Bitwise or
 
@@ -425,23 +432,28 @@ The token C<@@> evaluates to the current user's primary group ID.
 =head2 Dates and date/times
 
 Dates and date/times can be specified between square brackets (C<"[]">)
-(i.e., C<[>I<YYYY>C</>I<MM>C</>I<DD>C<]> and C<[>I<YYYY>C</>I<MM>C</>I<DD>
-I<hh>C<:>I<mm>C<:>I<ss>C<]>). They are interpreted as being in the local
-time zone. If the year is specified as a number below 100, then it is
-interpreted as being a year in the current century. Hours must be in 24-hour
-time, not 12-hour time. The seconds component is optional if it is zero
-(i.e., C<[>I<YYYY>C</>I<MM>C</>I<DD> I<hh>C<:>I<mm>C<]>). The minutes
-component is also optional if both it and the seconds are zero (i.e.,
-C<[>I<YYYY>C</>I<MM>C</>I<DD> I<hh>C<]>). The hours component is also
-optional if it and the minutes and seconds are all zero (i.e.,
-midnight). Then, it's just a date. Dates and date/times evaluate to the corresponding
-number of seconds since the I<UNIX> epoch.
+(i.e.,
+S<C<[>I<YYYY>C</>I<MM>C</>I<DD>C<]>> and
+S<C<[>I<YYYY>C</>I<MM>C</>I<DD> I<hh>C<:>I<mm>C<:>I<ss>C<.>I<nnnnnnnnn>C<]>>). They
+are interpreted as being in the local time zone. If the year is specified as
+a number below 100, then it is interpreted as being a year in the current
+century. Hours must be in 24-hour time, not 12-hour time. Trailing zero
+digits of the nanoseconds component are optional. The nanoseconds component
+itself is optional if it is zero (i.e.,
+S<C<[>I<YYYY>C</>I<MM>C</>I<DD> I<hh>C<:>I<mm>C<:>I<ss>C<]>>). The seconds
+component is optional if it is also zero (i.e.,
+S<C<[>I<YYYY>C</>I<MM>C</>I<DD> I<hh>C<:>I<mm>C<]>>). The minutes component
+is optional if it is also zero (i.e.,
+S<C<[>I<YYYY>C</>I<MM>C</>I<DD> I<hh>C<]>>). The hours component is optional
+if it is also zero (i.e., midnight). Then, it's just a date. Dates and
+date/times evaluate to the number of nanoseconds since the I<UNIX> Epoch.
 
 Note that if the month, day, hours, minutes, or seconds are outside their
 valid ranges, the date or date/time is normalized so that, for example, the
 40th of October is interpreted as the 9th of November, and the time
 C<25:90:90> is interpreted as C<2:31:30> the following day. See I<mktime(3)>
-for details.
+for details. It is an error if the nanosecond value is outside its valid
+range.
 
 =head2 Functions
 
@@ -583,17 +595,23 @@ is the C<st_blocks> field of the corresponding I<stat(2)> structure.
 =item C<atime>
 
 The time that the current candidate file was last accessed. This is the
-C<st_atime> field of the corresponding I<stat(2)> structure.
+C<st_atime> field of the corresponding I<stat(2)> structure converted to
+nanoseconds, and combined with the nanoseconds from C<st_atim.tv_nsec> (or
+equivalent).
 
 =item C<mtime>
 
 The time that the current candidate file's contents were last modified. This
-is the C<st_mtime> field of the corresponding I<stat(2)> structure.
+is the C<st_mtime> field of the corresponding I<stat(2)> structure converted
+to nanoseconds, and combined with the nanoseconds from C<st_mtim.tv_nsec>
+(or equivalent).
 
 =item C<ctime>
 
 The time that the current candidate file's inode was last changed. This is
-the C<st_ctime> field of the corresponding I<stat(2)> structure.
+the C<st_ctime> field of the corresponding I<stat(2)> structure converted to
+nanoseconds, and combined with nanoseconds from C<st_ctim.tv_nsec> (or
+equivalent).
 
 =item C<attr>
 
@@ -758,39 +776,45 @@ C<exit> can be used in combination with C<prune> and/or C<trim> (see above)
 
 =item C<now>
 
-The current time (when I<rh(1)> started) in seconds since the I<UNIX> epoch.
+The current time (when I<rh(1)> started) in nanoseconds since the I<UNIX>
+Epoch.
+
+Note that timers on different systems have different resolutions. I<Linux>,
+I<FreeBSD>, I<OpenBSD>, and I<NetBSD> have nanosecond precision. I<macOS>
+and I<Cygwin> have microsecond precision. I<Solaris> has millisecond
+precision.
 
 =item C<today>
 
-The time last midnight (local time) in seconds since the I<UNIX> epoch.
+The time last midnight (local time) in nanoseconds since the I<UNIX> Epoch.
 
 =item C<second>
 
-The value C<1>.
+The number of nanoseconds in one second.
 
 =item C<minute>
 
-The number of seconds in a minute.
+The number of nanoseconds in a minute.
 
 =item C<hour>
 
-The number of seconds in an hour.
+The number of nanoseconds in an hour.
 
 =item C<day>
 
-The number of seconds in a day.
+The number of nanoseconds in a day.
 
 =item C<week>
 
-The number of seconds in a week.
+The number of nanoseconds in a week.
 
 =item C<month>
 
-The average number of seconds in a month.
+The average number of nanoseconds in a month.
 
 =item C<year>
 
-The average number of seconds in a year.
+The average number of nanoseconds in a year.
 
 =item C<IFMT>
 
@@ -1055,7 +1079,8 @@ seen will be broken ones, and this built-in will return zero.
 
 The time that the current candidate symlink's ultimate target was last
 accessed. This is the C<st_atime> field of the corresponding I<stat(2)>
-structure.
+structure converted to nanoseconds, and combined with the nanoseconds from
+C<st_atim.tv_nsec> (or equivalent).
 
 This should only be used when the current candidate file is a symlink, and
 when its ultimate target exists (i.e., when C<texists> is true). Otherwise,
@@ -1068,7 +1093,8 @@ seen will be broken ones, and this built-in will return zero.
 
 The time that the current candidate symlink's ultimate target's contents
 were last modified. This is the C<st_mtime> field of the corresponding
-I<stat(2)> structure.
+I<stat(2)> structure converted to nanoseconds, and combined with the
+nanoseconds from C<st_mtim.tv_nsec> (or equivalent).
 
 This should only be used when the current candidate file is a symlink, and
 when its ultimate target exists (i.e., when C<texists> is true). Otherwise,
@@ -1081,7 +1107,8 @@ seen will be broken ones, and this built-in will return zero.
 
 The time that the current candidate symlink's ultimate target's inode was
 last changed. This is the C<st_ctime> field of the corresponding I<stat(2)>
-structure.
+structure converted to nanoseconds, and combined with the nanoseconds from
+C<st_ctim.tv_nsec> (or equivalent).
 
 This should only be used when the current candidate file is a symlink, and
 when its ultimate target exists (i.e., when C<texists> is true). Otherwise,
@@ -1699,8 +1726,8 @@ artificial extended attributes have the following format:
 The I<name> is the name of the corresponding real extended attribute. The
 C<"/stat:"> is literal. The I<nlink> is always C<1>. The I<user> and
 I<group> are names or numeric IDs. The I<size> is in bytes. The I<mtime>,
-I<atime>, and I<ctime> are in ISO date/time format (C<"YYYY-MM-DD HH:MM:SS
-+HHMM">).
+I<atime>, and I<ctime> are in ISO date/time format
+(S<C<"YYYY-MM-DD HH:MM:SS +HHMM">>).
 
 This makes it possible on I<Solaris> to search for files by the I<stat(2)>
 information of their extended attributes. But it can only be a text-based
@@ -2054,7 +2081,8 @@ C<exists> above.
 =item C<atime>
 
 The time that the reference file was last accessed. This is the C<st_atime>
-field of the corresponding I<stat(2)> structure.
+field of the corresponding I<stat(2)> structure converted to nanoseconds,
+and combined with the nanoseconds from C<st_atim.tv_nsec> (or equivalent).
 
 It is an error to use this if the reference file does not exist. See
 C<exists> above.
@@ -2062,7 +2090,9 @@ C<exists> above.
 =item C<mtime>
 
 The time that the reference file's contents were last modified. This is the
-C<st_mtime> field of the corresponding I<stat(2)> structure.
+C<st_mtime> field of the corresponding I<stat(2)> structure converted to
+nanoseconds, and combined with the nanoseconds from C<st_mtim.tv_nsec> (or
+equivalent).
 
 It is an error to use this if the reference file does not exist. See
 C<exists> above.
@@ -2070,7 +2100,9 @@ C<exists> above.
 =item C<ctime>
 
 The time that the reference file's inode was last changed. This is the
-C<st_ctime> field of the corresponding I<stat(2)> structure.
+C<st_ctime> field of the corresponding I<stat(2)> structure converted to
+nanoseconds, and combined with the nanoseconds from C<st_ctim.tv_nsec> (or
+equivalent).
 
 It is an error to use this if the reference file does not exist. See
 C<exists> above.
@@ -2343,7 +2375,7 @@ This is the default C</etc/rawhide.conf> standard library:
   len      { strlen } # Length of the base name
   sz       { size }
   
-  seconds  { second }
+  seconds  { second } # Nanoseconds
   minutes  { minute }
   hours    { hour }
   days     { day }

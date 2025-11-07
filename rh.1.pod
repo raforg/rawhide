@@ -73,8 +73,8 @@ I<rh> - (I<rawhide>) find files using pretty I<C> expressions
    -b           - Same as -E (like ls(1) on many systems)
    -q           - Output ? for control characters (default if tty)
    -p           - Append / indicator to directories
-   -t           - Append most type indicators (one of / @ = | >)
-   -F           - Append all type indicators (one of * / @ = | >)
+   -t           - Append most type indicators (one of / @ = | > %)
+   -F           - Append all type indicators (one of * / @ = | > %)
 
                     * executable
                     / directory
@@ -104,7 +104,7 @@ I<rh> - (I<rawhide>) find files using pretty I<C> expressions
    "pattern"  "pattern".modifier  "/path".field  "cmd".sh  "cmd".ush
    {pattern}  {pattern}.modifier  {/path}.field  {cmd}.sh  {cmd}.ush
    123 0777 0xffff  1K 2M 3G  1k 2m 3g  $user @group  $$ @@
-   [yyyy/mm/dd] [yyyy/mm/dd hh:mm:ss]
+   [yyyy/mm/dd] [yyyy/mm/dd hh:mm:ss.nnnnnnnnn]
 
  Glob pattern notation:
    ? * [abc] [!abc] [a-c] [!a-c]
@@ -121,6 +121,7 @@ I<rh> - (I<rawhide>) find files using pretty I<C> expressions
    .acl          .iacl         .reacl        .reiacl
    .ea           .iea          .reea         .reiea
    .sh           .ush
+
    Case-insensitive glob pattern matching is available here (i)
    Perl-compatible regular expressions are available here (re)
    File types and MIME types are available here (what, mime)
@@ -178,7 +179,7 @@ paths are given, the current working directory is searched.
 The search criteria expression can come from the command line (with the
 C<-e> option), from a file (with the C<-f> option), or from standard input
 (I<stdin>) (with C<-f->). If there is no explicit C<-e> option expression,
-I<rh> looks for an implicit expression among any remaining command line
+I<rh> can look for an implicit expression among any remaining command line
 arguments. If no expression is specified, the default search criteria is the
 expression C<1>, which matches all filesystem entries.
 
@@ -193,7 +194,10 @@ There are built-in symbols that represent each candidate file's inode
 metadata. These are the fields in the corresponding I<stat(2)> structure
 (e.g., C<st_mode>, C<st_uid>, C<st_size>, C<st_mtime>, ...). See I<stat(2)>
 for details. For convenience, the C<"st_"> prefix is omitted from the symbol
-names (e.g., C<st_mtime> is used as C<mtime>).
+names (e.g., C<st_mtime> is used as C<mtime>). Note: The file timestamp
+built-ins (i.e., C<atime>, C<mtime>, and C<ctime>) are not the same as their
+corresponding I<stat(2)> structure fields, which are numbers of seconds
+since the I<UNIX> Epoch. These built-ins are their nanosecond equivalents.
 
 Other built-in symbols represent the constants defined by I<C>'s
 C<< <sys/stat.h> >> header file. These are useful for interpreting the
@@ -1089,7 +1093,7 @@ function (excluding its terminating newline).
 
 The accessed time (C<atime>) in the format specified by I<k>, which is
 either the at sign (C<"@">), for the number of seconds since the I<UNIX>
-epoch, or a conversion specifier character for the I<C> I<strftime(3)>
+Epoch, or a conversion specifier character for the I<C> I<strftime(3)>
 function. See I<strftime(3)> for details.
 
 =item C<%t>
@@ -1101,7 +1105,7 @@ function (excluding its terminating newline).
 
 The modified time (C<mtime>) in the format specified by I<k>, which is
 either the at sign (C<"@">), for the number of seconds since the I<UNIX>
-epoch, or a conversion specifier character for the I<C> I<strftime(3)>
+Epoch, or a conversion specifier character for the I<C> I<strftime(3)>
 function. See I<strftime(3)> for details.
 
 =item C<%c>
@@ -1113,7 +1117,7 @@ I<ctime(3)> function (excluding its terminating newline).
 
 The inode changed time (C<ctime>) in the format specified by I<k>, which is
 either the at sign (C<"@">), for the number of seconds since the I<UNIX>
-epoch, or a conversion specifier character for the I<C> I<strftime(3)>
+Epoch, or a conversion specifier character for the I<C> I<strftime(3)>
 function. See I<strftime(3)> for details.
 
 =item C<%w>
@@ -1573,16 +1577,16 @@ output C<"/"> after the target paths of matching symlinks to directories.
 =item C<-t>
 
 Output most of the type indicators after matching paths (i.e., one of
-C<"/">, C<"@">, C<"=">, C<"|">, or C<< ">" >>). If the C<-l> option has also
-been supplied (see above), also output most of the type indicators as
-appropriate after the target paths of matching symlinks.
+C<"/">, C<"@">, C<"=">, C<"|">, C<< ">" >>, or C<"%">). If the C<-l> option
+has also been supplied (see above), also output most of the type indicators
+as appropriate (see next) after the target paths of matching symlinks.
 
 =item C<-F>
 
 Output all of the type indicators after matching paths (i.e., one of C<"*">,
-C<"/">, C<"@">, C<"=">, C<"|">, or C<< ">" >>). If the C<-l> option has also
-been supplied (see above), also output all of the type indicators as
-appropriate after the target paths of matching symlinks.
+C<"/">, C<"@">, C<"=">, C<"|">, C<< ">" >>, or C<"%">). If the C<-l> option
+has also been supplied (see above), also output all of the type indicators
+as appropriate after the target paths of matching symlinks.
 
 The type indicators have the following meanings:
 
@@ -1695,7 +1699,7 @@ sense. But here's a brief introduction.
 
 There are expressions and functions. Expressions look like I<C>
 expressions. The only data type is integer. These I<C> operators are available (presented
-in groups of increasing precedence):
+in groups of decreasing precedence):
 
     -   Minus (unary)
     ~   Bitwise not (unary)
@@ -1721,7 +1725,7 @@ in groups of increasing precedence):
 
     &   Bitwise and
 
-    ^   Bitwise exclusive or
+    ^   Bitwise exclusive or (xor)
 
     |   Bitwise or
 
@@ -1750,7 +1754,7 @@ There are special tokens to represent various things:
     $user @group          - user and group IDs
     $$ @@                 - current user's user ID and primary group ID
     [yyyy/mm/dd]          - dates
-    [yyyy/mm/dd hh:mm:ss] - date/times
+    [yyyy/mm/dd hh:mm:ss.nnnnnnnnn] - date/times
 
 There is an alternate syntax using curly braces instead of double quotes for
 the string literals above:
@@ -1779,15 +1783,16 @@ by a file test expression, which is optionally terminated by a semicolon
 
 There are built-in symbols that represent the inode metadata (i.e.,
 I<stat(2)> structure fields) of candidate files (e.g., C<mode>, C<uid>,
-C<size>, C<mtime>, ...), I<Linux>/I<BSD>/I<Solaris> file attributes/flags
-(i.e., C<attr>, C<proj>, C<gen>), other useful file information (e.g.,
-C<nouser>, C<nogroup>, C<readable>, C<writable>, ...), control flow (i.e.,
-C<prune>, C<trim>, C<exit>), useful values and constants (e.g., C<now>,
-C<today>, C<minute>, C<hour>, C<day>, ...), and more constants from I<C>'s
-C<< <sys/stat.h> >> header file (e.g., C<IFMT>, C<IFDIR>, C<IRUSR>,
-...). There are also built-in symbols that represent the inode metadata of
-candidate symlink targets (e.g., C<tmode>, C<tuid>, C<tsize>, C<tmtime>,
-...).
+C<size>, C<mtime>, ...),
+I<Linux>/I<FreeBSD>/I<OpenBSD>/I<NetBSD>/I<macOS>/I<Solaris> file
+attributes/flags (i.e., C<attr>, C<proj>, C<gen>), other useful file
+information (e.g., C<nouser>, C<nogroup>, C<readable>, C<writable>, ...),
+control flow (i.e., C<prune>, C<trim>, C<exit>), useful values and constants
+(e.g., C<now>, C<today>, C<minute>, C<hour>, C<day>, ...), and more
+constants from I<C>'s C<< <sys/stat.h> >> header file (e.g., C<IFMT>,
+C<IFDIR>, C<IRUSR>, ...). There are also built-in symbols that represent the
+inode metadata of candidate symlink targets (e.g., C<tmode>, C<tuid>,
+C<tsize>, C<tmtime>, ...).
 
 There is also a standard library of functions in C</etc/rawhide.conf> (or
 similar). It contains both readable and concise functions for various things
@@ -1823,7 +1828,8 @@ pattern match against the file name. Pattern modifiers
 literals to let you choose how to match text (i.e., glob pattern or
 I<Perl>-compatible regular expression (regex), and case-sensitive or
 case-insensitive), and which text to match against (i.e., file name, path,
-symlink target path, access control list, or extended attributes).
+symlink target path, body, file type description, MIME type, access control
+list, or extended attributes).
 
 There are other string literal suffixes that represent the inode metadata
 (i.e., I<stat(2)> structure fields) of arbitrary reference files
@@ -2558,10 +2564,10 @@ into C</root/suid.txt> and large files into C</root/big.txt>.
       \( -perm -4000 -fprintf /root/suid.txt '%#m %u %p\n' \) , \
       \( -size +100M -fprintf /root/big.txt '%-10s %p\n' \)
 
-  # rh -e '
+  # rh / '
       setuid && {rh -M0 -L "%%#m %%u %%p\n" %s >>/root/suid.txt}.sh,
-      size > 100M && {rh -M0 -L "%%-10s %%p\n" %s >>/root/big.txt}.sh
-  ' -L '' /
+      size > 100M && {rh -M0 -L "%%-10s %%p\n" %s >>/root/big.txt}.sh,0
+  '
 
 =head2 Searching files by age
 
@@ -2784,9 +2790,10 @@ supported (e.g., I<UTF-16>, I<GB 18030>, I<Big5>, I<Shift JIS>, and
 I<EUC-*>). These limitations let I<rh> enjoy most of the benefits of
 I<Unicode> without needing to expend any time or energy decoding and
 encoding characters. Actually, some decoding is done to identify
-non-printable/control characters, and to determine character widths. But
-that's not enough to make the other multi-byte character encodings mentioned
-above work, at least not for JSON output.
+non-printable/control characters, and to determine character widths. And the
+C<-L> option with C<\u> and C<\U> does encode I<Unicode> code points for the
+user's locale. But that's not enough to make the other multi-byte character
+encodings mentioned above work, at least not for JSON output.
 
 If the user's C<$PATH> environment variable includes the current working
 directory, or any other non-absolute paths, they are automatically

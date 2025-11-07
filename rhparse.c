@@ -23,7 +23,8 @@
 */
 
 #define _GNU_SOURCE /* For FNM_CASEFOLD in <fnmatch.h> */
-#define _FILE_OFFSET_BITS 64 /* For 64-bit off_t on 32-bit systems (Not AIX) */
+#define _FILE_OFFSET_BITS 64 /* For 64-bit off_t on 32-bit systems */
+#define _TIME_BITS 64        /* For 64-bit time_t on 32-bit systems */
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -55,7 +56,8 @@
 
 static int cpos;             /* Current byte position */
 static int lineno;           /* Current line number */
-static int decimal_mode;     /* Only decimal, not octal */
+static int decimal_mode;     /* Only decimal, not octal or hexadecimal */
+static int datetime_mode;    /* Only plain decimal, no scale units */
 static int last_reffile;     /* Most recent reference file */
 static int expect_block = 0; /* Expecting { to start a function block? */
 static char *saved_expstr;
@@ -1087,23 +1089,32 @@ static llong parse_datetime(void);
 Parse a date/time:
 
 	<date-time> ::=
-		  NUMBER "/" NUMBER "/" NUMBER
-		| NUMBER "/" NUMBER "/" NUMBER NUMBER
-		| NUMBER "/" NUMBER "/" NUMBER NUMBER ":" NUMBER
-		| NUMBER "/" NUMBER "/" NUMBER NUMBER ":" NUMBER ":" NUMBER
+		  <date>
+		| <date> <time>
+
+	<date> ::=
+		  DECIMAL "/" DECIMAL "/" DECIMAL
+
+	<time> ::=
+		  DECIMAL
+		| DECIMAL ":" DECIMAL
+		| DECIMAL ":" DECIMAL ":" DECIMAL
+		| DECIMAL ":" DECIMAL ":" DECIMAL "." DECIMAL
 
 If the year is below 100 it is interpreted as being in the current century.
-Return the seconds from the UNIX epoch until the specified date/time.
+Return the nanoseconds from the UNIX Epoch until the specified date/time.
 
 */
 
 static llong parse_datetime(void)
 {
-	int year, month, day, hour = 0, minute = 0, second = 0;
+	int year, month, day, hour = 0, minute = 0, second = 0, nanosecond = 0;
 	llong seconds;
 	struct tm tm[1];
 
 	debug_extra(("datetime()"));
+
+	datetime_mode = 1;
 
 	/* Year */
 
@@ -1163,12 +1174,29 @@ static llong parse_datetime(void)
 					parser_error("expected second number, found %s", show_token());
 
 				second = tokenval;
-				token = get_token();
+
+				/* Nanoseconds (optional) */
+
+				if ((token = get_token()) == '.')
+				{
+					if ((token = get_token_decimal()) != NUMBER)
+						parser_error("expected nanosecond number, found %s", show_token());
+
+					if (tokenval > 999999999LL || tokendigits > 9)
+						parser_error("expected nanosecond number, found %s", show_token());
+
+					nanosecond = tokenval;
+
+					while (tokendigits < 9)
+						nanosecond *= 10, ++tokendigits;
+
+					token = get_token();
+				}
 			}
 		}
 	}
 
-	/* Convert to seconds since the epoch */
+	/* Convert to seconds since the UNIX Epoch */
 
 	tm->tm_sec = second;
 	tm->tm_min = minute;
@@ -1182,17 +1210,23 @@ static llong parse_datetime(void)
 
 	if ((seconds = (llong)mktime(tm)) == -1 || (year == 1900 && attr.test_invalid_date))
 	{
-		if (hour == 0 && minute == 0 && second == 0)
+		if (hour == 0 && minute == 0 && second == 0 && nanosecond == 0)
 			parser_error("invalid date: [%04d/%d/%d]", year, month, day);
-		else if (minute == 0 && second == 0)
+		else if (minute == 0 && second == 0 && nanosecond == 0)
 			parser_error("invalid time: [%04d/%d/%d %d]", year, month, day, hour);
-		else if (second == 0)
+		else if (second == 0 && nanosecond == 0)
 			parser_error("invalid time: [%04d/%d/%d %d:%02d]", year, month, day, hour, minute);
-		else
+		else if (nanosecond == 0)
 			parser_error("invalid time: [%04d/%d/%d %d:%02d:%02d]", year, month, day, hour, minute, second);
+		else
+			parser_error("invalid time: [%04d/%d/%d %d:%02d:%02d.%09d]", year, month, day, hour, minute, second, nanosecond);
 	}
 
-	return seconds;
+	datetime_mode = 0;
+
+	/* Convert to nanoseconds since the UNIX Epoch */
+
+	return TIMESTAMP(seconds, nanosecond);
 }
 
 /*
@@ -1284,6 +1318,7 @@ static int _get_token(void)
 	char *scale, *start;
 
 	tokensym = NULL;
+	tokendigits = 0;
 	c = getch();
 
 	/* Comment */
@@ -1378,14 +1413,16 @@ static int _get_token(void)
 	if (isdigit(c))
 	{
 		tokenval = c - '0';
+		tokendigits = 1;
 
 		while (isdigit((c = getch())))
 		{
 			tokenval *= 10;
 			tokenval += c - '0';
+			++tokendigits;
 		}
 
-		if ((scale = strchr(scales, c)))
+		if (!datetime_mode && (scale = strchr(scales, c)))
 			tokenval *= factor[scale - scales];
 		else
 			ungetch(c);
@@ -1809,7 +1846,7 @@ static const char *show_token(void)
 		case IDENTIFIER: snprintf(buf, BUFSIZE, "identifier %s", tokensym->name); break;
 		case FUNCTION: snprintf(buf, BUFSIZE, "function %s", tokensym->name); break;
 		case PARAM: snprintf(buf, BUFSIZE, "param %s", tokensym->name); break;
-		case NUMBER: snprintf(buf, BUFSIZE, "number %lld%s%s", tokenval, (tokensym) ? " " : "", (tokensym) ? tokensym->name : ""); break;
+		case NUMBER: snprintf(buf, BUFSIZE, "number %0*lld%s%s", tokendigits, tokenval, (tokensym) ? " " : "", (tokensym) ? tokensym->name : ""); break;
 		case FIELD: snprintf(buf, BUFSIZE, "field %s", tokensym->name); break;
 		case STRING: snprintf(buf, BUFSIZE, "string \"%s\"", Strbuf + tokenval); break;
 		case PATMOD: snprintf(buf, BUFSIZE, "patmod \"%s\"%s", Strbuf + tokenval, tokensym->name); break;
