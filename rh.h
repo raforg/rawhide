@@ -115,19 +115,23 @@ typedef long long unsigned int ullong;
 #define SECONDS(s) ((llong)(s) * 1000000000LL)
 #define TIMESTAMP(sec, nsec) (SECONDS(sec) + (nsec))
 
-#if HAVE_NSEC_POSIX /* Linux, FreeBSD, OpenBSD, NetBSD, Solaris, Cygwin */
-#define ATIME(st) TIMESTAMP((st)->st_atime, (st)->st_atim.tv_nsec)
-#define MTIME(st) TIMESTAMP((st)->st_mtime, (st)->st_mtim.tv_nsec)
-#define CTIME(st) TIMESTAMP((st)->st_ctime, (st)->st_ctim.tv_nsec)
-#elif HAVE_NSEC_SPEC /* macOS */
-#define ATIME(st) TIMESTAMP((st)->st_atime, (st)->st_atimespec.tv_nsec)
-#define MTIME(st) TIMESTAMP((st)->st_mtime, (st)->st_mtimespec.tv_nsec)
-#define CTIME(st) TIMESTAMP((st)->st_ctime, (st)->st_ctimespec.tv_nsec)
+#if HAVE_POSIX_NSEC /* Linux, FreeBSD, OpenBSD, NetBSD, Solaris, Cygwin */
+#define ANSEC(st) ((st)->st_atim.tv_nsec)
+#define MNSEC(st) ((st)->st_mtim.tv_nsec)
+#define CNSEC(st) ((st)->st_ctim.tv_nsec)
+#elif HAVE_SPEC_NSEC /* macOS */
+#define ANSEC(st) ((st)->st_atimespec.tv_nsec)
+#define MNSEC(st) ((st)->st_mtimespec.tv_nsec)
+#define CNSEC(st) ((st)->st_ctimespec.tv_nsec)
 #else /* Any? */
-#define ATIME(st) TIMESTAMP((st)->st_atime, 0)
-#define MTIME(st) TIMESTAMP((st)->st_mtime, 0)
-#define CTIME(st) TIMESTAMP((st)->st_ctime, 0)
+#define ANSEC(st) 0
+#define MNSEC(st) 0
+#define CNSEC(st) 0
 #endif
+
+#define ATIME(st) TIMESTAMP((st)->st_atime, ANSEC(st))
+#define MTIME(st) TIMESTAMP((st)->st_mtime, MNSEC(st))
+#define CTIME(st) TIMESTAMP((st)->st_ctime, CNSEC(st))
 
 /* Structure of a rawhide assembly instruction */
 

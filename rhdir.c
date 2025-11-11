@@ -1266,6 +1266,30 @@ static const char *aclea(void)
 
 /*
 
+static const char *timestampfmt(llong nsec, int iso_time, int verbose);
+
+Return the appropriate strftime() format for mtime/atime/ctime columns.
+
+*/
+
+static const char *timestampfmt(llong nsec, int iso_time, int verbose)
+{
+	#define FMTBUFSIZE 32
+	static char fmtbuf[FMTBUFSIZE];
+
+	if (!iso_time)
+		return "%b %e %H:%M:%S %Y";
+
+	if (!verbose)
+		return "%Y-%m-%d %H:%M:%S %z";
+
+	snprintf(fmtbuf, FMTBUFSIZE, "%%Y-%%m-%%d %%H:%%M:%%S.%09lld %%z", nsec);
+
+	return fmtbuf;
+}
+
+/*
+
 void visitf_long(void);
 
 The -l action for matching files. It outputs the name and other details. The
@@ -1551,7 +1575,7 @@ void visitf_long(void)
 	if ((!attr.atime_column && !attr.ctime_column) || attr.verbose)
 	{
 		pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "%s", (ncols) ? " " : "");
-		pos += strftime(buf + pos, CMDBUFSIZE - pos, (attr.iso_time) ? "%Y-%m-%d %H:%M:%S %z" : "%b %e %H:%M:%S %Y", localtime(&attr.statbuf->st_mtime));
+		pos += strftime(buf + pos, CMDBUFSIZE - pos, timestampfmt(MNSEC(attr.statbuf), attr.iso_time, attr.verbose), localtime(&attr.statbuf->st_mtime));
 		++ncols;
 	}
 
@@ -1560,7 +1584,7 @@ void visitf_long(void)
 	if (attr.atime_column || attr.verbose)
 	{
 		pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "%s", (ncols) ? " " : "");
-		pos += strftime(buf + pos, CMDBUFSIZE - pos, (attr.iso_time) ? "%Y-%m-%d %H:%M:%S %z" : "%b %e %H:%M:%S %Y", localtime(&attr.statbuf->st_atime));
+		pos += strftime(buf + pos, CMDBUFSIZE - pos, timestampfmt(ANSEC(attr.statbuf), attr.iso_time, attr.verbose), localtime(&attr.statbuf->st_atime));
 		++ncols;
 	}
 
@@ -1569,7 +1593,7 @@ void visitf_long(void)
 	if (attr.ctime_column || attr.verbose)
 	{
 		pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "%s", (ncols) ? " " : "");
-		pos += strftime(buf + pos, CMDBUFSIZE - pos, (attr.iso_time) ? "%Y-%m-%d %H:%M:%S %z" : "%b %e %H:%M:%S %Y", localtime(&attr.statbuf->st_ctime));
+		pos += strftime(buf + pos, CMDBUFSIZE - pos, timestampfmt(CNSEC(attr.statbuf), attr.iso_time, attr.verbose), localtime(&attr.statbuf->st_ctime));
 		++ncols;
 	}
 
@@ -2926,13 +2950,22 @@ static char *json(void)
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"blksize\":%lld, ", (llong)attr.statbuf->st_blksize);
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"blocks\":%lld, ", (llong)attr.statbuf->st_blocks);
 
-	pos += strftime(buf + pos, JSON_BUFSIZE - pos, "\"atime\":\"%Y-%m-%d %H:%M:%S %z\", ", localtime(&attr.statbuf->st_atime));
-	pos += strftime(buf + pos, JSON_BUFSIZE - pos, "\"mtime\":\"%Y-%m-%d %H:%M:%S %z\", ", localtime(&attr.statbuf->st_mtime));
-	pos += strftime(buf + pos, JSON_BUFSIZE - pos, "\"ctime\":\"%Y-%m-%d %H:%M:%S %z\", ", localtime(&attr.statbuf->st_ctime));
+	pos += snprintf(buf + pos, JSON_BUFSIZE - pos, "\"atime\":\"");
+	pos += strftime(buf + pos, JSON_BUFSIZE - pos, timestampfmt(ANSEC(attr.statbuf), 1, 1), localtime(&attr.statbuf->st_atime));
+	pos += snprintf(buf + pos, JSON_BUFSIZE - pos, "\", ");
+	pos += snprintf(buf + pos, JSON_BUFSIZE - pos, "\"mtime\":\"");
+	pos += strftime(buf + pos, JSON_BUFSIZE - pos, timestampfmt(MNSEC(attr.statbuf), 1, 1), localtime(&attr.statbuf->st_mtime));
+	pos += snprintf(buf + pos, JSON_BUFSIZE - pos, "\", ");
+	pos += snprintf(buf + pos, JSON_BUFSIZE - pos, "\"ctime\":\"");
+	pos += strftime(buf + pos, JSON_BUFSIZE - pos, timestampfmt(CNSEC(attr.statbuf), 1, 1), localtime(&attr.statbuf->st_ctime));
+	pos += snprintf(buf + pos, JSON_BUFSIZE - pos, "\", ");
 
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"atime_unix\":%lld, ", (llong)attr.statbuf->st_atime);
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"atime_nsec\":%lld, ", ANSEC(attr.statbuf));
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"mtime_unix\":%lld, ", (llong)attr.statbuf->st_mtime);
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"mtime_nsec\":%lld, ", MNSEC(attr.statbuf));
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"ctime_unix\":%lld, ", (llong)attr.statbuf->st_ctime);
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"ctime_nsec\":%lld, ", CNSEC(attr.statbuf));
 
 	if (get_what())
 		pos += add_field(buf + pos, JSON_BUFSIZE - pos, "filetype", get_what());
@@ -2969,6 +3002,114 @@ static char *json(void)
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "}");
 
 	return buf;
+}
+
+/*
+
+static void printf_timestamp(int conversion, int width, int precision, int flags, llong sec, llong nsec);
+
+For -L %A@ %T@ %C@, print the seconds and nanoseconds separated by a dot,
+taking conversion width/precision/flags into account.
+
+This interprets the conversion width/precision/flags as though this were a
+%f floating point number conversion, rather than two decimal conversions.
+That's why the width/precision/flags need to be interpreted here.
+
+The width is the field width of the entire "sec.nsec" data.
+The precision is the number of most-significant digits in nsec to include.
+
+Note: For a decimal integer conversion, the precision would normally be used
+to insert leading zeroes. Here, it is used with nsec to remove trailing
+digits, because nsec appears as the fractional part of the timestamp.
+
+*/
+
+#define DASH  0x01
+#define ZERO  0x02
+#define HASH  0x04
+#define SPACE 0x08
+#define PLUS  0x10
+
+static void printf_timestamp(int conversion, int width, int precision, int flags, llong sec, llong nsec)
+{
+	#define SECBUFSIZE 32
+	static char secbuf[SECBUFSIZE];
+	int seclen;
+	#define NSECBUFSIZE 16
+	static char nsecbuf[NSECBUFSIZE];
+	int nseclen;
+	int combinedlen, lpadlen = 0, signlen = 0, rpadlen = 0, rzeropadlen = 0;
+	int sign;
+
+	/* Create a buffer for seconds (we need to know its length) */
+
+	seclen = snprintf(secbuf, SECBUFSIZE, "%lld", (sec < 0) ? -sec : sec);
+
+	/* Create a buffer for nanoseconds, limited by precision */
+
+	if (precision == 0)
+	{
+		if (flags & HASH)
+			*nsecbuf = '.', nsecbuf[1] = '\0', nseclen = 1;
+		else
+			*nsecbuf = '\0', nseclen = 0;
+	}
+	else
+	{
+		nseclen = snprintf(nsecbuf, NSECBUFSIZE, ".%09lld", nsec);
+
+		if (precision != -1)
+		{
+			if (precision < 9)
+				nsecbuf[nseclen = 1 + precision] = '\0';
+			else if (precision > 9)
+				rzeropadlen = precision - 9;
+		}
+	}
+
+	/* Determine the sign */
+
+	if (sec < 0)
+		sign = '-', signlen = 1;
+	else if (flags & PLUS)
+		sign = '+', signlen = 1;
+	else if (flags & SPACE)
+		sign = ' ', signlen = 1;
+
+	/* Determine left or right padding */
+
+	combinedlen = signlen + seclen + nseclen + rzeropadlen;
+
+	if (width > combinedlen)
+	{
+		if (flags & DASH)
+			rpadlen = width - combinedlen;
+		else
+			lpadlen = width - combinedlen;
+	}
+
+	/* Output sign? lpad? sign? sec nsec rzeropad? rpad? */
+
+	debug_extra(("fmt %%%c@ width=%d precision=%d flags=0x%x lpad=%d sign=%d sec='%s' nsec='%s' rzeropad=%d rpad=%d", conversion, width, precision, flags, lpadlen, signlen, secbuf, nsecbuf, rzeropadlen, rpadlen));
+
+	if (signlen && flags & ZERO)
+		putchar(sign);
+
+	if (lpadlen && flags & ZERO)
+		printf("%0*d", lpadlen, 0);
+	else if (lpadlen)
+		printf("%*c", lpadlen, ' ');
+
+	if (signlen && !(flags & ZERO))
+		putchar(sign);
+
+	printf("%s%s", secbuf, nsecbuf);
+
+	if (rzeropadlen)
+		printf("%0*d", rzeropadlen, 0);
+
+	if (rpadlen)
+		printf("%*c", rpadlen, ' ');
 }
 
 /*
@@ -3076,6 +3217,7 @@ void visitf_format(void)
 				char owp[BUFSIZ], *owpp;
 				char buf[BUFSIZE];
 				char tfmt[3];
+				char flags;
 
 				*o++ = '%';
 				tfmt[0] = '%';
@@ -3093,8 +3235,28 @@ void visitf_format(void)
 				#define add_digit(n, d) if (n == -1) n = 0; n *= 10; n += d - '0'
 				#define is_digit(c) isdigit((int)(unsigned char)c)
 
+				flags = 0;
+
 				while (ofmt_space() && f[1] && strchr(" -+#0", f[1]))
+				{
 					*o++ = *++f;
+
+					if (*f == '-')
+						flags |= DASH;
+					if (*f == '0')
+						flags |= ZERO;
+					if (*f == '#')
+						flags |= HASH;
+					if (*f == ' ')
+						flags |= SPACE;
+					if (*f == '+')
+						flags |= PLUS;
+				}
+
+				if (flags & DASH && flags & ZERO)
+					flags &= ~ZERO;
+				if (flags & PLUS && flags & SPACE)
+					flags &= ~SPACE;
 
 				/* Parse width.precision into width and length to be treated as character widths for string conversions. */
 				/* Copy width.precision into owp buffer to be copied for non-string conversions. */
@@ -3119,6 +3281,9 @@ void visitf_format(void)
 						add_digit(length, *++f);
 						owp_add(*f);
 					}
+
+					if (length == -1)
+						length = 0;
 				}
 
 				/* Process conversion: finish ofmt then use it */
@@ -3150,10 +3315,7 @@ void visitf_format(void)
 					{
 						if (*++f == '@')
 						{
-							ofmt_add_wp();
-							ofmt_add_lld();
-							debug_extra(("fmt %%A@ \"%s\", %lld", ofmt, (llong)attr.statbuf->st_atime));
-							printf(ofmt, (llong)attr.statbuf->st_atime);
+							printf_timestamp('A', width, length, flags, (llong)attr.statbuf->st_atime, (llong)ANSEC(attr.statbuf));
 						}
 						else if (!isalpha((int)(unsigned char)*f) && *f != '+' && *f != '%')
 						{
@@ -3212,10 +3374,7 @@ void visitf_format(void)
 					{
 						if (*++f == '@')
 						{
-							ofmt_add_wp();
-							ofmt_add_lld();
-							debug_extra(("fmt %%C@ \"%s\", %lld", ofmt, (llong)attr.statbuf->st_ctime));
-							printf(ofmt, (llong)attr.statbuf->st_ctime);
+							printf_timestamp('C', width, length, flags, (llong)attr.statbuf->st_ctime, (llong)CNSEC(attr.statbuf));
 						}
 						else if (!isalpha((int)(unsigned char)*f) && *f != '+' && *f != '%')
 						{
@@ -3516,10 +3675,7 @@ void visitf_format(void)
 					{
 						if (*++f == '@')
 						{
-							ofmt_add_wp();
-							ofmt_add_lld();
-							debug_extra(("fmt %%T@ \"%s\", %lld", ofmt, (llong)attr.statbuf->st_mtime));
-							printf(ofmt, (llong)attr.statbuf->st_mtime);
+							printf_timestamp('T', width, length, flags, (llong)attr.statbuf->st_mtime, (llong)MNSEC(attr.statbuf));
 						}
 						else if (!isalpha((int)(unsigned char)*f) && *f != '+' && *f != '%')
 						{

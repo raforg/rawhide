@@ -148,8 +148,8 @@ test_rawhide()
 	stdout=tests/$t.out
 	stderr=tests/$t.err
 
-	[ -n "$expected_stdout" ] && printf "$expected_stdout" > $stdout.expected || touch $stdout.expected
-	[ -n "$expected_stderr" ] && printf "$expected_stderr" > $stderr.expected || touch $stderr.expected
+	[ -n "$expected_stdout" ] && printf -- "$expected_stdout" > $stdout.expected || touch $stdout.expected
+	[ -n "$expected_stderr" ] && printf -- "$expected_stderr" > $stderr.expected || touch $stderr.expected
 
 	test_rawhide_pre_hook
 
@@ -230,9 +230,9 @@ test_rawhide_either()
 	stdout=tests/$t.out
 	stderr=tests/$t.err
 
-	[ -n "$expected_stdout" ] && printf "$expected_stdout" > $stdout.expected || touch $stdout.expected
-	[ -n "$expected_stdout_2" ] && printf "$expected_stdout_2" > $stdout.expected_2 || touch $stdout.expected_2
-	[ -n "$expected_stderr" ] && printf "$expected_stderr" > $stderr.expected || touch $stderr.expected
+	[ -n "$expected_stdout" ] && printf -- "$expected_stdout" > $stdout.expected || touch $stdout.expected
+	[ -n "$expected_stdout_2" ] && printf -- "$expected_stdout_2" > $stdout.expected_2 || touch $stdout.expected_2
+	[ -n "$expected_stderr" ] && printf -- "$expected_stderr" > $stderr.expected || touch $stderr.expected
 
 	test_rawhide_pre_hook
 
@@ -427,7 +427,7 @@ test_rawhide_grep()
 	stdout=tests/$t.out
 	stderr=tests/$t.err
 
-	[ -n "$expected_stderr" ] && printf "$expected_stderr" > $stderr.expected || touch $stderr.expected
+	[ -n "$expected_stderr" ] && printf -- "$expected_stderr" > $stderr.expected || touch $stderr.expected
 
 	test_rawhide_pre_hook
 

@@ -45,6 +45,7 @@ sizeunits="$num([.][0-9])?[kKMGTPE]?"
 rdev=" *$num, *$num"
 time="[A-Z][a-z][a-z]  ?[0-9][0-9]? [0-9][0-9]:[0-9][0-9]:[0-9][0-9] [0-9][0-9][0-9][0-9]"
 isotime="[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9] [+-][0-9][0-9][0-9][0-9]"
+isotimensec="[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9][.][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9] [+-][0-9][0-9][0-9][0-9]"
 name="$d.*"
 __=" +"
 
@@ -275,7 +276,7 @@ test_rawhide_post_hook() { true; }
 test_rawhide_grep "$rh -l'#'  $d" "^$mode$__$nlink$__$num$__$num$__$size$__$time$__$name\$"                                                                         "" 0 "-l -#"
 test_rawhide_grep "$rh -lT    $d" "^$mode$__$nlink$__$user$__$group$__$size$__$isotime$__$name\$"                                                                   "" 0 "-lT"
 test_rawhide_grep "$rh -lacT  $d" "^$mode$__$nlink$__$user$__$group$__$size$__$isotime$__$isotime$__$name\$"                                                        "" 0 "-lacT"
-test_rawhide_grep "$rh -lacTv $d" "^$dev$__$ino$__$blksize$__$blocks$__$space$__$mode$__$nlink$__$user$__$group$__$size$__$isotime$__$isotime$__$isotime$__$name\$" "" 0 "-lacTv"
+test_rawhide_grep "$rh -lacTv $d" "^$dev$__$ino$__$blksize$__$blocks$__$space$__$mode$__$nlink$__$user$__$group$__$size$__$isotimensec$__$isotimensec$__$isotimensec$__$name\$" "" 0 "-lacTv"
 
 test_rawhide_grep "$rh  -H  $d" "^$mode$__$nlink$__$user$__$group$__$sizeunits$__$time $name\$"                 "" 0 "-H"
 test_rawhide_grep "$rh -Hl  $d" "^$mode$__$nlink$__$user$__$group$__$sizeunits$__$time $name\$"                 "" 0 "-Hl"

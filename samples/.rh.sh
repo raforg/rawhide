@@ -136,9 +136,9 @@ jqsz() { bjq -sj "$@" 'sort_by(.path)[].path+"\u0000"'; }
 # jqtz - Same as jqt, but nul-terminated, for xargs
 # usage: jq arguments that don't conflict with -s
 # e.g.: rh -j | jqt
-jqt()  { bjq -sr "$@" 'sort_by(-.mtime_unix,.path)[].path'; }
-jqts() { bjq -sr "$@" 'sort_by(-.mtime_unix,.path)[].path|@sh'; }
-jqtz() { bjq -sj "$@" 'sort_by(-.mtime_unix,.path)[].path+"\u0000"'; }
+jqt()  { bjq -sr "$@" 'sort_by(-.mtime_unix,-.mtime_nsec,.path)[].path'; }
+jqts() { bjq -sr "$@" 'sort_by(-.mtime_unix,-.mtime_nsec,.path)[].path|@sh'; }
+jqtz() { bjq -sj "$@" 'sort_by(-.mtime_unix,-.mtime_nsec,.path)[].path+"\u0000"'; }
 
 # jqz - (helper) use jq to sort rh -j by size
 # jqzs - Same as jqz, but shell-quoted

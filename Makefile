@@ -140,7 +140,7 @@ RAWHIDE_DEFINES = \
 #DEBUG_DEFINES = -DNDEBUG
 
 # Test coverage (gcov): Uncomment this, run tests (as non-root and as root),
-# then run gcov *.c then examine *.c.gcov or run gcov_summary (97.59% on Linux)
+# then run gcov *.c then examine *.c.gcov or run gcov_summary (97.63% on Linux)
 #GCOV_CFLAGS = -fprofile-arcs -ftest-coverage
 
 # Undefined behaviour sanitizer: Uncomment this, run tests (as non-root and as root)
@@ -157,7 +157,7 @@ RAWHIDE_DEFINES = \
 
 # Memory sanitizer: Uncomment this, run tests (as non-root and as root)
 #MSAN_CFLAGS = -fsanitize=memory
-#MSAN_LDFLAGS = -fsanitize=memor
+#MSAN_LDFLAGS = -fsanitize=memory
 
 CC = cc
 #CC = gcc
@@ -355,7 +355,7 @@ help:
 	@echo "  make vg=1 test    - Run tests and produce valgrind.out analysis (~40m)"
 	@echo "  vim valgrind.out  - Examine the results (delete the noise, check the rest)"
 	@echo
-	@echo "To run tests for test coverage analysis (97.59% on Linux):"
+	@echo "To run tests for test coverage analysis (97.63% on Linux):"
 	@echo
 	@echo "  ./configure --enable-gcov"
 	@echo "  make"
@@ -406,7 +406,7 @@ help:
 	@echo "  man     - Create the manual entries (needs pod2man)"
 	@echo "  tags    - Create the tags file for vim (needs ctags)"
 	@echo "  html    - Create manual entries as HTML (needs pod2html)"
-	@echo "  html2   - Create README/CONTRIBUTING as HTML (needs python3 and markdown module)"
+	@echo "  html2   - Create README/CONTRIBUTING as HTML (needs python3, markdown module)"
 	@echo "  check   - Same as test"
 	@echo "  tests   - Same as test"
 	@echo "  default - Reset Makefile to its default configuration"

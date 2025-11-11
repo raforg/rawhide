@@ -835,6 +835,9 @@ control lists (ACLs), rather than the default compact form.
 Without any of the above options, this option behaves as though the C<-l>
 option had been supplied, and includes all possible columns.
 
+With the C<-T> option, this option causes timestamp columns to include
+nanoseconds.
+
 =item C<-0>
 
 Output the null character (C<"\0">) after each matching path, rather than
@@ -1092,9 +1095,9 @@ function (excluding its terminating newline).
 =item C<%A>I<k>
 
 The accessed time (C<atime>) in the format specified by I<k>, which is
-either the at sign (C<"@">), for the number of seconds since the I<UNIX>
-Epoch, or a conversion specifier character for the I<C> I<strftime(3)>
-function. See I<strftime(3)> for details.
+either the at sign (C<"@">), for the number of I<seconds>C<.>I<nanoseconds>
+since the I<UNIX> Epoch, or a conversion specifier character for the I<C>
+I<strftime(3)> function. See I<strftime(3)> for details.
 
 =item C<%t>
 
@@ -1104,9 +1107,9 @@ function (excluding its terminating newline).
 =item C<%T>I<k>
 
 The modified time (C<mtime>) in the format specified by I<k>, which is
-either the at sign (C<"@">), for the number of seconds since the I<UNIX>
-Epoch, or a conversion specifier character for the I<C> I<strftime(3)>
-function. See I<strftime(3)> for details.
+either the at sign (C<"@">), for the number of I<seconds>C<.>I<nanoseconds>
+since the I<UNIX> Epoch, or a conversion specifier character for the I<C>
+I<strftime(3)> function. See I<strftime(3)> for details.
 
 =item C<%c>
 
@@ -1116,9 +1119,9 @@ I<ctime(3)> function (excluding its terminating newline).
 =item C<%C>I<k>
 
 The inode changed time (C<ctime>) in the format specified by I<k>, which is
-either the at sign (C<"@">), for the number of seconds since the I<UNIX>
-Epoch, or a conversion specifier character for the I<C> I<strftime(3)>
-function. See I<strftime(3)> for details.
+either the at sign (C<"@">), for the number of I<seconds>C<.>I<nanoseconds>
+since the I<UNIX> Epoch, or a conversion specifier character for the I<C>
+I<strftime(3)> function. See I<strftime(3)> for details.
 
 =item C<%w>
 
@@ -1403,11 +1406,17 @@ the following possible attributes:
 
 =item C<ctime> (string) (like C<%c>/C<%C@>, but in ISO format)
 
-=item C<atime_unix> (integer) (same as C<%A@>)
+=item C<atime_unix> (integer) (same as C<%A@> seconds)
 
-=item C<mtime_unix> (integer) (same as C<%T@>)
+=item C<atime_nsec> (integer) (same as C<%A@> nanoseconds)
 
-=item C<ctime_unix> (integer) (same as C<%C@>)
+=item C<mtime_unix> (integer) (same as C<%T@> seconds)
+
+=item C<mtime_nsec> (integer) (same as C<%T@> nanoseconds)
+
+=item C<ctime_unix> (integer) (same as C<%C@> seconds)
+
+=item C<ctime_nsec> (integer) (same as C<%C@> nanoseconds)
 
 =item C<filetype> (string) (same as C<%w>) (only if available)
 
@@ -1469,22 +1478,26 @@ are characters of different widths that are encoded in a variable number of
 bytes. But note that this doesn't work correctly for complex grapheme
 clusters, and on some systems (i.e., I<NetBSD>, I<Solaris>, and I<Cygwin>),
 it gets even simple emojis wrong. It's better on I<Linux>, I<FreeBSD>,
-I<OpenBSD>, and C<macOS>. But most non-emoji text seems to work everywhere.
+I<OpenBSD>, and I<macOS>. But most non-emoji text seems to work everywhere.
 
 The above conversions that output text use an underlying I<printf(3)> C<%s>
 string conversion. Those that output an integer use an underlying C<%d> or
 C<%o> integer conversion. The C<%S> (sparseness) conversion uses an
-underlying C<%g> floating point number conversion.
+underlying C<%g> floating point number conversion. This determines how
+conversion flags and precisions are interpreted.
+
+The C<%A@>, C<%T@>, and C<%C@> conversions, which output two integers
+(I<seconds>C<.>I<nanoseconds>), interpret flags and precisions as if using
+an underlying I<printf(3)> C<%f> floating point number conversion (because
+the timestamp looks like a floating point number). All other C<%A>I<k>,
+C<%T>I<k>, and C<%C>I<k> conversions use an underlying C<%s> string
+conversion (because I<strftime(3)> produces strings).
 
 Note that, when the C<%u> (user) or C<%g> (group) conversions are forced to
 output a numeric user or group ID because the user or group has no name, it
-is still output using an underlying C<%s> string conversion, rather than
-changing to an underlying C<%d> integer conversion. This is to prevent any
-surprises relating to the use of conversion flags or precisions. Also note
-that the C<%A@>, C<%C@>, and C<%T@> conversions output integers, so they use
-an underlying C<%d> integer conversion, but all other C<%A>I<k>, C<%C>I<k>,
-and C<%T>I<k> conversions use an underlying C<%s> string conversion (because
-I<strftime(3)> produces strings).
+is still output using an underlying I<printf(3)> C<%s> string conversion,
+rather than changing to an underlying C<%d> integer conversion. This is to
+prevent any surprises relating to the use of conversion flags or precisions.
 
 This option is mostly but not entirely compatible with S<I<GNU find(1)>>'s
 C<-printf> action. I<rh> doesn't do I<find(1)>'s C<%F> (filesystem type),
@@ -1508,11 +1521,15 @@ C<%j> (I<JSON>).
 
 And for most of the format conversions that output an integer, I<rh> and
 I<find(1)> use different underlying I<printf(3)> conversions (I<rh> uses
-C<%d>, and I<find(1)> uses C<%s>), so conversion flags or precisions would
+C<%d>, and I<find(1)> uses C<%s>), so conversion flags and precisions would
 behave differently. This difference applies to all (non-I<strftime(3)>)
-conversions that output integers except C<%m> (file permissions in octal)
+conversions that output an integer except C<%m> (file permissions in octal)
 and C<%d> (C<depth>), which I<rh> and I<find(1)> both treat as integers. But
-if conversion flags and precisions are not used, there is no difference.
+if conversion flags and precisions are not used, there is no
+difference. Also, for C<%A@>, C<%T@>, and C<%C@>, I<rh> emulates using an underlying
+C<%f> conversion, and I<find(1)> uses C<%s>. Another difference is that
+I<rh> doesn't automatically add a trailing zero digit after the nanoseconds,
+like I<find(1)> does).
 
 And I<rh>'s C<%s> (size) conversion outputs the size of readable directories
 as the number of entries they contain (excluding C<.> and C<..>), rather
@@ -1653,8 +1670,11 @@ This option and the C<-H> option are mutually exclusive.
 =item C<-T>
 
 For the modified time, accessed time, and inode changed time columns, use
-ISO date/time format (C<"YYYY-MM-DD HH:MM:SS +HHMM">), rather than the
-default format (C<"MMM DD HH:MM:SS YYYY">). Implies the C<-l> option.
+ISO date/time format (S<C<"YYYY-MM-DD HH:MM:SS +HHMM">>), rather than the
+default format (S<C<"MMM DD HH:MM:SS YYYY">>). Implies the C<-l> option.
+
+With the C<-v> option, nanoseconds are included
+(S<C<"YYYY-MM-DD HH:MM:SS.NNNNNNNNN +HHMM">>).
 
 =item C<-#>
 
@@ -2390,9 +2410,10 @@ Some command line shell syntactic sugar to save keystrokes:
     # jqtz - Same as jqt, but nul-terminated, for xargs
     # usage: jq arguments that don't conflict with -s
     # e.g.: rh -j | jqt
-    jqt()  { bjq -sr "$@" 'sort_by(-.mtime_unix,.path)[].path'; }
-    jqts() { bjq -sr "$@" 'sort_by(-.mtime_unix,.path)[].path|@sh'; }
-    jqtz() { bjq -sj "$@" 'sort_by(-.mtime_unix,.path)[].path+"\u0000"';}
+    jqt_order="-.mtime_unix,-.mtime_nsec,.path"
+    jqt()  { bjq -sr "$@" "sort_by($jqt_order)[].path"; }
+    jqts() { bjq -sr "$@" "sort_by($jqt_order)[].path|@sh"; }
+    jqtz() { bjq -sj "$@" "sort_by($jqt_order)[].path+\"\u0000\""; }
     
     # jqz - (helper) use jq to sort rh -j by size
     # jqzs - Same as jqz, but shell-quoted
@@ -2880,7 +2901,7 @@ equivalence, but only for a single character, so C<"[[.e.]]"> would work
 (for what that's worth) but C<"[[.ch.]]"> in the Czech locale wouldn't). So
 this is probably only potentially useful on I<Linux>, I<OpenBSD>, and
 I<NetBSD>. Note, however, that the internal implementation does not support
-the I<ksh> extended glob patterns that are supported by C<Linux>'s
+the I<ksh> extended glob patterns that are supported by I<Linux>'s
 I<fnmatch(3)> implementation. So there is a big trade-off when setting
 C<RAWHIDE_INTERNAL_GLOB=1> on I<Linux>. If you need the I<ksh> extended glob
 patterns on I<Linux>, but the local system's I<fnmatch(3)> implementation is

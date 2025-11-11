@@ -433,18 +433,18 @@ The token C<@@> evaluates to the current user's primary group ID.
 
 Dates and date/times can be specified between square brackets (C<"[]">)
 (i.e.,
-S<C<[>I<YYYY>C</>I<MM>C</>I<DD>C<]>> and
-S<C<[>I<YYYY>C</>I<MM>C</>I<DD> I<hh>C<:>I<mm>C<:>I<ss>C<.>I<nnnnnnnnn>C<]>>). They
+S<C<[>I<yyyy>C</>I<mm>C</>I<dd>C<]>> and
+S<C<[>I<yyyy>C</>I<mm>C</>I<dd> I<hh>C<:>I<mm>C<:>I<ss>C<.>I<nnnnnnnnn>C<]>>). They
 are interpreted as being in the local time zone. If the year is specified as
 a number below 100, then it is interpreted as being a year in the current
 century. Hours must be in 24-hour time, not 12-hour time. Trailing zero
 digits of the nanoseconds component are optional. The nanoseconds component
 itself is optional if it is zero (i.e.,
-S<C<[>I<YYYY>C</>I<MM>C</>I<DD> I<hh>C<:>I<mm>C<:>I<ss>C<]>>). The seconds
+S<C<[>I<yyyy>C</>I<mm>C</>I<dd> I<hh>C<:>I<mm>C<:>I<ss>C<]>>). The seconds
 component is optional if it is also zero (i.e.,
-S<C<[>I<YYYY>C</>I<MM>C</>I<DD> I<hh>C<:>I<mm>C<]>>). The minutes component
+S<C<[>I<yyyy>C</>I<mm>C</>I<dd> I<hh>C<:>I<mm>C<]>>). The minutes component
 is optional if it is also zero (i.e.,
-S<C<[>I<YYYY>C</>I<MM>C</>I<DD> I<hh>C<]>>). The hours component is optional
+S<C<[>I<yyyy>C</>I<mm>C</>I<dd> I<hh>C<]>>). The hours component is optional
 if it is also zero (i.e., midnight). Then, it's just a date. Dates and
 date/times evaluate to the number of nanoseconds since the I<UNIX> Epoch.
 
