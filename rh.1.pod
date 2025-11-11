@@ -1670,11 +1670,13 @@ This option and the C<-H> option are mutually exclusive.
 =item C<-T>
 
 For the modified time, accessed time, and inode changed time columns, use
-ISO date/time format (S<C<"YYYY-MM-DD HH:MM:SS +HHMM">>), rather than the
-default format (S<C<"MMM DD HH:MM:SS YYYY">>). Implies the C<-l> option.
+ISO date/time format
+(I<yyyy>C<->I<mm>C<->I<dd>C<T>I<hh>C<:>I<mm>C<:>I<ss+hhmm>), rather than the
+default format
+(S<I<mmm>C< >I<dd>C< >I<hh>C<:>I<mm>C<:>I<ss>C< >I<yyyy>>). Implies the C<-l> option.
 
 With the C<-v> option, nanoseconds are included
-(S<C<"YYYY-MM-DD HH:MM:SS.NNNNNNNNN +HHMM">>).
+(I<yyyy>C<->I<mm>C<->I<dd>C<T>I<hh>C<:>I<mm>C<:>I<ss>C<.>I<nnnnnnnnn+hhmm>).
 
 =item C<-#>
 

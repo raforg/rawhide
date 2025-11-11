@@ -1281,9 +1281,9 @@ static const char *timestampfmt(llong nsec, int iso_time, int verbose)
 		return "%b %e %H:%M:%S %Y";
 
 	if (!verbose)
-		return "%Y-%m-%d %H:%M:%S %z";
+		return "%Y-%m-%dT%H:%M:%S%z";
 
-	snprintf(fmtbuf, FMTBUFSIZE, "%%Y-%%m-%%d %%H:%%M:%%S.%09lld %%z", nsec);
+	snprintf(fmtbuf, FMTBUFSIZE, "%%Y-%%m-%%dT%%H:%%M:%%S.%09lld%%z", nsec);
 
 	return fmtbuf;
 }

@@ -1449,9 +1449,9 @@ char *get_ea(int want)
 
 				pos += ssnprintf(attr.fea + pos, fea_size - pos, " %lld", (llong)statbuf->st_size);
 
-				pos += strftime(attr.fea + pos, fea_size - pos, " %Y-%m-%d %H:%M:%S %z", localtime(&statbuf->st_mtime));
-				pos += strftime(attr.fea + pos, fea_size - pos, " %Y-%m-%d %H:%M:%S %z", localtime(&statbuf->st_atime));
-				pos += strftime(attr.fea + pos, fea_size - pos, " %Y-%m-%d %H:%M:%S %z", localtime(&statbuf->st_ctime));
+				pos += strftime(attr.fea + pos, fea_size - pos, " %Y-%m-%dT%H:%M:%S%z", localtime(&statbuf->st_mtime));
+				pos += strftime(attr.fea + pos, fea_size - pos, " %Y-%m-%dT%H:%M:%S%z", localtime(&statbuf->st_atime));
+				pos += strftime(attr.fea + pos, fea_size - pos, " %Y-%m-%dT%H:%M:%S%z", localtime(&statbuf->st_ctime));
 				pos += ssnprintf(attr.fea + pos, fea_size - pos, "\n");
 			}
 		}

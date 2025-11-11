@@ -1727,7 +1727,7 @@ The I<name> is the name of the corresponding real extended attribute. The
 C<"/stat:"> is literal. The I<nlink> is always C<1>. The I<user> and
 I<group> are names or numeric IDs. The I<size> is in bytes. The I<mtime>,
 I<atime>, and I<ctime> are in ISO date/time format
-(S<C<"YYYY-MM-DD HH:MM:SS +HHMM">>).
+(I<yyyy>C<->I<mm>C<->I<dd>C<T>I<hh>C<:>I<mm>C<:>I<ss+hhmm>).
 
 This makes it possible on I<Solaris> to search for files by the I<stat(2)>
 information of their extended attributes. But it can only be a text-based
