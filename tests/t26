@@ -109,6 +109,13 @@ test_rawhide "$rh -L '%+ 25A@\n'   $d/f2" "     -311423548.000000000\n" ""      
 test_rawhide "$rh -L '%0+ 25A@\n'  $d/f2" "-00000311423548.000000000\n" ""                                     0 "-L '%0+ 25A@\\\\n' negative"
 rm $d/f2
 
+test_rawhide "$rh -L '%A+\n'       $d/f" "1990-02-18T13:27:32.000000000+0000\n"  ""                                               0 "-L '%A+\\\\n'"
+test_rawhide "$rh -L '%35A+\n'     $d/f" " 1990-02-18T13:27:32.000000000+0000\n" ""                                               0 "-L '%35A+\\\\n'"
+test_rawhide "$rh -L '%-35A+\n'    $d/f" "1990-02-18T13:27:32.000000000+0000 \n" ""                                               0 "-L '%-35A+\\\\n'"
+test_rawhide "$rh -L '%.15A+\n'    $d/f" "1990-02-18T13:2\n"                     ""                                               0 "-L '%.15A+\\\\n'"
+test_rawhide "$rh -L '%35.15A+\n'  $d/f" "                    1990-02-18T13:2\n" ""                                               0 "-L '%35.15A+\\\\n'"
+test_rawhide "$rh -L '%-35.15A+\n' $d/f" "1990-02-18T13:2                    \n" ""                                               0 "-L '%-35.15A+\\\\n'"
+
 test_rawhide "$rh -L '%Ad\n'       $d/f" "18\n"                        ""                                               0 "-L '%Ad\\\\n'"
 test_rawhide "$rh -L '%5Ad\n'      $d/f" "   18\n"                     ""                                               0 "-L '%5Ad\\\\n'"
 test_rawhide "$rh -L '%-5Ad\n'     $d/f" "18   \n"                     ""                                               0 "-L '%-5Ad\\\\n'"
@@ -170,7 +177,6 @@ parttime="[0-9][0-9]:[0-9]"
 year="[0-9][0-9][0-9][0-9]"
 
 test_rawhide_grep "LANG=C $rh -L '%c\n'        $d/f"                          "$day $mon $dom $time $year"          ""                                                0 "-L '%c\\\\n'"
-test_rawhide_grep "LANG=C $rh -L '%c\n'        $d/f"                          "$day $mon $dom $time $year"          ""                                                0 "-L '%a\\\\n'"
 test_rawhide_grep "LANG=C $rh -L '%25c\n'      $d/f"                          " $day $mon $dom $time $year"         ""                                                0 "-L '%25c\\\\n'"
 test_rawhide_grep "LANG=C $rh -L '%-25c\n'     $d/f"                          "$day $mon $dom $time $year "         ""                                                0 "-L '%-25c\\\\n'"
 test_rawhide_grep "LANG=C $rh -L '%.15c\n'     $d/f"                          "$day $mon $dom $parttime"            ""                                                0 "-L '%.15c\\\\n'"
@@ -227,6 +233,18 @@ test_rawhide_grep "$rh -L '% 25C@\n'    $d/f"                         "     $tm.
 test_rawhide_grep "$rh -L '%0 25C@\n'   $d/f"                         " 0000$tm.$ns\$"           ""                                     0 "-L '%0 25C@\\\\n'"
 test_rawhide_grep "$rh -L '%+ 25C@\n'   $d/f"                         "    \+$tm.$ns\$"          ""                                     0 "-L '%+ 25C@\\\\n'"
 test_rawhide_grep "$rh -L '%0+ 25C@\n'  $d/f"                         "\+0000$tm.$ns\$"          ""                                     0 "-L '%0+ 25C@\\\\n'"
+
+yyyy='[0-9][0-9][0-9][0-9]'
+mm='[0-9][0-9]'
+dd='[0-9][0-9]'
+nsec='[.][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
+zone='[+-][0-9][0-9][0-9][0-9]'
+test_rawhide_grep "$rh -L '%C+\n'        $d/f"                          "$yyyy-$mm-$dd[T]$time$nsec$zone"                      ""    0 "-L '%C+\\\\n'"
+test_rawhide_grep "$rh -L '%35C+\n'      $d/f"                          " $yyyy-$mm-$dd[T]$time$nsec$zone"                     ""    0 "-L '%35C+\\\\n'"
+test_rawhide_grep "$rh -L '%-35C+\n'     $d/f"                          "$yyyy-$mm-$dd[T]$time$nsec$zone "                     ""    0 "-L '%-35C+\\\\n'"
+test_rawhide_grep "$rh -L '%.15C+\n'     $d/f"                          "$yyyy-$mm-$dd[T][0-9][0-9]:[0-9]"                      ""    0 "-L '%.15C+\\\\n'"
+test_rawhide_grep "$rh -L '%35.15C+\n'   $d/f"                          "                    $yyyy-$mm-$dd[T][0-9][0-9]:[0-9]"  ""    0 "-L '%35.15C+\\\\n'"
+test_rawhide_grep "$rh -L '%-35.15C+\n'  $d/f"                          "$yyyy-$mm-$dd[T][0-9][0-9]:[0-9]                    "  ""    0 "-L '%-35.15C+\\\\n'"
 
 tm="[0-9][0-9]"
 test_rawhide_grep "$rh -L '%Cd\n'       $d/f"                          "$tm"                ""                                        0 "-L '%Ca\\\\n'"
@@ -690,6 +708,13 @@ test_rawhide "$rh -L '%0 25A@\n'   $d/f2" "-00000311423548.000000000\n" ""      
 test_rawhide "$rh -L '%+ 25A@\n'   $d/f2" "     -311423548.000000000\n" ""                                     0 "-L '%+ 25A@\\\\n' negative"
 test_rawhide "$rh -L '%0+ 25A@\n'  $d/f2" "-00000311423548.000000000\n" ""                                     0 "-L '%0+ 25A@\\\\n' negative"
 rm $d/f2
+
+test_rawhide "$rh -L '%T+\n'       $d/f" "1990-02-18T13:27:32.000000000+0000\n"            ""                                         0 "-L '%T+\\\\n'"
+test_rawhide "$rh -L '%35T+\n'     $d/f" " 1990-02-18T13:27:32.000000000+0000\n"           ""                                         0 "-L '%35T+\\\\n'"
+test_rawhide "$rh -L '%-35T+\n'    $d/f" "1990-02-18T13:27:32.000000000+0000 \n"           ""                                         0 "-L '%-35T+\\\\n'"
+test_rawhide "$rh -L '%.15T+\n'    $d/f" "1990-02-18T13:2\n"                               ""                                         0 "-L '%.15T+\\\\n'"
+test_rawhide "$rh -L '%35.15T+\n'  $d/f" "                    1990-02-18T13:2\n"           ""                                         0 "-L '%35.15T+\\\\n'"
+test_rawhide "$rh -L '%-35.15T+\n' $d/f" "1990-02-18T13:2                    \n"           ""                                         0 "-L '%-35.15T+\\\\n'"
 
 test_rawhide "$rh -L '%Td\n'            $d/f" "18\n"                                       ""                                         0 "-L '%Td\\\\n'"
 test_rawhide "$rh -L '%5Td\n'           $d/f" "   18\n"                                    ""                                         0 "-L '%5Td\\\\n'"

@@ -379,7 +379,7 @@ Find 32-bit ELF executables:
 
         $ rh -e 'f && anyx && sz > 10k && "ELF 32-bit*executable*".what'
 
-Find text files that look like they have an ISO-8859-* encoding:
+Find text files that look like they have an *ISO-8859-\** encoding:
 
         $ rh -e 'f && "*ISO-8859* text".what'
         $ rh -e 'f && "text/*; charset=iso-8859*".mime'

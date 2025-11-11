@@ -3234,6 +3234,7 @@ void visitf_format(void)
 				#define owp_add(c) if (owp_space()) { *owpp++ = (c); *owpp = '\0'; } else ofmt_fatal()
 				#define add_digit(n, d) if (n == -1) n = 0; n *= 10; n += d - '0'
 				#define is_digit(c) isdigit((int)(unsigned char)c)
+				#define safe_strftime(b, sz, fmt, t) if (strftime(b, sz, fmt, t) == 0) *b = '\0'
 
 				flags = 0;
 
@@ -3300,9 +3301,7 @@ void visitf_format(void)
 
 					case 'a': /* Accessed time in ctime format */
 					{
-						if (strftime(buf, BUFSIZE, "%a %b %e %H:%M:%S %Y", localtime(&attr.statbuf->st_atime)) == 0)
-							*buf = '\0';
-
+						safe_strftime(buf, BUFSIZE, "%a %b %e %H:%M:%S %Y", localtime(&attr.statbuf->st_atime));
 						ofmt_add_wl(width, length, buf);
 						ofmt_add('s');
 						debug_extra(("fmt %%a \"%s\", \"%s\"", ofmt, buf));
@@ -3317,6 +3316,14 @@ void visitf_format(void)
 						{
 							printf_timestamp('A', width, length, flags, (llong)attr.statbuf->st_atime, (llong)ANSEC(attr.statbuf));
 						}
+						else if (*f == '+')
+						{
+							safe_strftime(buf, BUFSIZE, timestampfmt(ANSEC(attr.statbuf), 1, 1), localtime(&attr.statbuf->st_atime));
+							ofmt_add_wl(width, length, buf);
+							ofmt_add('s');
+							debug_extra(("fmt %%A%c \"%s\", \"%s\"", *f, ofmt, buf));
+							printf(ofmt, buf);
+						}
 						else if (!isalpha((int)(unsigned char)*f) && *f != '+' && *f != '%')
 						{
 							fatal("invalid %%A conversion: %s", ok(attr.format));
@@ -3325,9 +3332,7 @@ void visitf_format(void)
 						{
 							tfmt[1] = *f;
 
-							if (strftime(buf, BUFSIZE, tfmt, localtime(&attr.statbuf->st_atime)) == 0)
-								*buf = '\0';
-
+							safe_strftime(buf, BUFSIZE, tfmt, localtime(&attr.statbuf->st_atime));
 							ofmt_add_wl(width, length, buf);
 							ofmt_add('s');
 							debug_extra(("fmt %%A%c \"%s\", \"%s\"", tfmt[1], ofmt, buf));
@@ -3359,9 +3364,7 @@ void visitf_format(void)
 
 					case 'c': /* Inode changed time in ctime format */
 					{
-						if (strftime(buf, BUFSIZE, "%a %b %e %H:%M:%S %Y", localtime(&attr.statbuf->st_ctime)) == 0)
-							*buf = '\0';
-
+						safe_strftime(buf, BUFSIZE, "%a %b %e %H:%M:%S %Y", localtime(&attr.statbuf->st_ctime));
 						ofmt_add_wl(width, length, buf);
 						ofmt_add('s');
 						debug_extra(("fmt %%c \"%s\", \"%s\"", ofmt, buf));
@@ -3376,6 +3379,14 @@ void visitf_format(void)
 						{
 							printf_timestamp('C', width, length, flags, (llong)attr.statbuf->st_ctime, (llong)CNSEC(attr.statbuf));
 						}
+						else if (*f == '+')
+						{
+							safe_strftime(buf, BUFSIZE, timestampfmt(CNSEC(attr.statbuf), 1, 1), localtime(&attr.statbuf->st_ctime));
+							ofmt_add_wl(width, length, buf);
+							ofmt_add('s');
+							debug_extra(("fmt %%C%c \"%s\", \"%s\"", *f, ofmt, buf));
+							printf(ofmt, buf);
+						}
 						else if (!isalpha((int)(unsigned char)*f) && *f != '+' && *f != '%')
 						{
 							fatal("invalid %%C conversion: %s", ok(attr.format));
@@ -3384,9 +3395,7 @@ void visitf_format(void)
 						{
 							tfmt[1] = *f;
 
-							if (strftime(buf, BUFSIZE, tfmt, localtime(&attr.statbuf->st_ctime)) == 0)
-								*buf = '\0';
-
+							safe_strftime(buf, BUFSIZE, tfmt, localtime(&attr.statbuf->st_ctime));
 							ofmt_add_wl(width, length, buf);
 							ofmt_add('s');
 							debug_extra(("fmt %%C%c \"%s\", \"%s\"", tfmt[1], ofmt, buf));
@@ -3660,9 +3669,7 @@ void visitf_format(void)
 
 					case 't': /* Modification time in ctime format */
 					{
-						if (strftime(buf, BUFSIZE, "%a %b %e %H:%M:%S %Y", localtime(&attr.statbuf->st_mtime)) == 0)
-							*buf = '\0';
-
+						safe_strftime(buf, BUFSIZE, "%a %b %e %H:%M:%S %Y", localtime(&attr.statbuf->st_mtime));
 						ofmt_add_wl(width, length, buf);
 						ofmt_add('s');
 						debug_extra(("fmt %%t \"%s\", \"%s\"", ofmt, buf));
@@ -3677,6 +3684,14 @@ void visitf_format(void)
 						{
 							printf_timestamp('T', width, length, flags, (llong)attr.statbuf->st_mtime, (llong)MNSEC(attr.statbuf));
 						}
+						else if (*f == '+')
+						{
+							safe_strftime(buf, BUFSIZE, timestampfmt(MNSEC(attr.statbuf), 1, 1), localtime(&attr.statbuf->st_mtime));
+							ofmt_add_wl(width, length, buf);
+							ofmt_add('s');
+							debug_extra(("fmt %%T%c \"%s\", \"%s\"", *f, ofmt, buf));
+							printf(ofmt, buf);
+						}
 						else if (!isalpha((int)(unsigned char)*f) && *f != '+' && *f != '%')
 						{
 							fatal("invalid %%T conversion: %s", ok(attr.format));
@@ -3685,9 +3700,7 @@ void visitf_format(void)
 						{
 							tfmt[1] = *f;
 
-							if (strftime(buf, BUFSIZE, tfmt, localtime(&attr.statbuf->st_mtime)) == 0)
-								*buf = '\0';
-
+							safe_strftime(buf, BUFSIZE, tfmt, localtime(&attr.statbuf->st_mtime));
 							ofmt_add_wl(width, length, buf);
 							ofmt_add('s');
 							debug_extra(("fmt %%T%c \"%s\", \"%s\"", tfmt[1], ofmt, buf));

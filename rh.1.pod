@@ -1096,8 +1096,9 @@ function (excluding its terminating newline).
 
 The accessed time (C<atime>) in the format specified by I<k>, which is
 either the at sign (C<"@">), for the number of I<seconds>C<.>I<nanoseconds>
-since the I<UNIX> Epoch, or a conversion specifier character for the I<C>
-I<strftime(3)> function. See I<strftime(3)> for details.
+since the I<UNIX> Epoch, or the plus sign (C<"+">), for I<ISO> format, or a
+conversion specifier character for the I<C> I<strftime(3)> function. See
+I<strftime(3)> for details.
 
 =item C<%t>
 
@@ -1108,8 +1109,9 @@ function (excluding its terminating newline).
 
 The modified time (C<mtime>) in the format specified by I<k>, which is
 either the at sign (C<"@">), for the number of I<seconds>C<.>I<nanoseconds>
-since the I<UNIX> Epoch, or a conversion specifier character for the I<C>
-I<strftime(3)> function. See I<strftime(3)> for details.
+since the I<UNIX> Epoch, or the plus sign (C<"+">), for I<ISO> format, or a
+conversion specifier character for the I<C> I<strftime(3)> function. See
+I<strftime(3)> for details.
 
 =item C<%c>
 
@@ -1120,8 +1122,9 @@ I<ctime(3)> function (excluding its terminating newline).
 
 The inode changed time (C<ctime>) in the format specified by I<k>, which is
 either the at sign (C<"@">), for the number of I<seconds>C<.>I<nanoseconds>
-since the I<UNIX> Epoch, or a conversion specifier character for the I<C>
-I<strftime(3)> function. See I<strftime(3)> for details.
+since the I<UNIX> Epoch, or the plus sign (C<"+">), for I<ISO> format, or a
+conversion specifier character for the I<C> I<strftime(3)> function. See
+I<strftime(3)> for details.
 
 =item C<%w>
 
@@ -1400,11 +1403,11 @@ the following possible attributes:
 
 =item C<blocks> (integer) (same as C<%b>)
 
-=item C<atime> (string) (like C<%a>/C<%A@>, but in ISO format)
+=item C<atime> (string) (same as C<%A+>)
 
-=item C<mtime> (string) (like C<%t>/C<%T@>, but in ISO format)
+=item C<mtime> (string) (same as C<%T+>)
 
-=item C<ctime> (string) (like C<%c>/C<%C@>, but in ISO format)
+=item C<ctime> (string) (same as C<%C+>)
 
 =item C<atime_unix> (integer) (same as C<%A@> seconds)
 
@@ -1458,7 +1461,7 @@ Also note that this only works in locales that use I<UTF-8>.
 It is an error if C<%> is followed by any other character, or if it is the
 last character in the format string.
 
-All of the ISO I<C printf(3)> conversion flags are available (i.e., C<"#">,
+All of the S<I<ISO C printf(3)>> conversion flags are available (i.e., C<"#">,
 C<"0">, C<"-">, S<C<" ">>, and C<"+">), as well as field width and precision
 specifiers. These behave differently depending on the type of underlying
 I<printf(3)> conversion that they are applied to. See I<printf(3)> for
@@ -1529,7 +1532,8 @@ if conversion flags and precisions are not used, there is no
 difference. Also, for C<%A@>, C<%T@>, and C<%C@>, I<rh> emulates using an underlying
 C<%f> conversion, and I<find(1)> uses C<%s>. Another difference is that
 I<rh> doesn't automatically add a trailing zero digit after the nanoseconds,
-like I<find(1)> does).
+like I<find(1)> does). Another difference is that I<rh> and I<find(1)> use
+different formats for C<%A+>, C<%T+>, and C<%C+>. I<rh> uses I<ISO> format.
 
 And I<rh>'s C<%s> (size) conversion outputs the size of readable directories
 as the number of entries they contain (excluding C<.> and C<..>), rather
@@ -1670,7 +1674,7 @@ This option and the C<-H> option are mutually exclusive.
 =item C<-T>
 
 For the modified time, accessed time, and inode changed time columns, use
-ISO date/time format
+I<ISO> date/time format
 (I<yyyy>C<->I<mm>C<->I<dd>C<T>I<hh>C<:>I<mm>C<:>I<ss+hhmm>), rather than the
 default format
 (S<I<mmm>C< >I<dd>C< >I<hh>C<:>I<mm>C<:>I<ss>C< >I<yyyy>>). Implies the C<-l> option.
@@ -2045,7 +2049,7 @@ Find 32-bit ELF executables:
 
     $ rh -e 'f && anyx && sz > 10k && "ELF 32-bit*executable*".what'
 
-Find text files that look like they have an ISO-8859-* encoding:
+Find text files that look like they have an I<ISO-8859-*> encoding:
 
     $ rh -e 'f && "*ISO-8859* text".what'
     $ rh -e 'f && "text/*; charset=iso-8859*".mime'
