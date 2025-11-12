@@ -3352,11 +3352,11 @@ void visitf_format(void)
 						break;
 					}
 
-					case 'B': /* Block size */
+					case 'K': /* Block size */
 					{
 						ofmt_add_wp();
 						ofmt_add_lld();
-						debug_extra(("fmt %%B \"%s\", %lld", ofmt, (llong)attr.statbuf->st_blksize));
+						debug_extra(("fmt %%K \"%s\", %lld", ofmt, (llong)attr.statbuf->st_blksize));
 						printf(ofmt, (llong)attr.statbuf->st_blksize);
 
 						break;

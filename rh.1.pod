@@ -1069,7 +1069,7 @@ filesystem with transparent compression). The value 0 indicates files that
 are not real files on disk (e.g., kernel parameters exposed as virtual
 files).
 
-=item C<%B>
+=item C<%K>
 
 The preferred block size for efficient I/O on the file's filesystem
 (C<blksize>). On some filesystems (e.g., I<zfs>), this is specific to each
@@ -1399,7 +1399,7 @@ the following possible attributes:
 
 =item C<size> (integer) (same as C<%s>)
 
-=item C<blksize> (integer) (same as C<%B>)
+=item C<blksize> (integer) (same as C<%K>)
 
 =item C<blocks> (integer) (same as C<%b>)
 
@@ -1518,7 +1518,7 @@ C<%v> (C<dev> minor device number),
 C<%E> (C<rdev> device number),
 C<%R> (C<rdev> major device number),
 C<%r> (C<rdev> minor device number),
-C<%B> (block size),
+C<%K> (block size),
 or
 C<%j> (I<JSON>).
 

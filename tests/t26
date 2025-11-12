@@ -157,17 +157,17 @@ case "`uname`" in
 		;;
 esac
 
-test_rawhide_grep "$rh -L '%B\n'      $d/f" "^[0-9]+$"     "" 0 "-L '%B\\\\n'"
-test_rawhide_grep "$rh -L '%25B\n'    $d/f" "^ +[0-9]+$"   "" 0 "-L '%25B\\\\n'"
-test_rawhide_grep "$rh -L '%025B\n'   $d/f" "^[0-9]+$"     "" 0 "-L '%025B\\\\n'"
-test_rawhide_grep "$rh -L '% B\n'     $d/f" "^ [0-9]+$"    "" 0 "-L '% B\\\\n'"
-test_rawhide_grep "$rh -L '% 25B\n'   $d/f" "^ +[0-9]+$"   "" 0 "-L '% 25B\\\\n'"
-test_rawhide_grep "$rh -L '%+25B\n'   $d/f" "^ +\+[0-9]+$" "" 0 "-L '%+25B\\\\n'"
-test_rawhide_grep "$rh -L '%-25B\n'   $d/f" "^[0-9]+ +$"   "" 0 "-L '%-25B\\\\n'"
-test_rawhide_grep "$rh -L '%#25B\n'   $d/f" "^ +[0-9]+$"   "" 0 "-L '%#25B\\\\n'"
-test_rawhide_grep "$rh -L '%.25B\n'   $d/f" "^[0-9]+$"     "" 0 "-L '%.25B\\\\n'"
-test_rawhide_grep "$rh -L '%25.5B\n'  $d/f" "^ +[0-9]+$"   "" 0 "-L '%25.5B\\\\n'"
-test_rawhide_grep "$rh -L '%-25.5B\n' $d/f" "^[0-9]+ +$"   "" 0 "-L '%-25.5B\\\\n'"
+test_rawhide_grep "$rh -L '%K\n'      $d/f" "^[0-9]+$"     "" 0 "-L '%K\\\\n'"
+test_rawhide_grep "$rh -L '%25K\n'    $d/f" "^ +[0-9]+$"   "" 0 "-L '%25K\\\\n'"
+test_rawhide_grep "$rh -L '%025K\n'   $d/f" "^[0-9]+$"     "" 0 "-L '%025K\\\\n'"
+test_rawhide_grep "$rh -L '% K\n'     $d/f" "^ [0-9]+$"    "" 0 "-L '% K\\\\n'"
+test_rawhide_grep "$rh -L '% 25K\n'   $d/f" "^ +[0-9]+$"   "" 0 "-L '% 25K\\\\n'"
+test_rawhide_grep "$rh -L '%+25K\n'   $d/f" "^ +\+[0-9]+$" "" 0 "-L '%+25K\\\\n'"
+test_rawhide_grep "$rh -L '%-25K\n'   $d/f" "^[0-9]+ +$"   "" 0 "-L '%-25K\\\\n'"
+test_rawhide_grep "$rh -L '%#25K\n'   $d/f" "^ +[0-9]+$"   "" 0 "-L '%#25K\\\\n'"
+test_rawhide_grep "$rh -L '%.25K\n'   $d/f" "^[0-9]+$"     "" 0 "-L '%.25K\\\\n'"
+test_rawhide_grep "$rh -L '%25.5K\n'  $d/f" "^ +[0-9]+$"   "" 0 "-L '%25.5K\\\\n'"
+test_rawhide_grep "$rh -L '%-25.5K\n' $d/f" "^[0-9]+ +$"   "" 0 "-L '%-25.5K\\\\n'"
 
 day="[A-Z][a-z][a-z]"
 mon="[A-Z][a-z][a-z]"
