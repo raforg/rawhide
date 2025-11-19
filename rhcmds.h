@@ -68,6 +68,7 @@ void c_blocks(llong i);
 void c_atime(llong i);
 void c_mtime(llong i);
 void c_ctime(llong i);
+void c_btime(llong i);
 unsigned long get_attr(void);
 unsigned long get_proj(void);
 unsigned long get_gen(void);
@@ -174,6 +175,7 @@ void r_blocks(llong i);
 void r_atime(llong i);
 void r_mtime(llong i);
 void r_ctime(llong i);
+void r_btime(llong i);
 #if HAVE_ATTR || HAVE_FLAGS || HAVE_SOLARIS_ATTR
 void r_attr(llong i);
 #endif
@@ -203,6 +205,7 @@ void t_blocks(llong i);
 void t_atime(llong i);
 void t_mtime(llong i);
 void t_ctime(llong i);
+void t_btime(llong i);
 void t_strlen(llong i);
 
 char *read_symlink(void);
@@ -215,6 +218,7 @@ char *get_ea(int);
 void set_dirsize(void);
 int has_real_acl(void);
 int has_real_ea(void);
+llong get_btime(void);
 
 #ifndef NDEBUG
 char *instruction_name(void (*func)(llong));

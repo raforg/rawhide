@@ -98,6 +98,7 @@ static symbol_t init_syms[] =
 	{ "atime",   FIELD, 0, c_atime,   NULL },
 	{ "mtime",   FIELD, 0, c_mtime,   NULL },
 	{ "ctime",   FIELD, 0, c_ctime,   NULL },
+	{ "btime",   FIELD, 0, c_btime,   NULL },
 
 	/* Linux ext2-style file attributes, BSD file flags, Solaris file attributes */
 
@@ -182,6 +183,7 @@ static symbol_t init_syms[] =
 	{ "tatime",    FIELD, 0, t_atime,   NULL },
 	{ "tmtime",    FIELD, 0, t_mtime,   NULL },
 	{ "tctime",    FIELD, 0, t_ctime,   NULL },
+	{ "tbtime",    FIELD, 0, t_btime,   NULL },
 	{ "tstrlen",   FIELD, 0, t_strlen,  NULL },
 
 	/* Reference file stat structure fields */
@@ -206,6 +208,7 @@ static symbol_t init_syms[] =
 	{ ".atime",    REFFILE, 0, r_atime,   NULL },
 	{ ".mtime",    REFFILE, 0, r_mtime,   NULL },
 	{ ".ctime",    REFFILE, 0, r_ctime,   NULL },
+	{ ".btime",    REFFILE, 0, r_btime,   NULL },
 #if HAVE_ATTR || HAVE_FLAGS || HAVE_SOLARIS_ATTR
 	{ ".attr",     REFFILE, 0, r_attr,    NULL },
 #endif
@@ -223,6 +226,8 @@ static symbol_t init_syms[] =
 	{ ".accessed", REFFILE, 0, r_atime,   NULL },
 	{ ".modified", REFFILE, 0, r_mtime,   NULL },
 	{ ".changed",  REFFILE, 0, r_ctime,   NULL },
+	{ ".created",  REFFILE, 0, r_btime,   NULL },
+	{ ".birth",    REFFILE, 0, r_btime,   NULL },
 #if HAVE_ATTR || HAVE_FLAGS || HAVE_SOLARIS_ATTR
 	{ ".attribute",  REFFILE, 0, r_attr,  NULL },
 #endif

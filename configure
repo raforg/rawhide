@@ -68,6 +68,8 @@ do
 			echo "  --disable-mangz    - Disable gzipped manpages (default)"
 			echo "  --disable-major    - Forget location of major/minor (for distribution)"
 			echo "  --disable-nsec     - Forget location of nanoseconds (for distribution)"
+			echo "  --disable-btime    - Forget location of btime/birthtime (for distribution)"
+			echo "  --disable-birthtime - Alias for --disable-btime"
 			echo "  --enable-gcov      - Enable gcov test coverage measurement (do not install)"
 			echo "  --disable-gcov     - Disable gcov test coverage measurement (default)"
 			echo "  --enable-ubsan     - Enable the undefined behaviour sanitizer (do not install)"
@@ -164,8 +166,9 @@ case "$1" in
 		set -- \
 			--destdir= --prefix=/usr/local --etcdir=/etc --mandir='$(PREFIX)/share/man' \
 			--disable-pcre2 --disable-acl --disable-ea --disable-attr --disable-magic \
-			--disable-ndebug --disable-mangz --disable-major --disable-nsec --disable-gcov \
-			--disable-ubsan --disable-asan --disable-msan --disable-cc-other --static=large
+			--disable-ndebug --disable-mangz --disable-major --disable-nsec --disable-btime \
+			--disable-gcov --disable-ubsan --disable-asan --disable-msan --disable-cc-other \
+			--static=large
 		;;
 esac
 
@@ -897,6 +900,7 @@ test_attr_solaris()
 		-e 's:^#\(SOLARIS_ATTR_DEFINES =\).*$:\1 -DHAVE_SOLARIS_ATTR=1:' \
 		-e 's:^#\(SOLARIS_ATTR_CFLAGS =\)$:\1 '"$TEST_CFLAGS"':' \
 		-e 's:^#\(SOLARIS_ATTR_LDFLAGS =\)$:\1 '"$TEST_LDFLAGS"':'
+	HAVE_ATTR_SOLARIS=1 # Don't rerun this test looking for birth/created time
 	HAVE_ATTR=1
 	TEST_CFLAGS=""
 	TEST_LDFLAGS=""
@@ -1175,6 +1179,120 @@ case "$*" in
 		;;
 esac
 
+# Look for birth/created time
+
+create_birthtime_statx_code() # Linux
+{
+	cat > configchk.c <<END
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <time.h>
+#include <sys/stat.h>
+#include <sys/fcntl.h> /* For AT_SYMLINK_NOFOLLOW and AT_FDCWD */
+int main()
+{
+	struct statx statxbuf[1];
+	int flags = AT_SYMLINK_NOFOLLOW;
+	unsigned int mask = STATX_BTIME;
+	if (statx(AT_FDCWD, ".", flags, mask, statxbuf) != -1)
+	{
+		printf("b %lld.", (long long)statxbuf->stx_btime.tv_sec);
+		printf("%09lld ", (long long)statxbuf->stx_btime.tv_nsec);
+		time_t t = (statxbuf->stx_mask & mask) ? statxbuf->stx_btime.tv_sec : 0;
+		printf("%s", ctime(&t));
+	}
+	return 0;
+}
+END
+}
+
+test_birthtime_statx()
+{
+	create_birthtime_statx_code
+	compile_test || return 1
+	echo "Configuring btime as statx.stx_btime"
+	editconf Makefile -e 's,^#\(HAVE_STATX_BTIME =.*\)$,\1,'
+	return 0
+}
+
+create_birthtime_posix_code() # FreeBSD, NetBSD(zero), Cygwin
+{
+	cat > configchk.c <<END
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <time.h>
+#include <sys/stat.h>
+
+int main()
+{
+	struct stat statbuf[1];
+	if (stat(".", statbuf) != -1)
+	{
+		printf("b %ld.", (long)statbuf->st_birthtim.tv_sec);
+		printf("%09ld ", (long)statbuf->st_birthtim.tv_nsec);
+		printf("%s", ctime(&statbuf->st_birthtim.tv_sec));
+	}
+	return 0;
+}
+END
+}
+
+test_birthtime_posix()
+{
+	create_birthtime_posix_code
+	compile_test || return 1
+	echo "Configuring btime as stat.st_birthtim"
+	editconf Makefile -e 's,^#\(HAVE_POSIX_BTIME =.*\)$,\1,'
+	return 0
+}
+
+create_birthtime_spec_code() # macOS
+{
+	cat > configchk.c <<END
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <time.h>
+#include <sys/stat.h>
+
+int main()
+{
+	struct stat statbuf[1];
+	if (stat(".", statbuf) != -1)
+	{
+		printf("b %ld.", (long)statbuf->st_birthtimespec.tv_sec);
+		printf("%09ld ", (long)statbuf->st_birthtimespec.tv_nsec);
+		printf("%s", ctime(&statbuf->st_birthtimespec.tv_sec));
+	}
+	return 0;
+}
+END
+}
+
+test_birthtime_spec()
+{
+	create_birthtime_spec_code
+	compile_test || return 1
+	echo "Configuring btime as stat.st_birthtimespec"
+	editconf Makefile -e 's,^#\(HAVE_SPEC_BTIME =.*\)$,\1,'
+	return 0
+}
+
+test_birthtime_solaris()
+{
+	# On Solaris, birthtime is an attribute, so we can only have both attr and birthtime, or neither
+	[ -z "$HAVE_ATTR_SOLARIS" ] && return 1
+	echo "Configuring btime as attribute"
+	return 0
+}
+
+case "$*" in
+	*--disable-btime*|*--disable-birthtime*)
+		;;
+	*)
+		test_birthtime_statx || test_birthtime_posix || test_birthtime_spec || test_birthtime_solaris || echo "Configuring without birthtime"
+		;;
+esac
+
 # Process command line options
 
 for opt in "$@"
@@ -1336,6 +1454,14 @@ do
 			editconf Makefile \
 				-e 's,^\(HAVE_POSIX_NSEC =.*\)$,#\1,' \
 				-e 's,^\(HAVE_SPEC_NSEC =.*\)$,#\1,'
+			;;
+
+		--disable-btime|--disable-birthtime)
+			echo "Configuring $opt"
+			editconf Makefile \
+				-e 's,^\(HAVE_STATX_BTIME =.*\)$,#\1,' \
+				-e 's,^\(HAVE_POSIX_BTIME =.*\)$,#\1,' \
+				-e 's,^\(HAVE_SPEC_BTIME =.*\)$,#\1,'
 			;;
 
 		--enable-gcov)

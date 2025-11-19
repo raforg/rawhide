@@ -236,33 +236,33 @@ liberties taken):
       STRING NOSPACE "." NOSPACE <reference-file-field>
 
   <reference-file-field> ::=
-        "exists"   | "dev"     | "major"     | "minor"   | "ino"
-      | "mode"     | "type"    | "perm"      | "nlink"   | "uid"
-      | "gid"      | "rdev"    | "rmajor"    | "rminor"  | "size"
-      | "blksize"  | "blocks"  | "atime"     | "mtime"   | "ctime"
-      | "attr"     | "proj"    | "gen"       | "strlen"  | "inode"
-      | "nlinks"   | "user"    | "group"     | "sz"      | "accessed"
-      | "modified" | "changed" | "attribute" | "project" | "generation"
-      | "len"
+        "exists"   | "dev"      | "major"      | "minor"   | "ino"
+      | "mode"     | "type"     | "perm"       | "nlink"   | "uid"
+      | "gid"      | "rdev"     | "rmajor"     | "rminor"  | "size"
+      | "blksize"  | "blocks"   | "atime"      | "mtime"   | "ctime"
+      | "btime"    | "attr"     | "proj"       | "gen"     | "strlen"
+      | "inode"    | "nlinks"   | "user"       | "group"   | "sz"
+      | "accessed" | "modified" | "changed"    | ""created | "birth"
+      | "attribute" | "project" | "generation" | "len"
 
   <built-in> ::=
-        "dev"     | "major"   | "minor"    | "ino"      | "mode"
-      | "nlink"   | "uid"     | "gid"      | "rdev"     | "rmajor"
-      | "rminor"  | "size"    | "blksize"  | "blocks"   | "atime"
-      | "mtime"   | "ctime"   | "attr"     | "proj"     | "gen"
-      | "nouser"  | "nogroup" | "readable" | "writable" | "executable"
-      | "strlen"  | "depth"   | "prune"    | "trim"     | "exit"
-      | "now"     | "today"   | "second"   | "minute"   | "hour"
-      | "day"     | "week"    | "month"    | "year"     | "IFREG"
-      | "IFDIR"   | "IFLNK"   | "IFCHR"    | "IFBLK"    | "IFSOCK"
-      | "IFIFO"   | "IFDOOR"  | "IFWHT"    | "IFMT"     | "ISUID"
-      | "ISGID"   | "ISVTX"   | "IRWXU"    | "IRUSR"    | "IWUSR"
-      | "IXUSR"   | "IRWXG"   | "IRGRP"    | "IWGRP"    | "IXGRP"
-      | "IRWXO"   | "IROTH"   | "IWOTH"    | "IXOTH"    | "texists"
-      | "tdev"    | "tmajor"  | "tminor"   | "tino"     | "tmode"
-      | "tnlink"  | "tuid"    | "tgid"     | "trdev"    | "trmajor"
-      | "trminor" | "tsize"   | "tblksize" | "tblocks"  | "tatime"
-      | "tmtime"  | "tctime"  | "tstrlen"
+        "dev"        | "major"   | "minor"    | "ino"      | "mode"
+      | "nlink"      | "uid"     | "gid"      | "rdev"     | "rmajor"
+      | "rminor"     | "size"    | "blksize"  | "blocks"   | "atime"
+      | "mtime"      | "ctime"   | "btime"    | "attr"     | "proj"
+      | "gen"        | "nouser"  | "nogroup"  | "readable" | "writable"
+      | "executable" | "strlen"  | "depth"    | "prune"    | "trim"
+      | "exit"       | "now"     | "today"    | "second"   | "minute"
+      | "hour"       | "day"     | "week"     | "month"    | "year"
+      | "IFREG"      | "IFDIR"   | "IFLNK"    | "IFCHR"    | "IFBLK"
+      | "IFSOCK"     | "IFIFO"   | "IFDOOR"   | "IFWHT"    | "IFMT"
+      | "ISUID"      | "ISGID"   | "ISVTX"    | "IRWXU"    | "IRUSR"
+      | "IWUSR"      | "IXUSR"   | "IRWXG"    | "IRGRP"    | "IWGRP"
+      | "IXGRP"      | "IRWXO"   | "IROTH"    | "IWOTH"    | "IXOTH"
+      | "texists"    | "tdev"    | "tmajor"   | "tminor"   | "tino"
+      | "tmode"      | "tnlink"  | "tuid"     | "tgid"     | "trdev"
+      | "trmajor"    | "trminor" | "tsize"    | "tblksize" | "tblocks"
+      | "tatime"     | "tmtime"  | "tctime"   | "tbtime"   | "tstrlen"
 
   <function-call> ::=
       IDENTIFIER <arguments>
@@ -612,6 +612,17 @@ The time that the current candidate file's inode was last changed. This is
 the C<st_ctime> field of the corresponding I<stat(2)> structure converted to
 nanoseconds, and combined with nanoseconds from C<st_ctim.tv_nsec> (or
 equivalent).
+
+=item C<btime>
+
+The time that the current candidate file was created. This is known as the
+file's birth or created time. This is the C<st_birthtim> timestamp field of
+the corresponding I<stat(2)> structure (or equivalent) converted to
+nanoseconds.
+
+This is not supported on all operating systems (i.e., I<OpenBSD> and
+I<NetBSD> lack support), or by all filesystems. When birth times are not
+supported, this is zero, or in other words, the I<UNIX> Epoch.
 
 =item C<attr>
 
@@ -1109,6 +1120,24 @@ The time that the current candidate symlink's ultimate target's inode was
 last changed. This is the C<st_ctime> field of the corresponding I<stat(2)>
 structure converted to nanoseconds, and combined with the nanoseconds from
 C<st_ctim.tv_nsec> (or equivalent).
+
+This should only be used when the current candidate file is a symlink, and
+when its ultimate target exists (i.e., when C<texists> is true). Otherwise,
+this is zero.
+
+Note: The C<-Y> option is incompatible with this built-in. The only symlinks
+seen will be broken ones, and this built-in will return zero.
+
+=item C<tbtime>
+
+The time that the current candidate symlink's ultimate target was
+created. This is known as the target's birth or created time. This is the
+C<st_birthtim> timestamp field of the corresponding I<stat(2)> structure (or
+equivalent) converted to nanoseconds.
+
+This is not supported on all operating systems (i.e., I<OpenBSD> and
+I<NetBSD> lack support), or by all filesystems. When birth times are not
+supported, this is zero, or in other words, the I<UNIX> Epoch.
 
 This should only be used when the current candidate file is a symlink, and
 when its ultimate target exists (i.e., when C<texists> is true). Otherwise,
@@ -2107,6 +2136,19 @@ equivalent).
 It is an error to use this if the reference file does not exist. See
 C<exists> above.
 
+=item C<btime>
+
+The time that the reference file was created. This is known as the file's
+birth or created time. This is the C<st_birthtim> timestamp field of the
+corresponding I<stat(2)> structure (or equivalent) converted to nanoseconds.
+
+This is not supported on all operating systems (i.e., I<OpenBSD> and
+I<NetBSD> lack support), or by all filesystems. When birth times are not
+supported, this is zero, or in other words, the I<UNIX> Epoch.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
 =item C<attr>
 
 On I<Linux>, the reference file's I<ext2>-style file attribute bit mask. Not
@@ -2228,9 +2270,47 @@ An alias for C<ctime>.
 It is an error to use this if the reference file does not exist. See
 C<exists> above.
 
+=item C<created>
+
+An alias for C<btime>.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<birth>
+
+An alias for C<btime>.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<attribute>
+
+An alias for C<attr>.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<project>
+
+An alias for C<proj>.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
+=item C<generation>
+
+An alias for C<gen>.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
+
 =item C<len>
 
 An alias for C<strlen>.
+
+It is an error to use this if the reference file does not exist. See
+C<exists> above.
 
 =back
 
@@ -2937,11 +3017,12 @@ derived from it by appending C<".d">.
 
 =head1 SEE ALSO
 
-I<rh(1)>, I<stat(2)>, I<mktime(3)>, I<fnmatch(3)>, I<glob(7)>, I<perlre(1)>,
-I<pcre2pattern(3)>, I<pcre2syntax(3)>, I<access(2)>, I<acl(2)> or I<acl(3)>
-or I<acl(5)>, I<xattr(1)> or I<xattr(7)> or I<extattr(2)> or I<fsattr(7)>,
-I<chattr(1)>, I<lsattr(1)>, I<chflags(1)>, I<file(1)>, I<jq(1)>,
-S<I<The C programming language>>.
+I<rh(1)>, I<stat(2)>, I<statx(2)>, I<getattrat(3C)>, I<mktime(3)>,
+I<fnmatch(3)>, I<glob(7)>, I<perlre(1)>, I<pcre2pattern(3)>,
+I<pcre2syntax(3)>, I<access(2)>, I<acl(2)> or I<acl(3)> or I<acl(5)>,
+I<xattr(1)> or I<xattr(7)> or I<extattr(2)> or I<fsattr(7)>, I<chattr(1)>,
+I<lsattr(1)>, I<chflags(1)>, I<file(1)>, I<jq(1)>, S<I<The C programming
+language>>.
 
 =head1 AUTHORS
 

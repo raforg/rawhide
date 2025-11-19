@@ -188,6 +188,10 @@ static void caches_init(void)
 	attr.proj = 0;
 	attr.gen_done = 0;
 	attr.gen = 0;
+	attr.btime_done = 0;
+	attr.btime_ok = 0;
+	attr.linkbtime_done = 0;
+	attr.linkbtime_ok = 0;
 }
 
 /*
@@ -3563,7 +3567,7 @@ void visitf_format(void)
 					{
 						char *target = (islink(attr.statbuf)) ? read_symlink() : "";
 
-						ofmt_add_wl(width, length, buf);
+						ofmt_add_wl(width, length, target);
 						ofmt_add('s');
 						debug_extra(("fmt %%l \"%s\", \"%s\"", ofmt, target));
 						printf_sanitized(ofmt, target);

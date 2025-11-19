@@ -170,30 +170,30 @@ a high-level interface to the built-in symbols mentioned above, and makes
        dev           major         minor         ino           mode
        nlink         uid           gid           rdev          rmajor
        rminor        size          blksize       blocks        atime
-       mtime         ctime         attr          proj          gen
-       nouser        nogroup       readable      writable      executable
-       strlen        depth         prune         trim          exit
-       now           today         second        minute        hour
-       day           week          month         year          IFREG
-       IFDIR         IFLNK         IFCHR         IFBLK         IFSOCK
-       IFIFO         IFDOOR        IFWHT         IFMT          ISUID
-       ISGID         ISVTX         IRWXU         IRUSR         IWUSR
-       IXUSR         IRWXG         IRGRP         IWGRP         IXGRP
-       IRWXO         IROTH         IWOTH         IXOTH         texists
-       tdev          tmajor        tminor        tino          tmode
-       tnlink        tuid          tgid          trdev         trmajor
-       trminor       tsize         tblksize      tblocks       tatime
-       tmtime        tctime        tstrlen
+       mtime         ctime         btime         attr          proj
+       gen           nouser        nogroup       readable      writable
+       executable    strlen        depth         prune         trim
+       exit          now           today         second        minute
+       hour          day           week          month         year
+       IFREG         IFDIR         IFLNK         IFCHR         IFBLK
+       IFSOCK        IFIFO         IFDOOR        IFWHT         IFMT
+       ISUID         ISGID         ISVTX         IRWXU         IRUSR
+       IWUSR         IXUSR         IRWXG         IRGRP         IWGRP
+       IXGRP         IRWXO         IROTH         IWOTH         IXOTH
+       texists       tdev          tmajor        tminor        tino
+       tmode         tnlink        tuid          tgid          trdev
+       trmajor       trminor       tsize         tblksize      tblocks
+       tatime        tmtime        tctime        tbtime        tstrlen
 
      Reference file fields:
        .exists       .dev          .major        .minor        .ino
        .mode         .type         .perm         .nlink        .uid
        .gid          .rdev         .rmajor       .rminor       .size
        .blksize      .blocks       .atime        .mtime        .ctime
-       .attr         .proj         .gen          .strlen       .inode
-       .nlinks       .user         .group        .sz           .accessed
-       .modified     .changed      .attribute    .project      .generation
-       .len
+       .btime        .attr         .proj         .gen          .strlen
+       .inode        .nlinks       .user         .group        .sz
+       .accessed     .modified     .changed      .created      .birth
+       .attribute    .project      .generation   .len
 
      System-wide and user-specific functions can be defined here:
        /etc/rawhide.conf          ~/.rhrc

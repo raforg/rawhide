@@ -1331,7 +1331,7 @@ int main(int argc, char *argv[])
 	/* Initialize a search stack for filesystem cycle detection */
 
 	if (!(attr.search_stack = (point_t *)calloc(attr.max_depth + 1, sizeof(point_t))))
-		fatal("out of memory");
+		fatalsys("out of memory");
 
 	/* Prepare to deallocate libmagic resources */
 

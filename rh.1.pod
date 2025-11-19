@@ -132,30 +132,30 @@ I<rh> - (I<rawhide>) find files using pretty I<C> expressions
    dev           major         minor         ino           mode
    nlink         uid           gid           rdev          rmajor
    rminor        size          blksize       blocks        atime
-   mtime         ctime         attr          proj          gen
-   nouser        nogroup       readable      writable      executable
-   strlen        depth         prune         trim          exit
-   now           today         second        minute        hour
-   day           week          month         year          IFREG
-   IFDIR         IFLNK         IFCHR         IFBLK         IFSOCK
-   IFIFO         IFDOOR        IFWHT         IFMT          ISUID
-   ISGID         ISVTX         IRWXU         IRUSR         IWUSR
-   IXUSR         IRWXG         IRGRP         IWGRP         IXGRP
-   IRWXO         IROTH         IWOTH         IXOTH         texists
-   tdev          tmajor        tminor        tino          tmode
-   tnlink        tuid          tgid          trdev         trmajor
-   trminor       tsize         tblksize      tblocks       tatime
-   tmtime        tctime        tstrlen
+   mtime         ctime         btime         attr          proj
+   gen           nouser        nogroup       readable      writable
+   executable    strlen        depth         prune         trim
+   exit          now           today         second        minute
+   hour          day           week          month         year
+   IFREG         IFDIR         IFLNK         IFCHR         IFBLK
+   IFSOCK        IFIFO         IFDOOR        IFWHT         IFMT
+   ISUID         ISGID         ISVTX         IRWXU         IRUSR
+   IWUSR         IXUSR         IRWXG         IRGRP         IWGRP
+   IXGRP         IRWXO         IROTH         IWOTH         IXOTH
+   texists       tdev          tmajor        tminor        tino
+   tmode         tnlink        tuid          tgid          trdev
+   trmajor       trminor       tsize         tblksize      tblocks
+   tatime        tmtime        tctime        tbtime        tstrlen
 
  Reference file fields:
    .exists       .dev          .major        .minor        .ino
    .mode         .type         .perm         .nlink        .uid
    .gid          .rdev         .rmajor       .rminor       .size
    .blksize      .blocks       .atime        .mtime        .ctime
-   .attr         .proj         .gen          .strlen       .inode
-   .nlinks       .user         .group        .sz           .accessed
-   .modified     .changed      .attribute    .project      .generation
-   .len
+   .btime        .attr         .proj         .gen          .strlen
+   .inode        .nlinks       .user         .group        .sz
+   .accessed     .modified     .changed      .created      .birth
+   .attribute    .project      .generation   .len
 
  System-wide and user-specific functions can be defined here:
    /etc/rawhide.conf          ~/.rhrc
@@ -195,9 +195,10 @@ metadata. These are the fields in the corresponding I<stat(2)> structure
 (e.g., C<st_mode>, C<st_uid>, C<st_size>, C<st_mtime>, ...). See I<stat(2)>
 for details. For convenience, the C<"st_"> prefix is omitted from the symbol
 names (e.g., C<st_mtime> is used as C<mtime>). Note: The file timestamp
-built-ins (i.e., C<atime>, C<mtime>, and C<ctime>) are not the same as their
-corresponding I<stat(2)> structure fields, which are numbers of seconds
-since the I<UNIX> Epoch. These built-ins are their nanosecond equivalents.
+built-ins (i.e., C<atime>, C<mtime>, C<ctime>, and C<btime>) are not the
+same as their corresponding I<stat(2)> structure fields, which are numbers
+of seconds since the I<UNIX> Epoch. These built-ins are their nanosecond
+equivalents.
 
 Other built-in symbols represent the constants defined by I<C>'s
 C<< <sys/stat.h> >> header file. These are useful for interpreting the
@@ -1089,7 +1090,7 @@ modern filesystems are often larger (e.g., 4KiB).
 
 =item C<%a>
 
-The accessed time (C<atime>) in the format returned by the I<C> I<ctime(3)>
+The accessed time (C<atime>) in the format returned by the S<I<C ctime(3)>>
 function (excluding its terminating newline).
 
 =item C<%A>I<k>
@@ -1097,12 +1098,12 @@ function (excluding its terminating newline).
 The accessed time (C<atime>) in the format specified by I<k>, which is
 either the at sign (C<"@">), for the number of I<seconds>C<.>I<nanoseconds>
 since the I<UNIX> Epoch, or the plus sign (C<"+">), for I<ISO> format, or a
-conversion specifier character for the I<C> I<strftime(3)> function. See
+conversion specifier character for the S<I<C strftime(3)>> function. See
 I<strftime(3)> for details.
 
 =item C<%t>
 
-The modified time (C<mtime>) in the format returned by the I<C> I<ctime(3)>
+The modified time (C<mtime>) in the format returned by the S<I<C ctime(3)>>
 function (excluding its terminating newline).
 
 =item C<%T>I<k>
@@ -1110,20 +1111,20 @@ function (excluding its terminating newline).
 The modified time (C<mtime>) in the format specified by I<k>, which is
 either the at sign (C<"@">), for the number of I<seconds>C<.>I<nanoseconds>
 since the I<UNIX> Epoch, or the plus sign (C<"+">), for I<ISO> format, or a
-conversion specifier character for the I<C> I<strftime(3)> function. See
+conversion specifier character for the S<I<C strftime(3)>> function. See
 I<strftime(3)> for details.
 
 =item C<%c>
 
-The inode changed time (C<ctime>) in the format returned by the I<C>
-I<ctime(3)> function (excluding its terminating newline).
+The inode changed time (C<ctime>) in the format returned by the
+S<I<C ctime(3)>> function (excluding its terminating newline).
 
 =item C<%C>I<k>
 
 The inode changed time (C<ctime>) in the format specified by I<k>, which is
 either the at sign (C<"@">), for the number of I<seconds>C<.>I<nanoseconds>
 since the I<UNIX> Epoch, or the plus sign (C<"+">), for I<ISO> format, or a
-conversion specifier character for the I<C> I<strftime(3)> function. See
+conversion specifier character for the S<I<C strftime(3)>> function. See
 I<strftime(3)> for details.
 
 =item C<%w>
@@ -3220,13 +3221,13 @@ entry has a B<BUGS> section which just says:
 =head1 SEE ALSO
 
 I<rawhide.conf(5)>, I<find(1)>, I<xargs(1)>, I<ls(1)>, I<stat(1)>, I<jq(1)>,
-I<stat(2)>, I<fnmatch(3)>, I<glob(7)>, I<perlre(1)>, I<pcre2pattern(3)>,
-I<pcre2syntax(3)>, I<system(3)>, I<sh(1)>, I<printf(3)>, I<strftime(3)>,
-I<ctime(3)>, I<acl(2)> or I<acl(3)> or I<acl(5)>, I<xattr(1)> or I<xattr(7)>
-or I<extattr(2)> or I<fsattr(7)>, I<chmod(1)>, I<setfacl(1)>, I<getfacl(1)>,
-I<setfattr(1)>, I<getfattr(1)>, I<selinux(8)>, I<runat(1)>, I<mount(8)>,
-I<chattr(1)>, I<lsattr(1)>, I<chflags(1)>, I<file(1)>,
-S<I<The C programming language>>.
+I<stat(2)>, I<statx(2)>, I<getattrat(3C)>, I<fnmatch(3)>, I<glob(7)>,
+I<perlre(1)>, I<pcre2pattern(3)>, I<pcre2syntax(3)>, I<system(3)>, I<sh(1)>,
+I<printf(3)>, I<strftime(3)>, I<ctime(3)>, I<acl(2)> or I<acl(3)> or
+I<acl(5)>, I<xattr(1)> or I<xattr(7)> or I<extattr(2)> or I<fsattr(7)>,
+I<chmod(1)>, I<setfacl(1)>, I<getfacl(1)>, I<setfattr(1)>, I<getfattr(1)>,
+I<selinux(8)>, I<runat(1)>, I<mount(8)>, I<chattr(1)>, I<lsattr(1)>,
+I<chflags(1)>, I<file(1)>, S<I<The C programming language>>.
 
 =head1 AUTHORS
 

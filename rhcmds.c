@@ -207,30 +207,7 @@ void set_dirsize(void)
 		dirsize();
 }
 
-/* Built-ins */
-
-void c_number(llong i)  { Stack[SP++] = i; }
-void c_dev(llong i)     { Stack[SP++] = attr.statbuf->st_dev; }
-void c_major(llong i)   { Stack[SP++] = major(attr.statbuf->st_dev); }
-void c_minor(llong i)   { Stack[SP++] = minor(attr.statbuf->st_dev); }
-void c_ino(llong i)     { Stack[SP++] = attr.statbuf->st_ino; }
-void c_mode(llong i)    { Stack[SP++] = attr.statbuf->st_mode; }
-void c_nlink(llong i)   { Stack[SP++] = attr.statbuf->st_nlink; }
-void c_uid(llong i)     { Stack[SP++] = attr.statbuf->st_uid; }
-void c_gid(llong i)     { Stack[SP++] = attr.statbuf->st_gid; }
-void c_rdev(llong i)    { Stack[SP++] = attr.statbuf->st_rdev; }
-void c_rmajor(llong i)  { Stack[SP++] = major(attr.statbuf->st_rdev); }
-void c_rminor(llong i)  { Stack[SP++] = minor(attr.statbuf->st_rdev); }
-void c_size(llong i)    { Stack[SP++] = isdir(attr.statbuf) ? dirsize() : attr.statbuf->st_size; }
-void c_blksize(llong i) { Stack[SP++] = attr.statbuf->st_blksize; }
-void c_blocks(llong i)  { Stack[SP++] = attr.statbuf->st_blocks; }
-void c_atime(llong i)   { Stack[SP++] = ATIME(attr.statbuf); }
-void c_mtime(llong i)   { Stack[SP++] = MTIME(attr.statbuf); }
-void c_ctime(llong i)   { Stack[SP++] = CTIME(attr.statbuf); }
-void c_depth(llong i)   { Stack[SP++] = attr.depth; }
-void c_prune(llong i)   { Stack[SP++] = 1; attr.prune = attr.pruned = 1; }
-void c_trim(llong i)    { Stack[SP++] = 1; attr.prune = 1; }
-void c_exit(llong i)    { Stack[SP++] = 1; attr.exit = 1; }
+/* Solaris attributes */
 
 #if HAVE_SOLARIS_ATTR
 
@@ -250,7 +227,7 @@ void c_exit(llong i)    { Stack[SP++] = 1; attr.exit = 1; }
 #define SOLARIS_A_OPAQUE         0x2000
 #define SOLARIS_A_REPARSE_POINT  0x4000
 
-static void get_solaris_attr(const char *name, unsigned long *flags)
+static void get_solaris_attr(int parent_fd, const char *name, unsigned long *flags, int *btime_ok, struct timespec *btime)
 {
 	nvlist_t *response = NULL;
 	nvpair_t *pair = NULL;
@@ -258,7 +235,7 @@ static void get_solaris_attr(const char *name, unsigned long *flags)
 
 	*flags = 0;
 
-	if (getattrat(AT_FDCWD, XATTR_VIEW_READONLY, name, &response) != -1)
+	if (getattrat(parent_fd, XATTR_VIEW_READONLY, name, &response) != -1)
 	{
 		while ((pair = nvlist_next_nvpair(response, pair)))
 		{
@@ -273,7 +250,7 @@ static void get_solaris_attr(const char *name, unsigned long *flags)
 		}
 	}
 
-	if (getattrat(AT_FDCWD, XATTR_VIEW_READWRITE, name, &response) != -1)
+	if (getattrat(parent_fd, XATTR_VIEW_READWRITE, name, &response) != -1)
 	{
 		while ((pair = nvlist_next_nvpair(response, pair)))
 		{
@@ -307,6 +284,18 @@ static void get_solaris_attr(const char *name, unsigned long *flags)
 				*flags |= SOLARIS_A_SPARSE;
 			else if (!strcmp(n, A_SENSITIVE) && t == DATA_TYPE_BOOLEAN_VALUE && nvpair_value_boolean_value(pair, &val) != -1 && val)
 				*flags |= SOLARIS_A_SENSITIVE;
+			else if (!strcmp(n, A_CRTIME) && t == DATA_TYPE_UINT64_ARRAY && btime_ok && btime)
+			{
+				uint64_t *val;
+				uint_t nelem;
+
+				if (nvpair_value_uint64_array(pair, &val, &nelem) != -1)
+				{
+					*btime_ok = 1;
+					btime->tv_sec = val[0];
+					btime->tv_nsec = val[1];
+				}
+			}
 		}
 	}
 
@@ -314,6 +303,202 @@ static void get_solaris_attr(const char *name, unsigned long *flags)
 }
 
 #endif /* HAVE_SOLARIS_ATTR */
+
+/* Birthtime */
+
+llong get_btime(void)
+{
+	#if HAVE_STATX_BTIME
+
+	struct statx statxbuf[1];
+
+	if (!attr.btime_done)
+	{
+		char *name = (attr.parent_fd == AT_FDCWD) ? attr.fpath : attr.basename;
+		int flags = (attr.follow_symlinks) ? 0 : AT_SYMLINK_NOFOLLOW;
+		unsigned int mask = STATX_BTIME;
+
+		if (statx(attr.parent_fd, name, flags, mask, statxbuf) != -1 && statxbuf->stx_mask & mask)
+		{
+			attr.btime_ok = 1;
+			attr.btime->tv_sec = statxbuf->stx_btime.tv_sec;
+			attr.btime->tv_nsec = statxbuf->stx_btime.tv_nsec;
+		}
+
+		attr.btime_done = 1;
+	}
+
+	#elif HAVE_POSIX_BTIME
+
+	if (!attr.btime_done)
+	{
+		attr.btime_ok = 1;
+		attr.btime->tv_sec = attr.statbuf->st_birthtim.tv_sec;
+		attr.btime->tv_nsec = attr.statbuf->st_birthtim.tv_nsec;
+		attr.btime_done = 1;
+	}
+
+	#elif HAVE_SPEC_BTIME
+
+	if (!attr.btime_done)
+	{
+		attr.btime_ok = 1;
+		attr.btime->tv_sec = attr.statbuf->st_birthtimespec.tv_sec;
+		attr.btime->tv_nsec = attr.statbuf->st_birthtimespec.tv_nsec;
+		attr.btime_done = 1;
+	}
+
+	#elif HAVE_SOLARIS_ATTR
+
+	if (!attr.btime_done)
+	{
+		char *name = (attr.parent_fd == AT_FDCWD) ? attr.fpath : attr.basename;
+		unsigned long attr_unused;
+		get_solaris_attr(attr.parent_fd, name, &attr_unused, &attr.btime_ok, attr.btime);
+		attr.btime_done = 1;
+		attr.attr_done = 1;
+	}
+
+	#endif
+
+	return (attr.btime_ok) ? BTIME(attr.btime) : 0;
+}
+
+static llong get_linkbtime(void)
+{
+	#if HAVE_STATX_BTIME
+
+	struct statx statxbuf[1];
+
+	if (!attr.linkbtime_done)
+	{
+		int flags = AT_SYMLINK_NOFOLLOW;
+		unsigned int mask = STATX_BTIME;
+
+		if (statx(attr.parent_fd, attr.ftarget, flags, mask, statxbuf) != -1 && statxbuf->stx_mask & mask)
+		{
+			attr.linkbtime_ok = 1;
+			attr.linkbtime->tv_sec = statxbuf->stx_btime.tv_sec;
+			attr.linkbtime->tv_nsec = statxbuf->stx_btime.tv_nsec;
+		}
+
+		attr.linkbtime_done = 1;
+	}
+
+	#elif HAVE_POSIX_BTIME
+
+	if (!attr.linkbtime_done)
+	{
+		attr.linkbtime_ok = 1;
+		attr.linkbtime->tv_sec = attr.linkstatbuf->st_birthtim.tv_sec;
+		attr.linkbtime->tv_nsec = attr.linkstatbuf->st_birthtim.tv_nsec;
+		attr.linkbtime_done = 1;
+	}
+
+	#elif HAVE_SPEC_BTIME
+
+	if (!attr.linkbtime_done)
+	{
+		attr.linkbtime_ok = 1;
+		attr.linkbtime->tv_sec = attr.linkstatbuf->st_birthtimespec.tv_sec;
+		attr.linkbtime->tv_nsec = attr.linkstatbuf->st_birthtimespec.tv_nsec;
+		attr.linkbtime_done = 1;
+	}
+
+	#elif HAVE_SOLARIS_ATTR
+
+	if (!attr.linkbtime_done)
+	{
+		get_solaris_attr(attr.parent_fd, attr.ftarget, &attr.attr, &attr.linkbtime_ok, attr.linkbtime);
+		attr.btime_done = 1;
+		attr.attr_done = 1;
+	}
+
+	#endif
+
+	return (attr.linkbtime_ok) ? BTIME(attr.linkbtime) : 0;
+}
+
+static llong get_refbtime(llong i)
+{
+	#if HAVE_STATX_BTIME
+
+	struct statx statxbuf[1];
+
+	if (!RefFile[i].btime_done)
+	{
+		int flags = 0;
+		unsigned int mask = STATX_BTIME;
+
+		if (statx(AT_FDCWD, Strbuf + RefFile[i].fpathi, flags, mask, statxbuf) != -1 && statxbuf->stx_mask & mask)
+		{
+			RefFile[i].btime_ok = 1;
+			RefFile[i].btime->tv_sec = statxbuf->stx_btime.tv_sec;
+			RefFile[i].btime->tv_nsec = statxbuf->stx_btime.tv_nsec;
+		}
+
+		RefFile[i].btime_done = 1;
+	}
+
+	#elif HAVE_POSIX_BTIME
+
+	if (!RefFile[i].btime_done)
+	{
+		RefFile[i].btime_ok = 1;
+		RefFile[i].btime->tv_sec = RefFile[i].statbuf->st_birthtim.tv_sec;
+		RefFile[i].btime->tv_nsec = RefFile[i].statbuf->st_birthtim.tv_nsec;
+		RefFile[i].btime_done = 1;
+	}
+
+	#elif HAVE_SPEC_BTIME
+
+	if (!RefFile[i].btime_done)
+	{
+		RefFile[i].btime_ok = 1;
+		RefFile[i].btime->tv_sec = RefFile[i].statbuf->st_birthtimespec.tv_sec;
+		RefFile[i].btime->tv_nsec = RefFile[i].statbuf->st_birthtimespec.tv_nsec;
+		RefFile[i].btime_done = 1;
+	}
+
+	#elif HAVE_SOLARIS_ATTR
+
+	if (!RefFile[i].btime_done)
+	{
+		get_solaris_attr(AT_FDCWD, Strbuf + RefFile[i].fpathi, &RefFile[i].attr, &RefFile[i].btime_ok, RefFile[i].btime);
+		RefFile[i].btime_done = 1;
+		RefFile[i].attr_done = 1;
+	}
+
+	#endif
+
+	return (RefFile[i].btime_ok) ? BTIME(RefFile[i].btime) : 0;
+}
+
+/* Built-ins */
+
+void c_number(llong i)  { Stack[SP++] = i; }
+void c_dev(llong i)     { Stack[SP++] = attr.statbuf->st_dev; }
+void c_major(llong i)   { Stack[SP++] = major(attr.statbuf->st_dev); }
+void c_minor(llong i)   { Stack[SP++] = minor(attr.statbuf->st_dev); }
+void c_ino(llong i)     { Stack[SP++] = attr.statbuf->st_ino; }
+void c_mode(llong i)    { Stack[SP++] = attr.statbuf->st_mode; }
+void c_nlink(llong i)   { Stack[SP++] = attr.statbuf->st_nlink; }
+void c_uid(llong i)     { Stack[SP++] = attr.statbuf->st_uid; }
+void c_gid(llong i)     { Stack[SP++] = attr.statbuf->st_gid; }
+void c_rdev(llong i)    { Stack[SP++] = attr.statbuf->st_rdev; }
+void c_rmajor(llong i)  { Stack[SP++] = major(attr.statbuf->st_rdev); }
+void c_rminor(llong i)  { Stack[SP++] = minor(attr.statbuf->st_rdev); }
+void c_size(llong i)    { Stack[SP++] = isdir(attr.statbuf) ? dirsize() : attr.statbuf->st_size; }
+void c_blksize(llong i) { Stack[SP++] = attr.statbuf->st_blksize; }
+void c_blocks(llong i)  { Stack[SP++] = attr.statbuf->st_blocks; }
+void c_atime(llong i)   { Stack[SP++] = ATIME(attr.statbuf); }
+void c_mtime(llong i)   { Stack[SP++] = MTIME(attr.statbuf); }
+void c_ctime(llong i)   { Stack[SP++] = CTIME(attr.statbuf); }
+void c_btime(llong i)   { Stack[SP++] = get_btime(); }
+void c_depth(llong i)   { Stack[SP++] = attr.depth; }
+void c_prune(llong i)   { Stack[SP++] = 1; attr.prune = attr.pruned = 1; }
+void c_trim(llong i)    { Stack[SP++] = 1; attr.prune = 1; }
+void c_exit(llong i)    { Stack[SP++] = 1; attr.exit = 1; }
 
 unsigned long get_attr(void)
 {
@@ -325,7 +510,9 @@ unsigned long get_attr(void)
 		#elif HAVE_FLAGS
 		attr.attr = (unsigned long)attr.statbuf->st_flags;
 		#elif HAVE_SOLARIS_ATTR
-		get_solaris_attr(attr.fpath, &attr.attr);
+		attr.btime_done = 1;
+		char *name = (attr.parent_fd == AT_FDCWD) ? attr.fpath : attr.basename;
+		get_solaris_attr(attr.parent_fd, name, &attr.attr, &attr.btime_ok, attr.btime);
 		#endif
 	}
 
@@ -1605,6 +1792,7 @@ void r_blocks(llong i)  { check_reference(i, "blocks");  Stack[SP++] = RefFile[i
 void r_atime(llong i)   { check_reference(i, "atime");   Stack[SP++] = ATIME(RefFile[i].statbuf); }
 void r_mtime(llong i)   { check_reference(i, "mtime");   Stack[SP++] = MTIME(RefFile[i].statbuf); }
 void r_ctime(llong i)   { check_reference(i, "ctime");   Stack[SP++] = CTIME(RefFile[i].statbuf); }
+void r_btime(llong i)   { check_reference(i, "btime");   Stack[SP++] = get_refbtime(i); }
 void r_type(llong i)    { check_reference(i, "type");    Stack[SP++] = RefFile[i].statbuf->st_mode & S_IFMT; }
 void r_perm(llong i)    { check_reference(i, "perm");    Stack[SP++] = RefFile[i].statbuf->st_mode & ~S_IFMT; }
 
@@ -1673,7 +1861,8 @@ void r_attr(llong i)
 	if (!RefFile[i].attr_done)
 	{
 		RefFile[i].attr_done = 1;
-		get_solaris_attr(Strbuf + RefFile[i].fpathi, &RefFile[i].attr);
+		RefFile[i].btime_done = 1;
+		get_solaris_attr(AT_FDCWD, Strbuf + RefFile[i].fpathi, &RefFile[i].attr, &RefFile[i].btime_ok, RefFile[i].btime);
 	}
 
 	Stack[SP++] = RefFile[i].attr;
@@ -1724,6 +1913,7 @@ void t_blocks(llong i)  { prepare_target(); Stack[SP++] = attr.linkstatbuf->st_b
 void t_atime(llong i)   { prepare_target(); Stack[SP++] = ATIME(attr.linkstatbuf); }
 void t_mtime(llong i)   { prepare_target(); Stack[SP++] = MTIME(attr.linkstatbuf); }
 void t_ctime(llong i)   { prepare_target(); Stack[SP++] = CTIME(attr.linkstatbuf); }
+void t_btime(llong i)   { prepare_target(); Stack[SP++] = get_linkbtime(); }
 
 #ifndef NDEBUG
 /*
@@ -1781,6 +1971,7 @@ char *instruction_name(void (*func)(llong))
 		(func == c_atime) ? "atime" :
 		(func == c_mtime) ? "mtime" :
 		(func == c_ctime) ? "ctime" :
+		(func == c_btime) ? "btime" :
 		#if HAVE_ATTR || HAVE_FLAGS || HAVE_SOLARIS_ATTR
 		(func == c_attr) ? "cattr" :
 		#endif
@@ -1882,6 +2073,7 @@ char *instruction_name(void (*func)(llong))
 		(func == r_atime) ? "ratime" :
 		(func == r_mtime) ? "rmtime" :
 		(func == r_ctime) ? "rctime" :
+		(func == r_btime) ? "rbtime" :
 		#if HAVE_ATTR || HAVE_FLAGS || HAVE_SOLARIS_ATTR
 		(func == r_attr) ? "rattr" :
 		#endif
@@ -1910,6 +2102,7 @@ char *instruction_name(void (*func)(llong))
 		(func == t_atime) ? "tatime" :
 		(func == t_mtime) ? "tmtime" :
 		(func == t_ctime) ? "tctime" :
+		(func == t_btime) ? "tbtime" :
 		(func == t_strlen) ? "tstrlen" :
 		"unknown";
 }

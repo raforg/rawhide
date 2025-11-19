@@ -150,6 +150,10 @@ esac
 test_rawhide "$rh -e 'atime'                     $d" "$d\n$d/e\n" "" 0 "atime"
 test_rawhide "$rh -e 'mtime'                     $d" "$d\n$d/e\n" "" 0 "mtime"
 test_rawhide "$rh -e 'ctime'                     $d" "$d\n$d/e\n" "" 0 "ctime"
+[ `uname` != OpenBSD ] && [ `uname` != NetBSD ] && \
+test_rawhide "$rh -e 'btime'                     $d" "$d\n$d/e\n" "" 0 "btime"
+[ `uname` = OpenBSD -o `uname` = NetBSD ] && \
+test_rawhide "$rh -e '!btime'                    $d" "$d\n$d/e\n" "" 0 "btime (unsupported)"
 test_rawhide "$rh -e 'now'                       $d" "$d\n$d/e\n" "" 0 "now"
 test_rawhide "$rh -e 'mtime > now - 5 * minute'  $d" "$d\n$d/e\n" "" 0 "mtime > now - minute" # Allow 5 minutes for valgrind
 test_rawhide "$rh -e 'mtime <= now - 5 * minute' $d" ""           "" 0 "mtime <= now - minute"
@@ -312,6 +316,14 @@ test_rawhide "$rh -e 'lnk && texists && tatime'        $d" "$d/sd\n$d/se\n"     
 test_rawhide "$rh -e 'lnk && !texists && !tatime'      $d" "$d/sf\n$d/sg\n"               "" 0 "tatime (broken)"
 test_rawhide "$rh -e 'lnk && texists && tctime'        $d" "$d/sd\n$d/se\n"               "" 0 "tctime"
 test_rawhide "$rh -e 'lnk && !texists && !tctime'      $d" "$d/sf\n$d/sg\n"               "" 0 "tctime (broken)"
+[ `uname` != OpenBSD ] && [ `uname` != NetBSD ] && \
+test_rawhide "$rh -e 'lnk && texists && tbtime'        $d" "$d/sd\n$d/se\n"               "" 0 "tbtime"
+[ `uname` != OpenBSD ] && [ `uname` != NetBSD ] && \
+test_rawhide "$rh -e 'lnk && !texists && !tbtime'      $d" "$d/sf\n$d/sg\n"               "" 0 "tbtime (broken)"
+[ `uname` = OpenBSD -o `uname` = NetBSD ] && \
+test_rawhide "$rh -e 'lnk && texists && !tbtime'       $d" "$d/sd\n$d/se\n"               "" 0 "tbtime (unsupported)"
+[ `uname` = OpenBSD -o `uname` = NetBSD ] && \
+test_rawhide "$rh -e 'lnk && !texists && !tbtime'      $d" "$d/sf\n$d/sg\n"               "" 0 "tbtime (broken) (unsupported)"
 test_rawhide "$rh -e 'lnk && tstrlen == 1'             $d" "$d/sd\n$d/se\n$d/sf\n$d/sg\n" "" 0 "tstrlen"
 test_rawhide "$rh -e 'lnk && texists && tstrlen == 1'  $d" "$d/sd\n$d/se\n"               "" 0 "tstrlen (non-broken only)"
 test_rawhide "$rh -e 'lnk && !texists && tstrlen == 1' $d" "$d/sf\n$d/sg\n"               "" 0 "tstrlen (broken only)"

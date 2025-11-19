@@ -420,6 +420,7 @@ test_rawhide "$rh -e 'blocks != \"rh\".blocks'             $d" "$d\n$d/e\n" "" 0
 test_rawhide "$rh -e 'atime != \"rh\".atime - 3600'        $d" "$d\n$d/e\n" "" 0 "reference file atime field"
 test_rawhide "$rh -e 'mtime != \"rh\".mtime - 3600'        $d" "$d\n$d/e\n" "" 0 "reference file mtime field"
 test_rawhide "$rh -e 'ctime != \"rh\".ctime - 3600'        $d" "$d\n$d/e\n" "" 0 "reference file ctime field"
+test_rawhide "$rh -e 'btime != \"rh\".btime - 3600'        $d" "$d\n$d/e\n" "" 0 "reference file btime field"
 
 test_rawhide "$rh -e 'dev == {rh}.dev'                   $d" "$d\n$d/e\n" "" 0 "reference file dev field"
 test_rawhide "$rh -e 'major == {rh}.major'               $d" "$d\n$d/e\n" "" 0 "reference file major field"
@@ -454,6 +455,7 @@ test_rawhide "$rh -e 'blocks != {rh}.blocks'             $d" "$d\n$d/e\n" "" 0 "
 test_rawhide "$rh -e 'atime != {rh}.atime - 3600'        $d" "$d\n$d/e\n" "" 0 "reference file atime field"
 test_rawhide "$rh -e 'mtime != {rh}.mtime - 3600'        $d" "$d\n$d/e\n" "" 0 "reference file mtime field"
 test_rawhide "$rh -e 'ctime != {rh}.ctime - 3600'        $d" "$d\n$d/e\n" "" 0 "reference file ctime field"
+test_rawhide "$rh -e 'btime != {rh}.btime - 3600'        $d" "$d\n$d/e\n" "" 0 "reference file btime field"
 
 test_rawhide "$rh -e 'type == \"rh\".type'                 $d" "$d/e\n"     "" 0 "reference file type alias"
 test_rawhide "$rh -e 'perm & \"rh\".perm'                  $d" "$d\n$d/e\n" "" 0 "reference file perm alias"

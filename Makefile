@@ -103,17 +103,17 @@ RAWHIDE_DEFINES = \
 #EA_CFLAGS =
 #EA_LDFLAGS =
 
-# Linux ext2-style file attributes (like FreeBSD/OpenBSD/NetBSD/macOS flags)
+# Linux ext2-style file attributes (like FreeBSD/OpenBSD/NetBSD/macOS file flags)
 #ATTR_DEFINES =
 #ATTR_CFLAGS =
 #ATTR_LDFLAGS =
 
-# FreeBSD/OpenBSD/NetBSD/macOS file flags (like Linux attributes)
+# FreeBSD/OpenBSD/NetBSD/macOS file flags (like Linux file attributes)
 #FLAG_DEFINES =
 #FLAG_CFLAGS =
 #FLAG_LDFLAGS =
 
-# Solaris file attributes (like Linux attributes and FreeBSD/OpenBSD/NetBSD/macOS file flags)
+# Solaris file attributes (like Linux file attributes and FreeBSD/OpenBSD/NetBSD/macOS file flags) and birth/created time
 #SOLARIS_ATTR_DEFINES =
 #SOLARIS_ATTR_CFLAGS =
 #SOLARIS_ATTR_LDFLAGS =
@@ -135,12 +135,21 @@ RAWHIDE_DEFINES = \
 # For timestamp nanoseconds on macOS
 #HAVE_SPEC_NSEC = -DHAVE_SPEC_NSEC=1
 
+# For birthtime on Linux
+#HAVE_STATX_BTIME = -DHAVE_STATX_BTIME=1
+
+# For birthtime on FreeBSD, NetBSD (zero), Cygwin
+#HAVE_POSIX_BTIME = -DHAVE_POSIX_BTIME=1
+
+# For birthtime on macOS
+#HAVE_SPEC_BTIME = -DHAVE_SPEC_BTIME=1
+
 # Uncomment this to exclude debug code (~10%/12KiB smaller stripped binary)
 # Note: This breaks the "invalid -? option argument: wrong" test in t20 (OK)
 #DEBUG_DEFINES = -DNDEBUG
 
 # Test coverage (gcov): Uncomment this, run tests (as non-root and as root),
-# then run gcov *.c then examine *.c.gcov or run gcov_summary (97.79% on Linux)
+# then run gcov *.c then examine *.c.gcov or run gcov_summary (97.83% on Linux)
 #GCOV_CFLAGS = -fprofile-arcs -ftest-coverage
 
 # Undefined behaviour sanitizer: Uncomment this, run tests (as non-root and as root)
@@ -162,7 +171,7 @@ RAWHIDE_DEFINES = \
 CC = cc
 #CC = gcc
 #CC = other
-ALL_CPPFLAGS = $(CPPFLAGS) $(RAWHIDE_DEFINES) $(PCRE2_DEFINES) $(ACL_DEFINES) $(EA_DEFINES) $(ATTR_DEFINES) $(FLAG_DEFINES) $(SOLARIS_ATTR_DEFINES) $(MAGIC_DEFINES) $(DEBUG_DEFINES) $(HAVE_SYS_SYSMACROS) $(HAVE_SYS_MKDEV) $(HAVE_POSIX_NSEC) $(HAVE_SPEC_NSEC)
+ALL_CPPFLAGS = $(CPPFLAGS) $(RAWHIDE_DEFINES) $(PCRE2_DEFINES) $(ACL_DEFINES) $(EA_DEFINES) $(ATTR_DEFINES) $(FLAG_DEFINES) $(SOLARIS_ATTR_DEFINES) $(MAGIC_DEFINES) $(DEBUG_DEFINES) $(HAVE_SYS_SYSMACROS) $(HAVE_SYS_MKDEV) $(HAVE_POSIX_NSEC) $(HAVE_SPEC_NSEC) $(HAVE_STATX_BTIME) $(HAVE_POSIX_BTIME) $(HAVE_SPEC_BTIME)
 ALL_CFLAGS = -O3 -g -Wall -pedantic $(CFLAGS) $(ALL_CPPFLAGS) $(PCRE2_CFLAGS) $(ACL_CFLAGS) $(EA_CFLAGS) $(ATTR_CFLAGS) $(FLAG_CFLAGS) $(SOLARIS_ATTR_CFLAGS) $(MAGIC_CFLAGS) $(GCOV_CFLAGS) $(UBSAN_CFLAGS) $(ASAN_CFLAGS) $(SAN_CFLAGS)
 ALL_LDFLAGS = $(LDFLAGS) $(PCRE2_LDFLAGS) $(ACL_LDFLAGS) $(EA_LDLAGS) $(ATTR_LDFLAGS) $(FLAG_LDFLAGS) $(SOLARIS_ATTR_LDFLAGS) $(MAGIC_LDFLAGS) $(UBSAN_LDFLAGS) $(ASAN_LDFLAGS) $(SAN_LDFLAGS)
 
@@ -355,7 +364,7 @@ help:
 	@echo "  make vg=1 test    - Run tests and produce valgrind.out analysis (~40m)"
 	@echo "  vim valgrind.out  - Examine the results (delete the noise, check the rest)"
 	@echo
-	@echo "To run tests for test coverage analysis (97.79% on Linux):"
+	@echo "To run tests for test coverage analysis (97.83% on Linux):"
 	@echo
 	@echo "  ./configure --enable-gcov"
 	@echo "  make"

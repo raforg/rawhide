@@ -133,6 +133,10 @@ typedef long long unsigned int ullong;
 #define MTIME(st) TIMESTAMP((st)->st_mtime, MNSEC(st))
 #define CTIME(st) TIMESTAMP((st)->st_ctime, CNSEC(st))
 
+/* Note: The birthtime version takes struct timespec, not struct stat */
+
+#define BTIME(ts) TIMESTAMP((ts)->tv_sec, (ts)->tv_nsec)
+
 /* Structure of a rawhide assembly instruction */
 
 typedef struct instr_t instr_t;
@@ -280,6 +284,13 @@ struct runtime_t
 	struct stat linkstatbuf[1]; /* Stat info of the current candidate symlink target */
 	int linkdirsize_done;   /* Have we counted the target directory's contents yet? */
 
+	int btime_done;         /* Have we attempted to get the candidate file's birth/createdd time yet? */
+	int btime_ok;           /* Did we succeed in getting the candidate file's birth/created time? */
+	struct timespec btime[1]; /* The candidate file's birth/created time */
+	int linkbtime_done;     /* Have we attempted to get the symlink target's birth/created time yet? */
+	int linkbtime_ok;       /* Did we succeed in getting the symlink target's birth/created time? */
+	struct timespec linkbtime[1]; /* The candidate symlink's target's birth/created time */
+
 	char *command;          /* Command to execute for matching entries: -x or -X */
 	int local;              /* Commands are executed locally: -X */
 	int unlink;             /* Flag for the -U option: unlink */
@@ -341,17 +352,20 @@ struct runtime_t
 typedef struct reffile_t reffile_t;
 struct reffile_t
 {
-	int exists;             /* Whether or not lstat(2) succeeded for this reference file */
-	llong fpathi;           /* Index into Strbuf of the reference file path (e.g., "fpath".mtime) */
-	llong baselen;          /* The length of the base name */
-	struct stat statbuf[1]; /* The stat structure for the referenced file */
-	int dirsize_done;       /* Have we counted a reference directory's contents yet? */
-	int attr_done;          /* Have we loaded the Linux ext2-style attributes/BSD flags yet? */
-	unsigned long attr;     /* Linux ext2-style attributes */
-	int proj_done;          /* Have we loaded the Linux ext2-style project yet? */
-	unsigned long proj;     /* Linux ext2-style project */
-	int gen_done;           /* Have we loaded the Linux ext2-style generation yet? */
-	unsigned long gen;      /* Linux ext2-style generation */
+	int exists;               /* Whether or not lstat(2) succeeded for this reference file */
+	llong fpathi;             /* Index into Strbuf of the reference file path (e.g., "fpath".mtime) */
+	llong baselen;            /* The length of the base name */
+	struct stat statbuf[1];   /* The stat structure for the referenced file */
+	int dirsize_done;         /* Have we counted a reference directory's contents yet? */
+	int btime_done;           /* Have we loaded the birth/created time yet? */
+	int btime_ok;             /* Did we succeed in loading the birth/created time? */
+	struct timespec btime[1]; /* The birth/created time */
+	int attr_done;            /* Have we loaded the Linux ext2-style attributes/BSD flags yet? */
+	unsigned long attr;       /* Linux ext2-style attributes */
+	int proj_done;            /* Have we loaded the Linux ext2-style project yet? */
+	unsigned long proj;       /* Linux ext2-style project */
+	int gen_done;             /* Have we loaded the Linux ext2-style generation yet? */
+	unsigned long gen;        /* Linux ext2-style generation */
 };
 
 /* Global variables */
