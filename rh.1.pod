@@ -1432,6 +1432,8 @@ the following possible attributes:
 
 =item C<ctime> (string) (same as C<%C+>)
 
+=item C<btime> (string) (same as C<%B+>)
+
 =item C<atime_unix> (integer) (same as C<%A@> seconds)
 
 =item C<atime_nsec> (integer) (same as C<%A@> nanoseconds)
@@ -1443,6 +1445,10 @@ the following possible attributes:
 =item C<ctime_unix> (integer) (same as C<%C@> seconds)
 
 =item C<ctime_nsec> (integer) (same as C<%C@> nanoseconds)
+
+=item C<btime_unix> (integer) (same as C<%B@> seconds)
+
+=item C<btime_nsec> (integer) (same as C<%B@> nanoseconds)
 
 =item C<filetype> (string) (same as C<%w>) (only if available)
 

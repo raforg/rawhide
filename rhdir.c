@@ -2976,12 +2976,21 @@ static char *json(void)
 	pos += strftime(buf + pos, JSON_BUFSIZE - pos, timestampfmt(CNSEC(attr.statbuf), 1, 1), localtime(&attr.statbuf->st_ctime));
 	pos += snprintf(buf + pos, JSON_BUFSIZE - pos, "\", ");
 
+	if (!attr.btime_done)
+		(void)get_btime();
+
+	pos += snprintf(buf + pos, JSON_BUFSIZE - pos, "\"btime\":\"");
+	pos += strftime(buf + pos, JSON_BUFSIZE - pos, timestampfmt(attr.btime->tv_nsec, 1, 1), localtime(&attr.btime->tv_sec));
+	pos += snprintf(buf + pos, JSON_BUFSIZE - pos, "\", ");
+
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"atime_unix\":%lld, ", (llong)attr.statbuf->st_atime);
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"atime_nsec\":%lld, ", ANSEC(attr.statbuf));
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"mtime_unix\":%lld, ", (llong)attr.statbuf->st_mtime);
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"mtime_nsec\":%lld, ", MNSEC(attr.statbuf));
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"ctime_unix\":%lld, ", (llong)attr.statbuf->st_ctime);
 	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"ctime_nsec\":%lld, ", CNSEC(attr.statbuf));
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"btime_unix\":%lld, ", (llong)attr.btime->tv_sec);
+	pos += ssnprintf(buf + pos, JSON_BUFSIZE - pos, "\"btime_nsec\":%lld, ", (llong)attr.btime->tv_nsec);
 
 	if (get_what())
 		pos += add_field(buf + pos, JSON_BUFSIZE - pos, "filetype", get_what());
