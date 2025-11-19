@@ -39,6 +39,7 @@ p { type == IFIFO }
 D { type == IFDOOR } # Solaris
 W { type == IFWHT || (c && !rdev) } # macOS, Linux
 
+
 // File permissions (canonical, aliases, helpers)
 
 perm { mode & ~IFMT }
@@ -90,6 +91,8 @@ space    { blocks * 512 }
 accessed { atime }
 modified { mtime } # Refers to the contents
 changed  { ctime } # Refers to the inode
+created  { btime }
+birth    { btime }
 len      { strlen } # Length of the base name
 sz       { size }
 
@@ -178,6 +181,8 @@ tspace    { tblocks * 512 }
 taccessed { tatime }
 tmodified { tmtime } # Refers to the target's contents
 tchanged  { tctime } # Refers to the target's inode
+tcreated  { tbtime }
+tbirth    { tbtime }
 tlen      { tstrlen } # Length of the target's base name
 tsz       { tsize }
 
