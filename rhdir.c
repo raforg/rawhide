@@ -3726,6 +3726,49 @@ void visitf_format(void)
 						break;
 					}
 
+					case 'B': /* Birth/created time in strftime format */
+					{
+						if (!attr.btime_done)
+							(void)get_btime();
+
+						if (*++f == '-')
+						{
+							safe_strftime(buf, BUFSIZE, "%a %b %e %H:%M:%S %Y", localtime(&attr.btime->tv_sec));
+							ofmt_add_wl(width, length, buf);
+							ofmt_add('s');
+							debug_extra(("fmt %%B- \"%s\", \"%s\"", ofmt, buf));
+							printf(ofmt, buf);
+						}
+						else if (*f == '@')
+						{
+							printf_timestamp('T', width, length, flags, (llong)attr.btime->tv_sec, (llong)attr.btime->tv_nsec);
+						}
+						else if (*f == '+')
+						{
+							safe_strftime(buf, BUFSIZE, timestampfmt(attr.btime->tv_nsec, 1, 1), localtime(&attr.btime->tv_sec));
+							ofmt_add_wl(width, length, buf);
+							ofmt_add('s');
+							debug_extra(("fmt %%B%c \"%s\", \"%s\"", *f, ofmt, buf));
+							printf(ofmt, buf);
+						}
+						else if (!isalpha((int)(unsigned char)*f) && *f != '+' && *f != '%')
+						{
+							fatal("invalid %%B conversion: %s", ok(attr.format));
+						}
+						else
+						{
+							tfmt[1] = *f;
+
+							safe_strftime(buf, BUFSIZE, tfmt, localtime(&attr.btime->tv_sec));
+							ofmt_add_wl(width, length, buf);
+							ofmt_add('s');
+							debug_extra(("fmt %%B%c \"%s\", \"%s\"", tfmt[1], ofmt, buf));
+							printf(ofmt, buf);
+						}
+
+						break;
+					}
+
 					case 'u': /* User name or ID */
 					{
 						struct passwd *pwd;

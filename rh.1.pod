@@ -1139,6 +1139,16 @@ since the I<UNIX> Epoch, or the plus sign (C<"+">), for I<ISO> format, or a
 conversion specifier character for the S<I<C strftime(3)>> function. See
 I<strftime(3)> for details.
 
+=item C<%B>I<k>
+
+The birth or created time (C<btime>) in the format specified by I<k>, which
+is either the minus sign (C<"-">), for the format returned by the
+S<I<C ctime(3)>> function (excluding its terminating newline), or the at
+sign (C<"@">), for the number of I<seconds>C<.>I<nanoseconds> since the
+I<UNIX> Epoch, or the plus sign (C<"+">), for I<ISO> format, or a conversion
+specifier character for the S<I<C strftime(3)>> function. See I<strftime(3)>
+for details.
+
 =item C<%w>
 
 The file type description (as would be output by the I<file(1)>

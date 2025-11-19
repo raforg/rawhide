@@ -265,6 +265,111 @@ test_rawhide_grep "$rh -L '%C@\n'       $d/f"                          "^[0-9]+.
 test_rawhide_grep "$rh -L '%Cd\n'       $d/f"                          "^[0-9]+\$"         ""                                         0 "-L '%Ca\\\\n'"
 test_rawhide_grep "$rh -L '%CH\n'       $d/f"                          "^[0-9]+\$"         ""                                         0 "-L '%CH\\\\n'"
 
+test_rawhide_grep "LANG=C $rh -L '%B-\n'        $d/f"                          "$day $mon $dom $time $year"          ""                                                0 "-L '%B-\\\\n'"
+test_rawhide_grep "LANG=C $rh -L '%25B-\n'      $d/f"                          " $day $mon $dom $time $year"         ""                                                0 "-L '%25B-\\\\n'"
+test_rawhide_grep "LANG=C $rh -L '%-25B-\n'     $d/f"                          "$day $mon $dom $time $year "         ""                                                0 "-L '%-25B-\\\\n'"
+test_rawhide_grep "LANG=C $rh -L '%.15B-\n'     $d/f"                          "$day $mon $dom $parttime"            ""                                                0 "-L '%.15B-\\\\n'"
+test_rawhide_grep "LANG=C $rh -L '%25.15B-\n'   $d/f"                          "          $day $mon $dom $parttime"  ""                                                0 "-L '%25.15B-\\\\n'"
+test_rawhide_grep "LANG=C $rh -L '%-25.15B-\n'  $d/f"                          "$day $mon $dom $parttime          "  ""                                                0 "-L '%-25.15B-\\\\n'"
+
+test_rawhide "$rh -L '%B'               $d/f"                          ""                            "./rh: invalid %%B conversion: %%B\n"            1 "-L '%B' (invalid)"
+test_rawhide "$rh -L '%B?'              $d/f"                          ""                            "./rh: invalid %%B conversion: %%B?\n"           1 "-L '%B?' (invalid)"
+test_rawhide "$rh -L '%25B'             $d/f"                          ""                            "./rh: invalid %%B conversion: %%25B\n"          1 "-L '%25B' (invalid)"
+test_rawhide "$rh -L '%-25B'            $d/f"                          ""                            "./rh: invalid %%B conversion: %%-25B\n"         1 "-L '%-25B' (invalid)"
+test_rawhide "$rh -L '%.15B'            $d/f"                          ""                            "./rh: invalid %%B conversion: %%.15B\n"         1 "-L '%.15B' (invalid)"
+test_rawhide "$rh -L '%25.15B'          $d/f"                          ""                            "./rh: invalid %%B conversion: %%25.15B\n"       1 "-L '%25.15B' (invalid)"
+test_rawhide "$rh -L '%-25.15B'         $d/f"                          ""                            "./rh: invalid %%B conversion: %%-25.15B\n"      1 "-L '%-25.15B' (invalid)"
+
+test_rawhide "$rh -L '%B\n'             $d/f"                          ""                            "./rh: invalid %%B conversion: %%B\\\\n\n"       1 "-L '%B\\\\n' (invalid)"
+test_rawhide "$rh -L '%25B\n'           $d/f"                          ""                            "./rh: invalid %%B conversion: %%25B\\\\n\n"     1 "-L '%25B\\\\n' (invalid)"
+test_rawhide "$rh -L '%-25B\n'          $d/f"                          ""                            "./rh: invalid %%B conversion: %%-25B\\\\n\n"    1 "-L '%-25B\\\\n' (invalid)"
+test_rawhide "$rh -L '%.15B\n'          $d/f"                          ""                            "./rh: invalid %%B conversion: %%.15B\\\\n\n"    1 "-L '%.15B\\\\n' (invalid)"
+test_rawhide "$rh -L '%25.15B\n'        $d/f"                          ""                            "./rh: invalid %%B conversion: %%25.15B\\\\n\n"  1 "-L '%25.15B\\\\n' (invalid)"
+test_rawhide "$rh -L '%-25.15B\n'       $d/f"                          ""                            "./rh: invalid %%B conversion: %%-25.15B\\\\n\n" 1 "-L '%-25.15B\\\\n' (invalid)"
+
+dd="[0-9]"
+if [ `uname` = FreeBSD -o `uname` = Darwin ]
+then
+	# Note: FreeBSD and Darwin have a 1990 btime for this 1990 file, so only nine digits
+	tm="$dd$dd$dd$dd$dd$dd$dd$dd$dd"
+	sp=" " # 10-len($tm) spaces
+	z="0"  # 10-len($tm) zeroes 
+elif [ `uname` = OpenBSD -o `uname` = NetBSD ]
+then
+	# Note: OpenBSD and Netbsd have 0 for all birthtimes, so just zero
+	tm=0
+	sp="         "
+	z="000000000"
+else
+	tm="$dd$dd$dd$dd$dd$dd$dd$dd$dd$dd" # Until about 2286 CE
+	sp=""
+	z=""
+fi
+ns="$dd$dd$dd$dd$dd$dd$dd$dd$dd"
+d5="$dd$dd$dd$dd$dd"
+
+test_rawhide_grep "$rh -L '%B@\n'       $d/f"                         "$tm[.]$ns"                 ""                                    0 "-L '%B@\\\\n'"
+test_rawhide_grep "$rh -L '%25B@\n'     $d/f"                         "     $tm[.]$ns"            ""                                    0 "-L '%25B@\\\\n'"
+test_rawhide_grep "$rh -L '%025B@\n'    $d/f"                         "00000$tm[.]$ns"            ""                                    0 "-L '%025B@\\\\n'"
+test_rawhide_grep "$rh -L '% 25B@\n'    $d/f"                         "     $tm[.]$ns"            ""                                    0 "-L '% 25B@\\\\n'"
+test_rawhide_grep "$rh -L '%+25B@\n'    $d/f"                         "    \+$tm[.]$ns"           ""                                    0 "-L '%+25B@\\\\n'"
+test_rawhide_grep "$rh -L '%-25B@\n'    $d/f"                         "$tm[.]$ns     "            ""                                    0 "-L '%-25B@\\\\n'"
+test_rawhide_grep "$rh -L '%#25B@\n'    $d/f"                         "     $tm[.]$ns"            ""                                    0 "-L '%#25B@\\\\n'"
+test_rawhide_grep "$rh -L '%.15B@\n'    $d/f"                         "$tm[.]$ns000000"           ""                                    0 "-L '%.15B@\\\\n'"
+test_rawhide_grep "$rh -L '%35.15B@\n'  $d/f"                         "         $tm[.]$ns$d5$dd"  ""                                    0 "-L '%35.15B@\\\\n'"
+test_rawhide_grep "$rh -L '%-35.15B@\n' $d/f"                         "$tm[.]$ns$d5$dd         "  ""                                    0 "-L '%-35.15B@\\\\n'"
+
+test_rawhide_grep "$rh -L '%25.5B@\n'   $d/f"                         "         $tm[.]$d5\$"        ""                                     0 "-L '%25.5B@\\\\n'"
+test_rawhide_grep "$rh -L '%-25.5B@\n'  $d/f"                         "$tm[.]$d5         $sp\$"     ""                                     0 "-L '%-25.5B@\\\\n'"
+test_rawhide_grep "$rh -L '%25.1B@\n'   $d/f"                         "             $tm[.]$dd\$"    ""                                     0 "-L '%25.1B@\\\\n'"
+test_rawhide_grep "$rh -L '%-25.1B@\n'  $d/f"                         "$tm[.]$dd             $sp\$" ""                                     0 "-L '%-25.1B@\\\\n'"
+test_rawhide_grep "$rh -L '%25.0B@\n'   $d/f"                         "               $tm\$"        ""                                     0 "-L '%25.0B@\\\\n'"
+test_rawhide_grep "$rh -L '%-25.0B@\n'  $d/f"                         "$tm               $sp\$"     ""                                     0 "-L '%-25.0B@\\\\n'"
+test_rawhide_grep "$rh -L '%#25.0B@\n'  $d/f"                         "              $tm[.]\$"      ""                                     0 "-L '%#25.0B@\\\\n'"
+test_rawhide_grep "$rh -L '%#-25.0B@\n' $d/f"                         "$tm[.]              $sp\$"   ""                                     0 "-L '%#-25.0B@\\\\n'"
+test_rawhide_grep "$rh -L '%25.B@\n'    $d/f"                         "               $tm\$"        ""                                     0 "-L '%25.B@\\\\n'"
+test_rawhide_grep "$rh -L '%-25.B@\n'   $d/f"                         "$tm               $sp\$"     ""                                     0 "-L '%-25.B@\\\\n'"
+test_rawhide_grep "$rh -L '%#25.B@\n'   $d/f"                         "              $tm[.]\$"      ""                                     0 "-L '%#25.B@\\\\n'"
+test_rawhide_grep "$rh -L '%#-25.B@\n'  $d/f"                         "$tm[.]              $sp\$"   ""                                     0 "-L '%#-25.B@\\\\n'"
+
+test_rawhide_grep "$rh -L '%+25B@\n'    $d/f"                         "    \+$tm[.]$ns\$"            ""                                     0 "-L '%+25B@\\\\n'"
+test_rawhide_grep "$rh -L '%0+25B@\n'   $d/f"                         "\+0000$z$tm[.]$ns\$"          ""                                     0 "-L '%0+25B@\\\\n'"
+test_rawhide_grep "$rh -L '% 25B@\n'    $d/f"                         "     $tm[.]$ns\$"             ""                                     0 "-L '% 25B@\\\\n'"
+test_rawhide_grep "$rh -L '%0 25B@\n'   $d/f"                         " 0000$z$tm[.]$ns\$"           ""                                     0 "-L '%0 25B@\\\\n'"
+test_rawhide_grep "$rh -L '%+ 25B@\n'   $d/f"                         "    \+$tm[.]$ns\$"            ""                                     0 "-L '%+ 25B@\\\\n'"
+test_rawhide_grep "$rh -L '%0+ 25B@\n'  $d/f"                         "\+0000$z$tm[.]$ns\$"          ""                                     0 "-L '%0+ 25B@\\\\n'"
+
+yyyy='[0-9][0-9][0-9][0-9]'
+mm='[0-9][0-9]'
+dd='[0-9][0-9]'
+nsec='[.][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
+zone='[+-][0-9][0-9][0-9][0-9]'
+test_rawhide_grep "$rh -L '%B+\n'        $d/f"                          "$yyyy-$mm-$dd[T]$time$nsec$zone"                      ""    0 "-L '%B+\\\\n'"
+test_rawhide_grep "$rh -L '%35B+\n'      $d/f"                          " $yyyy-$mm-$dd[T]$time$nsec$zone"                     ""    0 "-L '%35B+\\\\n'"
+test_rawhide_grep "$rh -L '%-35B+\n'     $d/f"                          "$yyyy-$mm-$dd[T]$time$nsec$zone "                     ""    0 "-L '%-35B+\\\\n'"
+test_rawhide_grep "$rh -L '%.15B+\n'     $d/f"                          "$yyyy-$mm-$dd[T][0-9][0-9]:[0-9]"                      ""    0 "-L '%.15B+\\\\n'"
+test_rawhide_grep "$rh -L '%35.15B+\n'   $d/f"                          "                    $yyyy-$mm-$dd[T][0-9][0-9]:[0-9]"  ""    0 "-L '%35.15B+\\\\n'"
+test_rawhide_grep "$rh -L '%-35.15B+\n'  $d/f"                          "$yyyy-$mm-$dd[T][0-9][0-9]:[0-9]                    "  ""    0 "-L '%-35.15B+\\\\n'"
+
+tm="[0-9][0-9]"
+test_rawhide_grep "$rh -L '%Bd\n'       $d/f"                          "$tm"                ""                                        0 "-L '%Ba\\\\n'"
+test_rawhide_grep "$rh -L '%5Bd\n'      $d/f"                          "   $tm"             ""                                        0 "-L '%-Ba\\\\n'"
+test_rawhide_grep "$rh -L '%-5Bd\n'     $d/f"                          "$tm   "             ""                                        0 "-L '%-5Ba\\\\n'"
+test_rawhide_grep "$rh -L '%6.5Bd\n'    $d/f"                          "   $tm"             ""                                        0 "-L '%6.5Ba\\\\n'"
+test_rawhide_grep "$rh -L '%-6.5Bd\n'   $d/f"                          "$tm    "            ""                                        0 "-L '%-6.5Ba\\\\n'"
+
+test_rawhide_grep "$rh -L '%BH\n'       $d/f"                          "$tm"                ""                                        0 "-L '%BH\\\\n'"
+test_rawhide_grep "$rh -L '%5BH\n'      $d/f"                          "   $tm"             ""                                        0 "-L '%-BH\\\\n'"
+test_rawhide_grep "$rh -L '%-5BH\n'     $d/f"                          "$tm   "             ""                                        0 "-L '%-5BH\\\\n'"
+test_rawhide_grep "$rh -L '%6.5BH\n'    $d/f"                          "   $tm"             ""                                        0 "-L '%6.5BH\\\\n'"
+test_rawhide_grep "$rh -L '%-6.5BH\n'   $d/f"                          "$tm    "            ""                                        0 "-L '%-6.5BH\\\\n'"
+
+test_rawhide      "$rh -L '%B'          $d/f"                          ""                  "./rh: invalid %%B conversion: %%B\n"      1 "-L '%B' (invalid)"
+test_rawhide      "$rh -L '%B\n'        $d/f"                          ""                  "./rh: invalid %%B conversion: %%B\\\\n\n" 1 "-L '%B\\\\n' (invalid)"
+test_rawhide_grep "$rh -L '%B@\n'       $d/f"                          "^[0-9]+.$ns\$"     ""                                         0 "-L '%B@\\\\n'"
+test_rawhide_grep "$rh -L '%Bd\n'       $d/f"                          "^[0-9]+\$"         ""                                         0 "-L '%Ba\\\\n'"
+test_rawhide_grep "$rh -L '%BH\n'       $d/f"                          "^[0-9]+\$"         ""                                         0 "-L '%BH\\\\n'"
+
 test_rawhide "$rh -L '%d\n'             $d/f"                          "0\n"               ""                                         0 "-L '%d\\\\n'"
 test_rawhide "$rh -L '%5d\n'            $d/f"                          "    0\n"           ""                                         0 "-L '%5d\\\\n'"
 test_rawhide "$rh -L '%05d\n'           $d/f"                          "00000\n"           ""                                         0 "-L '%05d\\\\n'"
