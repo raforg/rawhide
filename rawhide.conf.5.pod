@@ -2452,6 +2452,8 @@ This is the default C</etc/rawhide.conf> standard library:
   accessed { atime }
   modified { mtime } # Refers to the contents
   changed  { ctime } # Refers to the inode
+  created  { btime }
+  birth    { btime }
   len      { strlen } # Length of the base name
   sz       { size }
   
@@ -2514,7 +2516,7 @@ This is the default C</etc/rawhide.conf> standard library:
   target_sock { tsock }
   target_fifo { tfifo }
   target_door { tdoor } # Solaris
-  target_whiteout { twhiteout } # macOS, Linux
+  target_wht  { twht } # macOS
   
   target_file      { treg }
   target_directory { tdir }
@@ -2524,6 +2526,7 @@ This is the default C</etc/rawhide.conf> standard library:
   target_socket    { tsock }
   target_namedpipe { tfifo }
   target_pipe      { tfifo }
+  target_whiteout  { twhiteout } # macOS, Linux
   
   target_f { treg }
   target_d { tdir }
@@ -2653,6 +2656,7 @@ This is the default C</etc/rawhide.conf> standard library:
   target_atime   { tatime }
   target_mtime   { tmtime }
   target_ctime   { tctime }
+  target_btime   { tbtime }
   target_strlen  { tstrlen }
   
   tinode    { tino }
@@ -2663,7 +2667,9 @@ This is the default C</etc/rawhide.conf> standard library:
   taccessed { tatime }
   tmodified { tmtime } # Refers to the target's contents
   tchanged  { tctime } # Refers to the target's inode
-  tlen      { tstrlen }
+  tcreated  { tbtime }
+  tbirth    { tbtime }
+  tlen      { tstrlen } # Length of the target's base name
   tsz       { tsize }
   
   target_inode    { tinode }
@@ -2674,6 +2680,8 @@ This is the default C</etc/rawhide.conf> standard library:
   target_accessed { taccessed }
   target_modified { tmodified }
   target_changed  { tchanged }
+  target_created  { tcreated }
+  target_birth    { tbirth }
   target_len      { tlen }
   target_sz       { tsz }
   
