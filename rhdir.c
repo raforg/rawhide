@@ -1576,7 +1576,7 @@ void visitf_long(void)
 
 	/* The mtime column */
 
-	if ((!attr.atime_column && !attr.ctime_column) || attr.verbose)
+	if ((!attr.atime_column && !attr.ctime_column && !attr.btime_column) || attr.verbose)
 	{
 		pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "%s", (ncols) ? " " : "");
 		pos += strftime(buf + pos, CMDBUFSIZE - pos, timestampfmt(MNSEC(attr.statbuf), attr.iso_time, attr.verbose), localtime(&attr.statbuf->st_mtime));
@@ -1598,6 +1598,18 @@ void visitf_long(void)
 	{
 		pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "%s", (ncols) ? " " : "");
 		pos += strftime(buf + pos, CMDBUFSIZE - pos, timestampfmt(CNSEC(attr.statbuf), attr.iso_time, attr.verbose), localtime(&attr.statbuf->st_ctime));
+		++ncols;
+	}
+
+	/* The btime column */
+
+	if (attr.btime_column || attr.verbose)
+	{
+		if (!attr.btime_done)
+			(void)get_btime();
+
+		pos += ssnprintf(buf + pos, CMDBUFSIZE - pos, "%s", (ncols) ? " " : "");
+		pos += strftime(buf + pos, CMDBUFSIZE - pos, timestampfmt(attr.btime->tv_nsec, attr.iso_time, attr.verbose), localtime(&attr.btime->tv_sec));
 		++ncols;
 	}
 

@@ -24,7 +24,7 @@
 
 . tests/.common
 
-label="-ldiBsSgoaucv -QEbqptF -HIT# options"
+label="-ldiBsSgoaucbv -QEqptF -HIT# options"
 
 num="[0-9]+"
 dev=" *$num, *$num"
@@ -71,6 +71,8 @@ test_rawhide_grep "$rh    -u $d" "^$mode$__$nlink$__$user$__$group$__$size$__$ti
 test_rawhide_grep "$rh   -ul $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"            "" 0 "-ul"
 test_rawhide_grep "$rh    -c $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"            "" 0 "-c"
 test_rawhide_grep "$rh   -cl $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"            "" 0 "-cl"
+test_rawhide_grep "$rh    -b $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"            "" 0 "-b"
+test_rawhide_grep "$rh   -bl $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"            "" 0 "-bl"
 test_rawhide_grep "$rh   -au $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"            "" 0 "-au"
 test_rawhide_grep "$rh  -aul $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$name\$"            "" 0 "-aul"
 test_rawhide_grep "$rh   -ac $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$name\$"    "" 0 "-ac"
@@ -79,11 +81,21 @@ test_rawhide_grep "$rh   -uc $d" "^$mode$__$nlink$__$user$__$group$__$size$__$ti
 test_rawhide_grep "$rh  -ucl $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$name\$"    "" 0 "-ucl"
 test_rawhide_grep "$rh  -auc $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$name\$"    "" 0 "-auc"
 test_rawhide_grep "$rh -aucl $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$name\$"    "" 0 "-aucl"
-test_rawhide_grep "$rh    -v $d" "^$dev$__$ino$__$blksize$__$blocks$__$space$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$time$__$name\$" "" 0 "-v"
-test_rawhide_grep "$rh   -vl $d" "^$dev$__$ino$__$blksize$__$blocks$__$space$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$time$__$name\$" "" 0 "-vl"
-test_rawhide_grep "RAWHIDE_TEST_TTY=1 $rh   -vl $d" "^$dev$__$ino$__$blksize$__$blocks$__$space$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$time$__$name\$" "" 0 "-vl (tty)"
+test_rawhide_grep "$rh   -ab $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$name\$"    "" 0 "-ab"
+test_rawhide_grep "$rh  -abl $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$name\$"    "" 0 "-abl"
+test_rawhide_grep "$rh   -ub $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$name\$"    "" 0 "-ub"
+test_rawhide_grep "$rh  -ubl $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$name\$"    "" 0 "-ubl"
+test_rawhide_grep "$rh  -aub $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$name\$"    "" 0 "-aub"
+test_rawhide_grep "$rh -aubl $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$name\$"    "" 0 "-aubl"
+test_rawhide_grep "$rh   -cb $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$name\$" "" 0 "-cb"
+test_rawhide_grep "$rh  -cbl $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$name\$" "" 0 "-cbl"
+test_rawhide_grep "$rh  -acb $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$time$__$name\$" "" 0 "-acb"
+test_rawhide_grep "$rh -acbl $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$time$__$name\$" "" 0 "-acbl"
+test_rawhide_grep "$rh    -v $d" "^$dev$__$ino$__$blksize$__$blocks$__$space$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$time$__$time$__$name\$" "" 0 "-v"
+test_rawhide_grep "$rh   -vl $d" "^$dev$__$ino$__$blksize$__$blocks$__$space$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$time$__$time$__$name\$" "" 0 "-vl"
+test_rawhide_grep "RAWHIDE_TEST_TTY=1 $rh   -vl $d" "^$dev$__$ino$__$blksize$__$blocks$__$space$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$time$__$time$__$name\$" "" 0 "-vl (tty)"
 
-test_rawhide_grep "RAWHIDE_COLUMN_WIDTH_DEVICE=99 RAWHIDE_COLUMN_WIDTH_INODE=99 RAWHIDE_COLUMN_WIDTH_BLKSIZE=99 RAWHIDE_COLUMN_WIDTH_BLOCKS=99 RAWHIDE_COLUMN_WIDTH_SPACE_UNITS=99 RAWHIDE_COLUMN_WIDTH_SPACE=99 RAWHIDE_COLUMN_WIDTH_NLINK=99 RAWHIDE_COLUMN_WIDTH_USER=99 RAWHIDE_COLUMN_WIDTH_GROUP=99 RAWHIDE_COLUMN_WIDTH_SIZE_UNITS=99 RAWHIDE_COLUMN_WIDTH_SIZE=99 RAWHIDE_COLUMN_WIDTH_RDEV_MAJOR=99 RAWHIDE_COLUMN_WIDTH_RDEV_MINOR=99 $rh -vl $d" "^ *$dev$__$ino$__$blksize$__$blocks$__$space$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$time$__$name\$" "" 0 "-vl with explicit column widths"
+test_rawhide_grep "RAWHIDE_COLUMN_WIDTH_DEVICE=99 RAWHIDE_COLUMN_WIDTH_INODE=99 RAWHIDE_COLUMN_WIDTH_BLKSIZE=99 RAWHIDE_COLUMN_WIDTH_BLOCKS=99 RAWHIDE_COLUMN_WIDTH_SPACE_UNITS=99 RAWHIDE_COLUMN_WIDTH_SPACE=99 RAWHIDE_COLUMN_WIDTH_NLINK=99 RAWHIDE_COLUMN_WIDTH_USER=99 RAWHIDE_COLUMN_WIDTH_GROUP=99 RAWHIDE_COLUMN_WIDTH_SIZE_UNITS=99 RAWHIDE_COLUMN_WIDTH_SIZE=99 RAWHIDE_COLUMN_WIDTH_RDEV_MAJOR=99 RAWHIDE_COLUMN_WIDTH_RDEV_MINOR=99 $rh -vl $d" "^ *$dev$__$ino$__$blksize$__$blocks$__$space$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$time$__$time$__$name\$" "" 0 "-vl with explicit column widths"
 
 test_rawhide_grep "$rh -lr -e 'chr' /dev" "^c$perm$__$nlink$__$user$__$group$__$rdev$__$time$__/dev/.*\$" "" 0 "-l -e chr /dev (rdev column)"
 
@@ -100,7 +112,7 @@ rm $d/a $d/b
 
 test_rawhide_grep "$rh    -Q $d" "^[\"]$name[\"]\$"                                                                                                               "" 0 "-Q"
 test_rawhide_grep "$rh   -lQ $d" "^$mode$__$nlink$__$user$__$group$__$size$__$time$__[\"]$name[\"]\$"                                                             "" 0 "-lQ"
-test_rawhide_grep "$rh  -vlQ $d" "^$dev$__$ino$__$blksize$__$blocks$__$space$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$time$__[\"]$name[\"]\$" "" 0 "-vl"
+test_rawhide_grep "$rh  -vlQ $d" "^$dev$__$ino$__$blksize$__$blocks$__$space$__$mode$__$nlink$__$user$__$group$__$size$__$time$__$time$__$time$__$time$__[\"]$name[\"]\$" "" 0 "-vlQ"
 
 touch "$d/`printf 'abc\a\b\t\n\v\f\rd%se\"f\\\\ghi\001\006\016\037jkl\370' \"'\"`" 2>/dev/null
 if [ $? = 0 ] # This touch doesn't succeed on Cygwin or macOS
@@ -108,12 +120,10 @@ then
 	test_rawhide                    "$rh     $d/abc*" "$d/abc\\a\\b\\t\\n\\v\\f\\rd'e\"f\\\\ghi\\001\\006\\016\\037jkl\370\n"                                      "" 0 "nasty name (no tty)"
 	test_rawhide "RAWHIDE_TEST_TTY=1 $rh     $d/abc*" "$d/abc???????d'e\"f\\\\ghi????jkl?\n"                                                                       "" 0 "nasty name (tty)"
 	test_rawhide                    "$rh  -E $d/abc*" "$d/abc\\\\a\\\\b\\\\t\\\\n\\\\v\\\\f\\\\rd'e\"f\\\\\\\\ghi\\\\001\\\\006\\\\016\\\\037jkl\\\\370\n"         "" 0 "nasty name with -E"
-	test_rawhide                    "$rh  -b $d/abc*" "$d/abc\\\\a\\\\b\\\\t\\\\n\\\\v\\\\f\\\\rd'e\"f\\\\\\\\ghi\\\\001\\\\006\\\\016\\\\037jkl\\\\370\n"         "" 0 "nasty name with -b"
 	test_rawhide                    "$rh  -q $d/abc*" "$d/abc???????d'e\"f\\\\ghi????jkl?\n"                                                                       "" 0 "nasty name with -q"
 	test_rawhide                    "$rh  -Q $d/abc*" "\"$d/abc\\a\\b\\t\\n\\v\\f\\rd'e\\\\\"f\\\\\\\\ghi\\001\\006\\016\\037jkl\\370\"\n"                         "" 0 "nasty name with -Q (no tty)"
 	test_rawhide "RAWHIDE_TEST_TTY=1 $rh  -Q $d/abc*" "\"$d/abc???????d'e\\\\\"f\\\\\\\\ghi????jkl?\"\n"                                                           "" 0 "nasty name with -Q (tty)"
 	test_rawhide                    "$rh -QE $d/abc*" "\"$d/abc\\\\a\\\\b\\\\t\\\\n\\\\v\\\\f\\\\rd'e\\\\\"f\\\\\\\\ghi\\\\001\\\\006\\\\016\\\\037jkl\\\\370\"\n" "" 0 "nasty name with -QE"
-	test_rawhide                    "$rh -Qb $d/abc*" "\"$d/abc\\\\a\\\\b\\\\t\\\\n\\\\v\\\\f\\\\rd'e\\\\\"f\\\\\\\\ghi\\\\001\\\\006\\\\016\\\\037jkl\\\\370\"\n" "" 0 "nasty name with -Qb"
 	test_rawhide                    "$rh -Qq $d/abc*" "\"$d/abc???????d'e\\\\\"f\\\\\\\\ghi????jkl?\"\n"                                                           "" 0 "nasty name with -Qq"
 	rm $d/abc*
 fi
@@ -276,7 +286,7 @@ test_rawhide_post_hook() { true; }
 test_rawhide_grep "$rh -l'#'  $d" "^$mode$__$nlink$__$num$__$num$__$size$__$time$__$name\$"                                                                         "" 0 "-l -#"
 test_rawhide_grep "$rh -lT    $d" "^$mode$__$nlink$__$user$__$group$__$size$__$isotime$__$name\$"                                                                   "" 0 "-lT"
 test_rawhide_grep "$rh -lacT  $d" "^$mode$__$nlink$__$user$__$group$__$size$__$isotime$__$isotime$__$name\$"                                                        "" 0 "-lacT"
-test_rawhide_grep "$rh -lacTv $d" "^$dev$__$ino$__$blksize$__$blocks$__$space$__$mode$__$nlink$__$user$__$group$__$size$__$isotimensec$__$isotimensec$__$isotimensec$__$name\$" "" 0 "-lacTv"
+test_rawhide_grep "$rh -lacTv $d" "^$dev$__$ino$__$blksize$__$blocks$__$space$__$mode$__$nlink$__$user$__$group$__$size$__$isotimensec$__$isotimensec$__$isotimensec$__$isotimensec$__$name\$" "" 0 "-lacTv"
 
 test_rawhide_grep "$rh  -H  $d" "^$mode$__$nlink$__$user$__$group$__$sizeunits$__$time $name\$"                 "" 0 "-H"
 test_rawhide_grep "$rh -Hl  $d" "^$mode$__$nlink$__$user$__$group$__$sizeunits$__$time $name\$"                 "" 0 "-Hl"

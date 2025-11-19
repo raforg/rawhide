@@ -57,7 +57,7 @@ test_rawhide "$rh -UUU -X echo $d" "" "./rh: -X and -U options are mutually excl
 test_rawhide "$rh -UUU -l      $d" "" "./rh: -l and -U options are mutually exclusive\n"            1 "-U and -l"
 test_rawhide "$rh -UUU -0      $d" "" "./rh: -0 and -U options are mutually exclusive\n"            1 "-U and -0"
 
-test_rawhide "$rh -E -q        $d" "" "./rh: -E/-b and -q options are mutually exclusive\n"         1 "-E and -q"
+test_rawhide "$rh -E -q        $d" "" "./rh: -E and -q options are mutually exclusive\n"            1 "-E and -q"
 test_rawhide "$rh -H -I        $d" "" "./rh: -H and -I options are mutually exclusive\n"            1 "-E and -q"
 
 test_rawhide "$rh -L"                     "" "./rh: missing -L option argument (see ./rh -h for help)\n" 1 "missing -L option argument"

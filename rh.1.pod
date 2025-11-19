@@ -62,6 +62,7 @@ I<rh> - (I<rawhide>) find files using pretty I<C> expressions
    -a           - Include atime rather than mtime column, implies -l
    -u           - Same as -a (like ls(1))
    -c           - Include ctime rather than mtime column, implies -l
+   -b           - Include btime rather than mtime column, implies -l
    -v           - Verbose: All columns, implies -ldiBsSac (unless -xXU0L)
    -0           - Output null chars instead of newlines (for xargs -0)
    -L format    - Output matching entries in a user-supplied format
@@ -70,7 +71,6 @@ I<rh> - (I<rawhide>) find files using pretty I<C> expressions
  path format options:
    -Q           - Enclose paths in double quotes
    -E           - Output C-style escapes for control characters
-   -b           - Same as -E (like ls(1) on many systems)
    -q           - Output ? for control characters (default if tty)
    -p           - Append / indicator to directories
    -t           - Append most type indicators (one of / @ = | > %)
@@ -789,9 +789,10 @@ Exclude the group column. Implies the C<-l> option.
 Include the accessed time column in place of the modified time
 column. Implies the C<-l> option.
 
-If the C<-a>/C<-u> and C<-c> options are both supplied, then both columns
-appear in place of the modified time column (with the accessed time column
-appearing before the inode changed time column).
+If the C<-a>/C<-u> and/or C<-c> and/or C<-b> options are supplied, then all
+requested columns appear in place of the modified time column (with the
+accessed time column appearing before the inode changed time column which
+appears before the birth/created time column).
 
 =item C<-u>
 
@@ -802,9 +803,20 @@ Same as the C<-a> option (like I<ls(1)>).
 Include the inode changed time column in place of the modified time
 column. Implies the C<-l> option.
 
-If the C<-a>/C<-u> and C<-c> options are both supplied, then both columns
-appear in place of the modified time column (with the accessed time column
-appearing before the inode changed time column).
+If the C<-a>/C<-u> and/or C<-c> and/or C<-b> options are supplied, then all
+requested columns appear in place of the modified time column (with the
+accessed time column appearing before the inode changed time column which
+appears before the birth/created time column).
+
+=item C<-b>
+
+Include the birth or created time column in place of the modified time
+column. Implies the C<-l> option.
+
+If the C<-a>/C<-u> and/or C<-c> and/or C<-b> options are supplied, then all
+requested columns appear in place of the modified time column (with the
+accessed time column appearing before the inode changed time column which
+appears before the birth/created time column).
 
 =item C<-v>
 
@@ -813,7 +825,7 @@ possible columns (i.e., device, inode number, block size, number of blocks,
 space, file type, permissions, existence of an access control list and/or
 extended attributes, number of hard links, user/owner, group, size (or
 comma-separated C<rdev> major and minor device numbers), modified time,
-accessed time, inode changed time, and path).
+accessed time, inode changed time, birth/created time, and path).
 
 With the C<-x> or C<-X> option, this option outputs each command before it
 is executed. The C<%s> and C<%S> escape sequences will appear as C<"$1"> and
@@ -1576,10 +1588,6 @@ backslash characters (C<"\">) in a path will be quoted with a preceding
 backslash.
 
 This option and the C<-q> option are mutually exclusive.
-
-=item C<-b>
-
-Same as the C<-E> option (like I<ls(1)>).
 
 =item C<-q>
 

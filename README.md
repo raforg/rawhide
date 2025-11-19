@@ -100,6 +100,7 @@ a high-level interface to the built-in symbols mentioned above, and makes
        -a           - Include atime rather than mtime column, implies -l
        -u           - Same as -a (like ls(1))
        -c           - Include ctime rather than mtime column, implies -l
+       -b           - Include btime rather than mtime column, implies -l
        -v           - Verbose: All columns, implies -ldiBsSac unless -xXU0Lj
        -0           - Output null chars instead of newlines (for xargs -0)
        -L format    - Output matching entries in a user-supplied format
@@ -108,7 +109,6 @@ a high-level interface to the built-in symbols mentioned above, and makes
      path format options:
        -Q           - Enclose paths in double quotes
        -E           - Output C-style escapes for control characters
-       -b           - Same as -E (like ls(1) on many systems)
        -q           - Output ? for control characters (default if tty)
        -p           - Append / indicator to directories
        -t           - Append most type indicators (one of / @ = | > %)

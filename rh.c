@@ -102,6 +102,7 @@ static void help_message(void)
 	printf("  -a           - Include atime rather than mtime column, implies -l\n");
 	printf("  -u           - Same as -a (like ls(1))\n");
 	printf("  -c           - Include ctime rather than mtime column, implies -l\n");
+	printf("  -b           - Include btime rather than mtime column, implies -l\n");
 	printf("  -v           - Verbose: All columns, implies -ldiBsSac unless -xXU0Lj\n");
 	printf("  -0           - Output null chars instead of newlines (for xargs -0)\n");
 	printf("  -L format    - Output matching entries in a user-supplied format\n");
@@ -110,7 +111,6 @@ static void help_message(void)
 	printf("path format options:\n");
 	printf("  -Q           - Enclose paths in double quotes\n");
 	printf("  -E           - Output C-style escapes for control characters\n");
-	printf("  -b           - Same as -E (like ls(1) on many systems)\n");
 	printf("  -q           - Output ? for control characters (default if tty)\n");
 	printf("  -p           - Append / indicator to directories\n");
 	printf("  -t           - Append most type indicators (one of / @ = | > %%)\n");
@@ -532,12 +532,13 @@ int main(int argc, char *argv[])
 	attr.no_group_column = 0;   /* -o */
 	attr.atime_column = 0;      /* -a/-u */
 	attr.ctime_column = 0;      /* -c */
+	attr.btime_column = 0;      /* -b */
 	attr.verbose = 0;           /* -v */
 	attr.nul = 0;               /* -0 */
 	attr.format = NULL;         /* -L/-j */
 
 	attr.quote_name = 0;        /* -Q */
-	attr.escape_name = 0;       /* -E/-b */
+	attr.escape_name = 0;       /* -E */
 	attr.mask_name = 0;         /* -q */
 	attr.dir_indicator = 0;     /* -p */
 	attr.most_indicators = 0;   /* -t */
@@ -835,6 +836,13 @@ int main(int argc, char *argv[])
 				break;
 			}
 
+			case 'b':
+			{
+				attr.btime_column = opt_l = 1;
+
+				break;
+			}
+
 			case 'v':
 			{
 				attr.verbose = 1;
@@ -884,7 +892,6 @@ int main(int argc, char *argv[])
 			}
 
 			case 'E':
-			case 'b':
 			{
 				attr.escape_name = 1;
 
@@ -1046,7 +1053,7 @@ int main(int argc, char *argv[])
 		fatal("-U and -L/-j options are mutually exclusive");
 
 	if (attr.escape_name && attr.mask_name)
-		fatal("-E/-b and -q options are mutually exclusive");
+		fatal("-E and -q options are mutually exclusive");
 
 	if (attr.human_units && attr.si_units)
 		fatal("-H and -I options are mutually exclusive");

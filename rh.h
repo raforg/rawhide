@@ -304,6 +304,7 @@ struct runtime_t
 	int no_group_column;    /* Flag for the -o option: Exclude group column */
 	int atime_column;       /* Flag for the -au option: Show atime rather than mtime */
 	int ctime_column;       /* Flag for the -c option: Show ctime rather than mtime */
+	int btime_column;       /* Flag for the -b option: Show btime rather than mtime */
 	int verbose;            /* Flag for the -v option: Include all columns */
 	int nul;                /* Flag for the -0 option: nul byte rather than newline */
 	char *format;           /* Format for the -L option */
