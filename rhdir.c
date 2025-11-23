@@ -3965,7 +3965,37 @@ void visitf_format(void)
 							snprintf(attr.formatbuf, attr.fpath_size, "%s", z);
 
 							/* Replace newlines with commas and remove the last one. */
-							/* On FreeBSD/Solaris, there are no newlines just commas already */
+							/* On FreeBSD/Solaris, there are no newlines, just commas already */
+
+							for (s = attr.formatbuf; *s; ++s)
+								if (*s == '\n')
+									*s = ',';
+
+							if (s > attr.formatbuf && !*s && s[-1] == ',')
+								s[-1] = '\0';
+						}
+
+						z = (z) ? attr.formatbuf : "";
+						ofmt_add_wl(width, length, z);
+						ofmt_add('s');
+						debug_extra(("fmt %%z \"%s\", \"%s\"", ofmt, z));
+						printf(ofmt, z);
+
+						break;
+					}
+
+					case 'L': /* Default access control list (comma-separated) */
+					{
+						char *z, *s;
+
+						if ((z = get_dacl()))
+						{
+							if (!attr.formatbuf && !(attr.formatbuf = malloc(attr.fpath_size)))
+								fatalsys("out of memory");
+
+							snprintf(attr.formatbuf, attr.fpath_size, "%s", z);
+
+							/* Replace newlines with commas and remove the last one */
 
 							for (s = attr.formatbuf; *s; ++s)
 								if (*s == '\n')

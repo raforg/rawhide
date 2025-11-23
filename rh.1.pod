@@ -1308,6 +1308,17 @@ trivially identical to the file permission bits. This can be convenient, but
 if it seems like noise, it can be silenced (but only on I<Solaris>) by
 setting the environment variable C<RAWHIDE_SOLARIS_ACL_NO_TRIVIAL=1>.
 
+=item C<%L>
+
+The default access control list (ACL) as a comma-separated list of
+items. This is only meaningful for directories.
+
+This is available on systems with I<"POSIX"> ACLs (i.e., I<Linux>,
+I<FreeBSD> (for I<ufs>), and I<Cygwin>). On systems without I<"POSIX"> ACLs,
+this is the empty string.
+
+See I<acl(2)> or I<acl(3)> or I<acl(5)> for more details.
+
 =item C<%x>
 
 The extended attributes (EA) as a comma-separated list. This is available on
@@ -1536,6 +1547,7 @@ This option is mostly but not entirely compatible with S<I<GNU find(1)>>'s
 C<-printf> action. I<rh> doesn't do I<find(1)>'s C<%F> (filesystem type),
 and I<find(1)> doesn't do I<rh>'s
 C<%z> (access control list),
+C<%L> (default access control list),
 C<%x> (extended attributes),
 C<%X> (ACL/EA indicator),
 C<%w> (file type description),

@@ -24,7 +24,7 @@
 
 . tests/.common
 
-label="acl dacl ea %z %x %Z %X %j -j"
+label="acl dacl ea %z %L %x %Z %X %j -j"
 
 touch $d/none
 touch $d/acl
@@ -101,6 +101,14 @@ then
 				test_rawhide_grep "$rh -j        $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*\\}$"                     "" 0 "-j (json) with acl"
 
 				setfacl -d -m user:root:rwx $d/dir1
+				test_rawhide "$rh    -L '%L\n' $d/dir1"    "user::rwx,user:root:rwx,group::r-x,mask::rwx,other::r-x\n" "" 0 "-L %L (dacl)"
+				test_rawhide "$rh    -L '%L\n' $d/symdir1" "user::rwx,user:root:rwx,group::r-x,mask::rwx,other::r-x\n" "" 0 "-L %L (symlink to dacl)"
+				test_rawhide "$rh -y -L '%L\n' $d/symdir1" "user::rwx,user:root:rwx,group::r-x,mask::rwx,other::r-x\n" "" 0 "-y -L %L (symlink to dacl)"
+				test_rawhide "$rh -Y -L '%L\n' $d/symdir1" "user::rwx,user:root:rwx,group::r-x,mask::rwx,other::r-x\n" "" 0 "-Y -L %L (symlink to dacl)"
+				test_rawhide "$rh    -L '%L\n' $d/dir2"    "\n"                                                        "" 0 "-L %L (no dacl)"
+				test_rawhide "$rh    -L '%L\n' $d/symdir2" "\n"                                                        "" 0 "-L %L (symlink to no dacl)"
+				test_rawhide "$rh -y -L '%L\n' $d/symdir2" "\n"                                                        "" 0 "-y -L %L (symlink to no dacl)"
+				test_rawhide "$rh -Y -L '%L\n' $d/symdir2" "\n"                                                        "" 0 "-Y -L %L (symlink to no dacl)"
 
 				test_rawhide "$rh    '\"*user:root:rwx*\".dacl'     $d" "$d/dir1\n$d/symdir1\n" "" 0 ".dacl"
 				test_rawhide "$rh    '\"*user:root:rwx*\".dac'      $d" "$d/dir1\n$d/symdir1\n" "" 0 ".dacl as .dac"
