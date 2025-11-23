@@ -3029,6 +3029,9 @@ static char *json(void)
 		#endif
 	}
 
+	if (get_dacl() && attr.dacl)
+		pos += add_field(buf + pos, JSON_BUFSIZE - pos, "default_access_control_list", attr.dacl);
+
 	if ((ea = get_ea(1)) && attr.fea_ok)
 		pos += add_field(buf + pos, JSON_BUFSIZE - pos, "extended_attributes", ea);
 

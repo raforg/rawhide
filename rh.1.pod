@@ -1476,6 +1476,8 @@ the following possible attributes:
 
 =item C<access_control_list_verbose> (string) (like C<%z> with the C<-v> option, but not reformatted as a comma-separated list) (only if present)
 
+=item C<default_access_control_list> (string) (like C<%L>, but not reformatted as a comma-separated list) (only if present)
+
 =item C<extended_attributes> (string) (like C<%x>, but not reformatted as a comma-separated list) (only if present)
 
 =item C<selinux_context> (string) (same as C<%Z>) (only if present)

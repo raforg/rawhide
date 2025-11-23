@@ -140,6 +140,9 @@ then
 					test_rawhide "$rh -Y '\"^user:root:rwx\$\".redacl'  $d" "$d/dir1\n$d/symdir1\n" "" 0 "-Y .redacl"
 					test_rawhide "$rh -Y '\"^user:ROOT:rwx\$\".reidacl' $d" "$d/dir1\n$d/symdir1\n" "" 0 "-Y .reidacl"
 				fi
+
+				test_rawhide_grep "$rh -L '%j\n' $d/dir1" "^\\{\"path\":\"$d/dir1\", .*\"default_access_control_list\":.*\\}$"                     "" 0 "-L %j (json) with acl"
+				test_rawhide_grep "$rh -j        $d/dir1" "^\\{\"path\":\"$d/dir1\", .*\"default_access_control_list\":.*\\}$"                     "" 0 "-j (json) with acl"
 			else
 				echo "$t: Skipping ACL tests (setfacl not found)"
 				ACL=0
