@@ -146,11 +146,7 @@ static llong get_dirsize(struct stat *statbuf, const char *name)
 		return (llong)statbuf->st_size;
 
 	if (!(dir = fdopendir(dir_fd)))
-	{
-		close(dir_fd);
-
-		return (llong)statbuf->st_size;
-	}
+		return close(dir_fd), (llong)statbuf->st_size;
 
 	statbuf->st_size = 0;
 
@@ -983,7 +979,7 @@ void c_reimime(llong i) { mime_re(i, PCRE2_CASELESS); }
 #endif
 #endif
 
-/* Load ACLs into attr.facl (and attr.facl_verbose on FreeBSD/Solaris) which must be deallocated */
+/* Load ACLs into attr.facl (and attr.facl_verbose on FreeBSD/Solaris), which must be deallocated */
 
 #define failure(args) if (want) { errorsys args; attr.exit_status = EXIT_FAILURE; }
 
@@ -1075,13 +1071,47 @@ char *get_acl(int want)
 	return attr.facl;
 }
 
+/* Load Default ACLs into attr.dacl, which must be deallocated */
+
+char *get_dacl(void)
+{
+	if (!attr.dacl_done)
+	{
+		/* The only choice for ACL APIs for default ACLs is "POSIX" */
+
+		#if defined(HAVE_POSIX_ACL) && defined(ACL_TYPE_DEFAULT)
+
+		int acl_flags = ACL_TYPE_DEFAULT;
+
+		/* Get the "POSIX" ACL */
+
+		acl_t dacl = acl_get_file(attr.fpath, acl_flags);
+
+		/* Convert the ACL to text */
+
+		if (dacl)
+		{
+			attr.dacl = acl_to_text(dacl, NULL);
+			acl_free(dacl);
+		}
+
+		#endif /* HAVE_POSIX_ACL */
+
+		attr.dacl_done = 1;
+	}
+
+	return attr.dacl;
+}
+
 #ifdef HAVE_ACL
 
 static void acl_glob(llong i, int options)
 {
 	Stack[SP++] = get_acl(1)
-		? attr.fnmatch(&Strbuf[i], get_acl(1), FNM_EXTMATCH | options) == 0 ||
-			(attr.facl_verbose && attr.fnmatch(&Strbuf[i], attr.facl_verbose, FNM_EXTMATCH | options) == 0)
+		? attr.fnmatch(&Strbuf[i], get_acl(1), FNM_EXTMATCH | options) == 0
+			#if HAVE_FREEBSD_ACL || HAVE_SOLARIS_ACL
+			|| (attr.facl_verbose && attr.fnmatch(&Strbuf[i], attr.facl_verbose, FNM_EXTMATCH | options) == 0)
+			#endif
 		: 0;
 }
 
@@ -1095,8 +1125,10 @@ void c_iacl(llong i) { acl_glob(i, FNM_CASEFOLD); }
 static void acl_re(llong i, int options)
 {
 	Stack[SP++] = get_acl(1)
-		? rematch(&Strbuf[i], get_acl(1), -1, PCRE2_MULTILINE | options) ||
-			(attr.facl_verbose && rematch(&Strbuf[i], attr.facl_verbose, -1, PCRE2_MULTILINE | options))
+		? rematch(&Strbuf[i], get_acl(1), -1, PCRE2_MULTILINE | options)
+			#if HAVE_FREEBSD_ACL || HAVE_SOLARIS_ACL
+			|| (attr.facl_verbose && rematch(&Strbuf[i], attr.facl_verbose, -1, PCRE2_MULTILINE | options))
+			#endif
 		: 0;
 }
 
@@ -1106,7 +1138,36 @@ void c_reiacl(llong i) { acl_re(i, PCRE2_CASELESS); }
 #endif
 #endif
 
-/* Load EAs into attr.fea which must be deallocated eventually */
+#if defined(HAVE_POSIX_ACL) && defined(ACL_TYPE_DEFAULT)
+
+static void dacl_glob(llong i, int options)
+{
+	Stack[SP++] = get_dacl()
+		? attr.fnmatch(&Strbuf[i], get_dacl(), FNM_EXTMATCH | options) == 0
+		: 0;
+}
+
+void c_dacl(llong i)  { dacl_glob(i, 0); }
+#ifdef FNM_CASEFOLD
+void c_idacl(llong i) { dacl_glob(i, FNM_CASEFOLD); }
+#endif
+
+#ifdef HAVE_PCRE2
+
+static void dacl_re(llong i, int options)
+{
+	Stack[SP++] = get_dacl()
+		? rematch(&Strbuf[i], get_dacl(), -1, PCRE2_MULTILINE | options)
+		: 0;
+}
+
+void c_redacl(llong i)  { dacl_re(i, 0); }
+void c_reidacl(llong i) { dacl_re(i, PCRE2_CASELESS); }
+
+#endif
+#endif
+
+/* Load EAs into attr.fea, which must be deallocated eventually */
 
 char *get_ea(int want)
 {
@@ -2041,6 +2102,16 @@ char *instruction_name(void (*func)(llong))
 		#ifdef HAVE_PCRE2
 		(func == c_reacl) ? "reacl" :
 		(func == c_reiacl) ? "reiacl" :
+		#endif
+		#endif
+		#if defined(HAVE_POSIX_ACL) && defined(ACL_TYPE_DEFAULT)
+		(func == c_dacl) ? "dacl" :
+		#ifdef FNM_CASEFOLD
+		(func == c_idacl) ? "idacl" :
+		#endif
+		#ifdef HAVE_PCRE2
+		(func == c_redacl) ? "redacl" :
+		(func == c_reidacl) ? "reidacl" :
 		#endif
 		#endif
 		#ifdef HAVE_EA

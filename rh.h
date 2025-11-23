@@ -193,10 +193,13 @@ struct runtime_t
 	int ftarget_done;       /* Have we read the current candidate symlink's target path yet? */
 	char *ftarget;          /* Target path of the current candidate symlink (long-lived, on-demand) */
 
-	int facl_done;          /* Have we loaded the current candidate's access control lists yet? */
+	int facl_done;          /* Have we loaded the current candidate's access control list (ACL) yet? */
 	char *facl;             /* ACL as lines of text ("POSIX"/FreeBSD) or comma-separated (Solaris) */
 	char *facl_verbose;     /* ACL as non-compact form (FreeBSD/Solaris) */
 	int facl_solaris_no_trivial; /* Suppress trivial ACLs on Solaris? */
+
+	int dacl_done;          /* Have we loaded the current candidate's default access control list yet? */
+	char *dacl;             /* Default ACL as lines of text ("POSIX") */
 
 	int fea_done;           /* Have we loaded the extended attributes yet? */
 	int fea_ok;             /* Have we loaded the extended attributes successfully? */

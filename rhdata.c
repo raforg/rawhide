@@ -33,6 +33,10 @@
 #include <time.h>
 #include <sys/stat.h>
 
+#ifdef HAVE_ACL
+#include <sys/acl.h>
+#endif
+
 #define DATA
 #include "rh.h"
 #include "rhdata.h"
@@ -304,6 +308,17 @@ static symbol_t init_syms[] =
 #ifdef HAVE_PCRE2
 	{ ".reacl",    PATMOD, 0, c_reacl,   NULL },
 	{ ".reiacl",   PATMOD, 0, c_reiacl,  NULL },
+#endif
+#endif
+
+#if defined(HAVE_POSIX_ACL) && defined(ACL_TYPE_DEFAULT)
+	{ ".dacl",     PATMOD, 0, c_dacl,    NULL },
+#ifdef FNM_CASEFOLD
+	{ ".idacl",    PATMOD, 0, c_idacl,   NULL },
+#endif
+#ifdef HAVE_PCRE2
+	{ ".redacl",   PATMOD, 0, c_redacl,  NULL },
+	{ ".reidacl",  PATMOD, 0, c_reidacl, NULL },
 #endif
 #endif
 

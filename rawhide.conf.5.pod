@@ -229,6 +229,7 @@ liberties taken):
       | "what" | "iwhat  | "rewhat" | "reiwhat"
       | "mime" | "imime  | "remime" | "reimime"
       | "acl"  | "iacl"  | "reacl"  | "reiacl"
+      | "dacl" | "idacl" | "redacl" | "rediacl"
       | "ea"   | "iea"   | "reea"   | "reiea"
       | "sh"   | "ush"
 
@@ -1440,14 +1441,14 @@ target paths, and MIME types (e.g., C<re>, C<repath>, C<relink>, and
 C<remime>) because it can be helpful when faced with malicious paths. These
 are all considered to be a single "line" (even if they actually contain
 newlines). It is not enabled by default when matching everything else (e.g.,
-C<reacl>, C<reea>, C<rewhat>, and C<rebody>). These are all considered to be
-multiple lines. It can be enabled by default in all cases by setting the
-environment variable C<RAWHIDE_PCRE2_DOTALL_ALWAYS=1>. It can be enabled for
-individual matches by starting the regular expression with C<(?s)>. It can
-be disabled for individual matches by starting the regular expression with
-C<(?-s)>. Note that, even when C<.> doesn't match a newline, there are other
-patterns that still match a newline (e.g., C<\s>, C<\v>, C<\H>, C<\W>,
-C<\D>, C<[^anything-that-does-not-include-newline]>).
+C<reacl>, C<redacl>, C<reea>, C<rewhat>, and C<rebody>). These are all
+considered to be multiple lines. It can be enabled by default in all cases
+by setting the environment variable C<RAWHIDE_PCRE2_DOTALL_ALWAYS=1>. It can
+be enabled for individual matches by starting the regular expression with
+C<(?s)>. It can be disabled for individual matches by starting the regular
+expression with C<(?-s)>. Note that, even when C<.> doesn't match a newline,
+there are other patterns that still match a newline (e.g., C<\s>, C<\v>,
+C<\H>, C<\W>, C<\D>, C<[^anything-that-does-not-include-newline]>).
 
 =item C<PCRE2_MULTILINE>
 
@@ -1462,12 +1463,12 @@ symlink target paths, and MIME types (e.g., C<re>, C<repath>, C<relink>, and
 C<remime>) because it can be unhelpful when faced with malicious
 paths. These are all considered to be a single "line" (even if they actually
 contain newlines). It is only enabled by default when matching everything
-else (e.g., C<reacl>, C<reea>, C<rewhat>, and C<rebody>). These are all
-considered to be multiple lines. It can be enabled by default in all cases
-by setting the environment variable C<RAWHIDE_PCRE2_MULTILINE_ALWAYS=1>. It
-can be enabled for individual matches by starting the regular expression
-with C<(?m)>. It can be disabled for individual matches by starting the
-regular expression with C<(?-m)>.
+else (e.g., C<reacl>, C<redacl>, C<reea>, C<rewhat>, and C<rebody>). These
+are all considered to be multiple lines. It can be enabled by default in all
+cases by setting the environment variable
+C<RAWHIDE_PCRE2_MULTILINE_ALWAYS=1>. It can be enabled for individual
+matches by starting the regular expression with C<(?m)>. It can be disabled
+for individual matches by starting the regular expression with C<(?-m)>.
 
 =item C<PCRE2_DOLLAR_ENDONLY>
 
@@ -1682,6 +1683,46 @@ modifier above for more information.
 =item C<reiacl> (or C<reia>)
 
 Like the C<reacl> modifier, but apply the regex without case-sensitivity.
+
+=item C<dacl> (or C<d>)
+
+Apply the glob pattern to each candidate directory's default access control
+list (ACL), rather than its base name. This is only meaningful for
+directories.
+
+This is available on systems with I<"POSIX"> ACLs (e.g., I<Linux>,
+I<FreeBSD> (for I<ufs>), and I<Cygwin>), but not on systems with I<NFSv4>
+ACLs (e.g., I<FreeBSD> and I<Solaris> (for I<zfs>)), or S<I<macOS Extended>>
+ACLs. I<OpenBSD> and I<NetBSD> don't do ACLs. See I<acl(2)> or I<acl(3)> or
+I<acl(5)> for more details.
+
+The output of S<C<rh --help>> states if default access control lists are
+available on the local system.
+
+See C<acl> above for details on the content of I<"POSIX"> access control
+lists.
+
+Note that glob patterns are anchored to the start and end, and so must match
+the entire text.
+
+=item C<idacl> (or C<id>)
+
+Like the C<dacl> modifier, but apply the glob pattern without
+case-sensitivity. This might not be available on all systems.
+
+=item C<redacl> (or C<red>)
+
+Like the C<dacl> modifier, but match each candidate directory's default
+access control list (ACL) against a I<Perl>-compatible regular expression
+(regex) instead of a glob pattern. By default, the directory's default ACL
+is considered to be multiple lines (i.e., as if the regular expression
+started with C<(?m)>, or the I<Perl> C</m> modifier were used). This is
+available on systems that have I<libpcre2-8> installed, and I<"POSIX">
+access control lists. See the C<re> modifier above for more information.
+
+=item C<reidacl> (or C<reid>)
+
+Like the C<redacl> modifier, but apply the regex without case-sensitivity.
 
 =item C<ea> (or C<e>)
 

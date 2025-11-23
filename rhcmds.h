@@ -144,6 +144,16 @@ void c_reacl(llong i);
 void c_reiacl(llong i);
 #endif
 #endif
+#if defined(HAVE_POSIX_ACL) && defined(ACL_TYPE_DEFAULT)
+void c_dacl(llong i);
+#ifdef FNM_CASEFOLD
+void c_idacl(llong i);
+#endif
+#ifdef HAVE_PCRE2
+void c_redacl(llong i);
+void c_reidacl(llong i);
+#endif
+#endif
 #ifdef HAVE_EA
 void c_ea(llong i);
 #ifdef FNM_CASEFOLD
@@ -214,6 +224,7 @@ const char *get_what(void);
 const char *get_mime(void);
 char *get_body(void);
 char *get_acl(int);
+char *get_dacl(void);
 char *get_ea(int);
 void set_dirsize(void);
 int has_real_acl(void);

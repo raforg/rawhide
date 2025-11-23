@@ -119,13 +119,14 @@ I<rh> - (I<rawhide>) find files using pretty I<C> expressions
    .what         .iwhat        .rewhat       .reiwhat
    .mime         .imime        .remime       .reimime
    .acl          .iacl         .reacl        .reiacl
+   .dacl         .idacl        .redacl       .reidacl
    .ea           .iea          .reea         .reiea
    .sh           .ush
 
    Case-insensitive glob pattern matching is available here (i)
    Perl-compatible regular expressions are available here (re)
    File types and MIME types are available here (what, mime)
-   Access control lists are available here (acl)
+   Access control lists are available here (acl, dacl)
    Extended attributes are available here (ea)
 
  Built-in symbols:
@@ -3045,12 +3046,13 @@ names, paths, symlink target paths, and MIME types (e.g., C<re>, C<repath>,
 C<relink>, and C<remime>) because it can be helpful when faced with
 malicious paths. These are all considered to be a single "line" (even if
 they actually contain newlines). It is not enabled by default when matching
-everything else (e.g., C<reacl>, C<reea>, C<rewhat>, and C<rebody>). These
-are all considered to be multiple lines. When this environment variable is
-set, its effect can be disabled for individual matches by starting the
-regular expression with C<(?-s)>. Note that, even when C<.> doesn't match a
-newline, there are other patterns that still match a newline (e.g., C<\s>,
-C<\v>, C<\H>, C<\W>, C<\D>, C<[^anything-that-does-not-include-newline]>).
+everything else (e.g., C<reacl>, C<redacl>, C<reea>, C<rewhat>, and
+C<rebody>). These are all considered to be multiple lines. When this
+environment variable is set, its effect can be disabled for individual
+matches by starting the regular expression with C<(?-s)>. Note that, even
+when C<.> doesn't match a newline, there are other patterns that still match
+a newline (e.g., C<\s>, C<\v>, C<\H>, C<\W>, C<\D>,
+C<[^anything-that-does-not-include-newline]>).
 
 Setting the environment variable C<RAWHIDE_PCRE2_MULTILINE_ALWAYS=1> causes
 regular expression patterns to always treat the subject text as multiple
@@ -3062,8 +3064,8 @@ enabled by default when matching file names, paths, symlink target paths,
 and MIME types (e.g., C<re>, C<repath>, C<relink>, and C<remime>) because it
 can be unhelpful when faced with malicious paths. These are all considered
 to be a single "line" (even if they actually contain newlines). It is only
-enabled by default when matching everything else (e.g., C<reacl>, C<reea>,
-C<rewhat>, and C<rebody>). These are all considered to be multiple
+enabled by default when matching everything else (e.g., C<reacl>, C<redacl>,
+C<reea>, C<rewhat>, and C<rebody>). These are all considered to be multiple
 lines. When this environment variable is set, its effect can be disabled for
 individual matches by starting the regular expression with C<(?-m)>.
 

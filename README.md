@@ -157,13 +157,14 @@ a high-level interface to the built-in symbols mentioned above, and makes
        .what         .iwhat        .rewhat       .reiwhat
        .mime         .imime        .remime       .reimime
        .acl          .iacl         .reacl        .reiacl
+       .dacl         .idacl        .redacl       .reidacl
        .ea           .iea          .reea         .reiea
        .sh           .ush
 
        Case-insensitive glob pattern matching is available here (i)
        Perl-compatible regular expressions are available here (re)
        File types and MIME types are available here (what, mime)
-       Access control lists are available here (acl)
+       Access control lists are available here (acl, dacl)
        Extended attributes are available here (ea)
 
      Built-in symbols:

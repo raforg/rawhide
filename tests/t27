@@ -24,7 +24,7 @@
 
 . tests/.common
 
-label="acl ea %z %x %Z %X %j -j"
+label="acl dacl ea %z %x %Z %X %j -j"
 
 touch $d/none
 touch $d/acl
@@ -35,6 +35,11 @@ ln -s acl $d/symacl
 ln -s ea $d/symea
 ln -s both $d/symboth
 ln -s none $d/symlink
+
+mkdir $d/dir1
+mkdir $d/dir2
+ln -s dir1 $d/symdir1
+ln -s dir2 $d/symdir2
 
 test_rawhide_post_hook() { test_rh_sort_post_hook; }
 
@@ -94,6 +99,39 @@ then
 
 				test_rawhide_grep "$rh -L '%j\n' $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*\\}$"                     "" 0 "-L %j (json) with acl"
 				test_rawhide_grep "$rh -j        $d/acl" "^\\{\"path\":\"$d/acl\", .*\"access_control_list\":.*\\}$"                     "" 0 "-j (json) with acl"
+
+				setfacl -d -m user:root:rwx $d/dir1
+
+				test_rawhide "$rh    '\"*user:root:rwx*\".dacl'     $d" "$d/dir1\n$d/symdir1\n" "" 0 ".dacl"
+				test_rawhide "$rh    '\"*user:root:rwx*\".dac'      $d" "$d/dir1\n$d/symdir1\n" "" 0 ".dacl as .dac"
+				test_rawhide "$rh    '\"*user:root:rwx*\".da'       $d" "$d/dir1\n$d/symdir1\n" "" 0 ".dacl as .da"
+				test_rawhide "$rh    '\"*user:root:rwx*\".d'        $d" "$d/dir1\n$d/symdir1\n" "" 0 ".dacl as .d"
+				test_rawhide "$rh -y '\"*user:root:rwx*\".dacl'     $d" "$d/dir1\n$d/symdir1\n" "" 0 "-y .dacl"
+				test_rawhide "$rh -Y '\"*user:root:rwx*\".dacl'     $d" "$d/dir1\n$d/symdir1\n" "" 0 "-Y .dacl"
+				if $rh -h | grep -q '\.idacl'
+				then
+					test_rawhide "$rh    '\"*user:ROOT:rwx*\".idacl'    $d" "$d/dir1\n$d/symdir1\n" "" 0 ".idacl"
+					test_rawhide "$rh    '\"*user:ROOT:rwx*\".idac'     $d" "$d/dir1\n$d/symdir1\n" "" 0 ".idacl as .idac"
+					test_rawhide "$rh    '\"*user:ROOT:rwx*\".ida'      $d" "$d/dir1\n$d/symdir1\n" "" 0 ".idacl as .ida"
+					test_rawhide "$rh    '\"*user:ROOT:rwx*\".id'       $d" "$d/dir1\n$d/symdir1\n" "" 0 ".idacl as .id"
+					test_rawhide "$rh -y '\"*user:ROOT:rwx*\".idacl'    $d" "$d/dir1\n$d/symdir1\n" "" 0 "-y .idacl"
+					test_rawhide "$rh -Y '\"*user:ROOT:rwx*\".idacl'    $d" "$d/dir1\n$d/symdir1\n" "" 0 "-Y .idacl"
+				fi
+				if $rh -h | grep -q '\.redacl'
+				then
+					test_rawhide "$rh    '\"^user:root:rwx\$\".redacl'  $d" "$d/dir1\n$d/symdir1\n" "" 0 ".redacl"
+					test_rawhide "$rh    '\"^user:root:rwx\$\".redac'   $d" "$d/dir1\n$d/symdir1\n" "" 0 ".redacl as .redac"
+					test_rawhide "$rh    '\"^user:root:rwx\$\".reda'    $d" "$d/dir1\n$d/symdir1\n" "" 0 ".redacl as .reda"
+					test_rawhide "$rh    '\"^user:root:rwx\$\".red'     $d" "$d/dir1\n$d/symdir1\n" "" 0 ".redacl as .red"
+					test_rawhide "$rh    '\"^user:ROOT:rwx\$\".reidacl' $d" "$d/dir1\n$d/symdir1\n" "" 0 ".reidacl"
+					test_rawhide "$rh    '\"^user:ROOT:rwx\$\".reidac'  $d" "$d/dir1\n$d/symdir1\n" "" 0 ".reidacl as .reidac"
+					test_rawhide "$rh    '\"^user:ROOT:rwx\$\".reida'   $d" "$d/dir1\n$d/symdir1\n" "" 0 ".reidacl as .reida"
+					test_rawhide "$rh    '\"^user:ROOT:rwx\$\".reid'    $d" "$d/dir1\n$d/symdir1\n" "" 0 ".reidacl as .reid"
+					test_rawhide "$rh -y '\"^user:root:rwx\$\".redacl'  $d" "$d/dir1\n$d/symdir1\n" "" 0 "-y .redacl"
+					test_rawhide "$rh -y '\"^user:ROOT:rwx\$\".reidacl' $d" "$d/dir1\n$d/symdir1\n" "" 0 "-y .reidacl"
+					test_rawhide "$rh -Y '\"^user:root:rwx\$\".redacl'  $d" "$d/dir1\n$d/symdir1\n" "" 0 "-Y .redacl"
+					test_rawhide "$rh -Y '\"^user:ROOT:rwx\$\".reidacl' $d" "$d/dir1\n$d/symdir1\n" "" 0 "-Y .reidacl"
+				fi
 			else
 				echo "$t: Skipping ACL tests (setfacl not found)"
 				ACL=0

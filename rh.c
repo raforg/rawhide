@@ -47,6 +47,10 @@
 #include "rherr.h"
 #include "rhfnmatch.h"
 
+#ifdef HAVE_ACL
+#include <sys/acl.h>
+#endif
+
 #ifdef NDEBUG
 #define debug(args)
 #else
@@ -188,7 +192,11 @@ static void help_message(void)
 	printf("  File types and MIME types are available here (what, mime)\n");
 	#endif
 	#ifdef HAVE_ACL
+	#if defined(HAVE_POSIX_ACL) && defined(ACL_TYPE_DEFAULT)
+	printf("  Access control lists are available here (acl, dacl)\n");
+	#else
 	printf("  Access control lists are available here (acl)\n");
+	#endif
 	#endif
 	#ifdef HAVE_EA
 	printf("  Extended attributes are available here (ea)\n");

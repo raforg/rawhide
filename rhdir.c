@@ -178,6 +178,8 @@ static void caches_init(void)
 	attr.facl_done = 0;
 	attr.facl = NULL;
 	attr.facl_verbose = NULL;
+	attr.dacl_done = 0;
+	attr.dacl = NULL;
 	attr.fea_done = 0;
 	attr.fea_ok = 0;
 	attr.fea_selinux = NULL;
@@ -209,8 +211,15 @@ static void caches_done(void)
 	if (attr.facl)
 		acl_free(attr.facl);
 
-	if (attr.facl_verbose) /* FreeBSD */
+	#if defined(HAVE_POSIX_ACL) && defined(ACL_TYPE_DEFAULT)
+	if (attr.dacl)
+		acl_free(attr.dacl);
+	#endif
+
+	#if defined(HAVE_FREEBSD_ACL) || defined(HAVE_SOLARIS_ACL)
+	if (attr.facl_verbose) /* FreeBSD, Solaris */
 		acl_free(attr.facl_verbose);
+	#endif
 
 	#endif
 
@@ -219,8 +228,10 @@ static void caches_done(void)
 	if (attr.facl)
 		free(attr.facl);
 
-	if (attr.facl_verbose)
+	#if defined(HAVE_FREEBSD_ACL) || defined(HAVE_SOLARIS_ACL)
+	if (attr.facl_verbose) /* FreeBSD, Solaris */
 		free(attr.facl_verbose);
+	#endif
 
 	#endif
 
@@ -3012,8 +3023,10 @@ static char *json(void)
 	{
 		pos += add_field(buf + pos, JSON_BUFSIZE - pos, "access_control_list", attr.facl);
 
-		if (attr.facl_verbose)
+		#if defined(HAVE_FREEBSD_ACL) || defined(HAVE_SOLARIS_ACL)
+		if (attr.facl_verbose) /* FreeBSD, Solaris */
 			pos += add_field(buf + pos, JSON_BUFSIZE - pos, "access_control_list_verbose", attr.facl_verbose);
+		#endif
 	}
 
 	if ((ea = get_ea(1)) && attr.fea_ok)
@@ -3941,8 +3954,10 @@ void visitf_format(void)
 						{
 							/* On FreeBSD/Solaris, use non-compact form if verbose */
 
+							#if defined(HAVE_FREEBSD_ACL) || defined(HAVE_SOLARIS_ACL)
 							if (attr.verbose && attr.facl_verbose)
 								z = attr.facl_verbose;
+							#endif
 
 							if (!attr.formatbuf && !(attr.formatbuf = malloc(attr.fpath_size)))
 								fatalsys("out of memory");
