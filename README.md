@@ -513,7 +513,7 @@ To install *rawhide*:
         cd rawhide-3.3
         ./configure
         make
-        make test # optional (lots of output, or set quiet=1)
+        make test # optional
         sudo make install
 
 This will install (approximately, depending on the operating system):

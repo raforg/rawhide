@@ -357,10 +357,10 @@ help:
 	@echo "  sudo make install   - Install rh"
 	@echo "  sudo make uninstall - Uninstall rh"
 	@echo
-	@echo "To run tests (verbose, quiet, valgrind):"
+	@echo "To run tests (quiet, verbose, valgrind):"
 	@echo
-	@echo "  make test         - Run tests showing every test (thousands)"
-	@echo "  make quiet=1 test - Run tests with just one line per test suite"
+	@echo "  make test         - Run tests with just one line per test suite"
+	@echo "  make quiet=0 test - Run tests showing every test (thousands)"
 	@echo "  make vg=1 test    - Run tests and produce valgrind.out analysis (~40m)"
 	@echo "  vim valgrind.out  - Examine the results (delete the noise, check the rest)"
 	@echo
@@ -368,8 +368,8 @@ help:
 	@echo
 	@echo "  ./configure --enable-gcov"
 	@echo "  make"
-	@echo "  make quiet=1 test"
-	@echo "  sudo make quiet=1 RAWHIDE_TEST_MULTIBYTE_USER_GROUP=1 test"
+	@echo "  make test"
+	@echo "  sudo make RAWHIDE_TEST_MULTIBYTE_USER_GROUP=1 test"
 	@echo "  make gcov"
 	@echo
 	@echo "But be warned that including RAWHIDE_TEST_MULTIBYTE_USER_GROUP=1 above"
@@ -380,8 +380,8 @@ help:
 	@echo
 	@echo "  ./configure --enable-ubsan"
 	@echo "  make"
-	@echo "  make quiet=1 ubsan=1 test"
-	@echo "  sudo make quiet=1 ubsan=1 RAWHIDE_TEST_MULTIBYTE_USER_GROUP=1 test"
+	@echo "  make ubsan=1 test"
+	@echo "  sudo make ubsan=1 RAWHIDE_TEST_MULTIBYTE_USER_GROUP=1 test"
 	@echo
 	@echo "The ubsan=1 variable suppresses a test that deliberately performs"
 	@echo "an integer overflow in the search criteria."
@@ -391,15 +391,15 @@ help:
 	@echo
 	@echo "  ./configure --enable-asan"
 	@echo "  make"
-	@echo "  make quiet=1 test"
-	@echo "  sudo make quiet=1 asan=1 RAWHIDE_TEST_MULTIBYTE_USER_GROUP=1 test"
+	@echo "  make test"
+	@echo "  sudo make asan=1 RAWHIDE_TEST_MULTIBYTE_USER_GROUP=1 test"
 	@echo
 	@echo "To run tests with the memory sanitizer (like valgrind but fast):"
 	@echo
 	@echo "  ./configure --enable-msan"
 	@echo "  make"
-	@echo "  make quiet=1 test"
-	@echo "  sudo make quiet=1 RAWHIDE_TEST_MULTIBYTE_USER_GROUP=1 test"
+	@echo "  make test"
+	@echo "  sudo make RAWHIDE_TEST_MULTIBYTE_USER_GROUP=1 test"
 	@echo
 	@echo "The asan=1 variable suppresses setuid/setgid tests that would trigger a"
 	@echo "fatal error for the LeakSanitizer which doesn't work with setuid/setgid"

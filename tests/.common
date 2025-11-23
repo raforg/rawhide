@@ -64,6 +64,10 @@ RAWHIDE_COLUMN_WIDTH_SIZE_UNITS=1; export RAWHIDE_COLUMN_WIDTH_SIZE_UNITS
 RAWHIDE_COLUMN_WIDTH_RDEV_MAJOR=1; export RAWHIDE_COLUMN_WIDTH_RDEV_MAJOR
 RAWHIDE_COLUMN_WIDTH_RDEV_MINOR=1; export RAWHIDE_COLUMN_WIDTH_RDEV_MINOR
 
+# Default to quiet tests (one line per test suite)
+
+[ -z "$quiet" ] && quiet=1
+
 # The default rh command for testing (and some other versions)
 
 saved_pwd="`pwd`"
