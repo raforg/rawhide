@@ -90,9 +90,9 @@ static void help_message(void)
 	printf("  -Y           - Follow symlinks encountered while searching as well\n");
 	printf("\n");
 	printf("alternative action options:\n");
-	printf("  -x 'cmd -- %%s' - Execute a shell command for each match (racy)\n");
-	printf("  -X 'cmd -- %%S' - Like -x but run from each match's directory (safer)\n");
-	printf("  -U -U -U       - Unlink matches (but tell me three times), implies -D\n");
+	printf("  -x 'cmd %%s'  - Execute a shell command for each match (racy)\n");
+	printf("  -X 'cmd %%S'  - Like -x but run from each match's directory (safer)\n");
+	printf("  -U -U -U     - Unlink matches (but tell me three times), implies -D\n");
 	printf("\n");
 	printf("output action options:\n");
 	printf("  -l           - Output matching entries like ls -l (but unsorted)\n");
@@ -107,7 +107,7 @@ static void help_message(void)
 	printf("  -u           - Same as -a (like ls(1))\n");
 	printf("  -c           - Include ctime rather than mtime column, implies -l\n");
 	printf("  -b           - Include btime rather than mtime column, implies -l\n");
-	printf("  -v           - Verbose: All columns, implies -ldiBsSac unless -xXU0Lj\n");
+	printf("  -v           - Verbose: All columns, implies -ldiBsSacb unless -xXU0Lj\n");
 	printf("  -0           - Output null chars instead of newlines (for xargs -0)\n");
 	printf("  -L format    - Output matching entries in a user-supplied format\n");
 	printf("  -j           - Output matching entries as JSON (same as -L \"%%j\\n\")\n");
