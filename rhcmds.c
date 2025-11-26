@@ -979,7 +979,7 @@ void c_reimime(llong i) { mime_re(i, PCRE2_CASELESS); }
 #endif
 #endif
 
-/* Load ACLs into attr.facl (and attr.facl_verbose on FreeBSD/Solaris), which must be deallocated */
+/* Load ACLs into attr.facl (and attr.facl_verbose on FreeBSD/Solaris), which must be deallocated eventually */
 
 #define failure(args) if (want) { errorsys args; attr.exit_status = EXIT_FAILURE; }
 
@@ -1071,7 +1071,7 @@ char *get_acl(int want)
 	return attr.facl;
 }
 
-/* Load Default ACLs into attr.dacl, which must be deallocated */
+/* Load Default ACLs into attr.dacl, which must be deallocated eventually */
 
 char *get_dacl(void)
 {
@@ -1281,7 +1281,7 @@ char *get_ea(int want)
 
 			/* Add the name */
 
-			pos += cescape(attr.fea + pos, fea_size - pos, name, -1, CESCAPE_HEX);
+			pos += cescape(attr.fea + pos, fea_size - pos, name, -1, CESCAPE_HEX | CESCAPE_EANAME);
 
 			/* Don't consider Linux ACL or selinux EAs to be "real" EAs (for -l) */
 
@@ -1453,7 +1453,7 @@ char *get_ea(int want)
 				/* Add the namespace and name */
 
 				pos += ssnprintf(attr.fea + pos, fea_size - pos, "%s.", namespace_name[ns]);
-				pos += cescape(attr.fea + pos, fea_size - pos, name + 1, *name, CESCAPE_HEX);
+				pos += cescape(attr.fea + pos, fea_size - pos, name + 1, *name, CESCAPE_HEX | CESCAPE_EANAME);
 
 				/* Consider all EAs to be real EAs on FreeBSD (for -l) */
 
@@ -1617,7 +1617,7 @@ char *get_ea(int want)
 
 			/* Add the name */
 
-			pos += cescape(attr.fea + pos, fea_size - pos, entry->d_name, -1, CESCAPE_HEX);
+			pos += cescape(attr.fea + pos, fea_size - pos, entry->d_name, -1, CESCAPE_HEX | CESCAPE_EANAME);
 
 			/* Consider all EAs to be real EAs on Solaris (for -l) */
 
@@ -1682,7 +1682,7 @@ char *get_ea(int want)
 				struct passwd *pwd = getpwuid(statbuf->st_uid);
 				struct group *grp = getgrgid(statbuf->st_gid);
 
-				pos += cescape(attr.fea + pos, fea_size - pos, entry->d_name, -1, CESCAPE_HEX);
+				pos += cescape(attr.fea + pos, fea_size - pos, entry->d_name, -1, CESCAPE_HEX | CESCAPE_EANAME);
 				pos += ssnprintf(attr.fea + pos, fea_size - pos, "/stat: %s %d", modestr(statbuf), (int)statbuf->st_nlink);
 
 				if (pwd)

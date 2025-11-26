@@ -469,6 +469,16 @@ then
 
 				test_rawhide_grep "$rh -L '%j\n' $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-L %j (json) with ea"
 				test_rawhide_grep "$rh -j        $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-j (json) with ea"
+
+				touch $d/encode1 $d/encode2
+				setfattr -n "user.rawhide-test:name" -v "abc" $d/encode1
+				setfattr -n "user.rawhide-test: name" -v "abc" $d/encode2
+				test_rawhide "$rh '\"user.rawhide-test:name: *\".ea'      $d" "$d/encode1\n" "" 0 ".ea with unencoded ':' in name"
+				test_rawhide "$rh '\"user.rawhide-test\\\\\\\\x3a name: *\".ea' $d" "$d/encode2\n" "" 0 ".ea with encoded ': ' in name"
+				test_rawhide "$rh '\"user.rawhide-test?x3a name: *\".ea' $d" "$d/encode2\n" "" 0 ".ea with encoded ': ' in name"
+				test_rawhide "$rh -L '%x\n' $d/encode1" "user.rawhide-test:name: abc\n"      "" 0 "-L %x with unencoded ':' in name"
+				test_rawhide "$rh -L '%x\n' $d/encode2" "user.rawhide-test\\x3a name: abc\n" "" 0 "-L %x with encoded ': ' in name"
+				rm $d/encode1 $d/encode2
 			else
 				echo "$t: Skipping EA tests (setfattr not found)"
 				EA=0

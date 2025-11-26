@@ -1748,8 +1748,10 @@ attribute names or values, and any non-I<ASCII> bytes (i.e., 128-255) in the
 values, will be presented as I<C>-like backslash escape sequences such as
 C<"\n"> for the newline character, and C<"\0"> for the null character, or as
 hexadecimal escape sequences such as C<"\x1b"> for the escape character. Any
-backslash characters are quoted with a preceding backslash. Note that commas
-are not quoted.
+backslash characters are quoted with a preceding backslash. Any extended
+attribute names that contain S<C<": ">> have the colon encoded as the
+hexadecimal escape sequence C<"\x3a"> so as to eliminate any risks from
+malicious extended attribute names. Note that commas are not quoted.
 
 This encoding is the text that patterns must be written to match
 against. But you can still match against any text in extended attribute names, and

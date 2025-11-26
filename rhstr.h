@@ -43,10 +43,11 @@ const char *ok(const char *s);
 const char *ok2(const char *s);
 const char *oklen(const char *s, size_t len);
 
-#define CESCAPE_QUOTES 1
-#define CESCAPE_HEX    2
-#define CESCAPE_JSON   5
+#define CESCAPE_QUOTES  1
+#define CESCAPE_HEX     2
+#define CESCAPE_JSON    5
 #define CESCAPE_BIN    10
+#define CESCAPE_EANAME 16
 
 #define is_wprint(wc) (iswprint((wint_t)(wc)) && (unsigned int)(wc) != 0x202d && (unsigned int)(wc) != 0x202e)
 

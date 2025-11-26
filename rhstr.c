@@ -176,9 +176,12 @@ int cescape(char *dst, ssize_t dstsz, const char *src, ssize_t srcsz, int opts);
 
 Copy src to dst using C escapes. At most dstsz bytes are written.
 If srcsz is -1, src is nul-terminated. Otherwise, the given number
-of bytes are processed. The opts bitmask can contain CESCAPE_QUOTES (to quote "),
-CESCAPE_HEX (to use hex not octal), CESCAPE_JSON (for \uxxxx ctrls and no \a\v),
-and CESCAPE_BIN (to hex all 8bit).
+of bytes are processed. The opts bitmask can contain
+CESCAPE_QUOTES (to quote "),
+CESCAPE_HEX (to use hex not octal),
+CESCAPE_JSON (for \uxxxx ctrls and no \a\v and quote "),
+CESCAPE_BIN (to hex all 8bit), and
+CESCAPE_EANAME (to encode ": " as "\x3a ").
 
 */
 
@@ -201,6 +204,8 @@ int cescape(char *dst, ssize_t dstsz, const char *src, ssize_t srcsz, int opts)
 		else if ((opts & CESCAPE_QUOTES) && src[i] == '"')
 			pos += ssnprintf(dst + pos, dstsz - pos, "\\\"");
 		else if ((opts & CESCAPE_BIN) == CESCAPE_BIN && (src[i] & 0x80))
+			pos += ssnprintf(dst + pos, dstsz - pos, "\\x%02x", (unsigned char)src[i]);
+		else if ((opts & CESCAPE_EANAME) == CESCAPE_EANAME && (src[i] == ':' && src[i + 1] == ' '))
 			pos += ssnprintf(dst + pos, dstsz - pos, "\\x%02x", (unsigned char)src[i]);
 		else
 		{
@@ -229,7 +234,7 @@ int cescape(char *dst, ssize_t dstsz, const char *src, ssize_t srcsz, int opts)
 
 				i += num_bytes_consumed - 1;
 			}
-			else /* Printable characters */
+			else /* Printable character */
 			{
 				pos += ssnprintf(dst + pos, dstsz - pos, "%.*s", num_bytes_consumed, src + i);
 				i += num_bytes_consumed - 1;
