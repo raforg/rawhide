@@ -446,6 +446,9 @@ then
 
 				test_rawhide      "$rh    '\"*user.rawhide-attrtest: *\".ea' $d/both $d/ea" "$d/both\n$d/ea\n"               "" 0 ".ea with multiple search directories"
 
+				setfattr -n user.rawhide-attrtest,2 -v ",a\012c,,d\012\012f," $d/ea
+				test_rawhide_grep "$rh    -L '%x\n' $d/ea"    "user.rawhide-attrtest\\\\x2c2: \\\\x2ca\\\\nc\\\\x2c\\\\x2cd\\\\n\\\\nf\\\\x2c"   "" 0 "-L %x (ea with , and nl)"
+
 				if $rh -h | grep -q '\.iea'
 				then
 					test_rawhide "$rh    '\"*user.rawhide-ATTRTEST: *\".iea'    $d" "$d/both\n$d/ea\n"                       "" 0 ".iea"
@@ -473,11 +476,12 @@ then
 				touch $d/encode1 $d/encode2
 				setfattr -n "user.rawhide-test:name" -v "abc" $d/encode1
 				setfattr -n "user.rawhide-test: name" -v "abc" $d/encode2
-				test_rawhide "$rh '\"user.rawhide-test:name: *\".ea'      $d" "$d/encode1\n" "" 0 ".ea with unencoded ':' in name"
+				test_rawhide "$rh '\"user.rawhide-test:name: *\".ea'            $d" "$d/encode1\n" "" 0 ".ea with unencoded ':' in name"
 				test_rawhide "$rh '\"user.rawhide-test\\\\\\\\x3a name: *\".ea' $d" "$d/encode2\n" "" 0 ".ea with encoded ': ' in name"
-				test_rawhide "$rh '\"user.rawhide-test?x3a name: *\".ea' $d" "$d/encode2\n" "" 0 ".ea with encoded ': ' in name"
-				test_rawhide "$rh -L '%x\n' $d/encode1" "user.rawhide-test:name: abc\n"      "" 0 "-L %x with unencoded ':' in name"
-				test_rawhide "$rh -L '%x\n' $d/encode2" "user.rawhide-test\\x3a name: abc\n" "" 0 "-L %x with encoded ': ' in name"
+				test_rawhide "$rh '\"user.rawhide-test?x3a name: *\".ea'        $d" "$d/encode2\n" "" 0 ".ea with encoded ': ' in name"
+
+				test_rawhide_grep "$rh -L '%x\n' $d/encode1" "user.rawhide-test:name: abc"        "" 0 "-L %x with unencoded ':' in name"
+				test_rawhide_grep "$rh -L '%x\n' $d/encode2" "user.rawhide-test\\\\x3a name: abc" "" 0 "-L %x with encoded ': ' in name"
 				rm $d/encode1 $d/encode2
 			else
 				echo "$t: Skipping EA tests (setfattr not found)"

@@ -205,6 +205,7 @@ struct runtime_t
 	int fea_ok;             /* Have we loaded the extended attributes successfully? */
 	char *fea;              /* Extended attributes as lines of text (long-lived, on-demand) */
 	char *fea_selinux;      /* "security.selinux" extended attribute, if any */
+	char *fea_format;       /* fea encoded for the -L %x format (long-lived, on-demand) */
 	int fea_real;           /* Are there any real EAs (i.e. non-ACL/non-selinux ones on Linux)? */
 	llong fea_size;         /* Non-default size to allocate for extended attributes? */
 	int fea_solaris_no_sunwattr; /* Suppress ubiquitous SUNWattr_ro/SUNWattr_rw EAs on Solaris? */

@@ -1178,16 +1178,16 @@ char *get_ea(int want)
 		ssize_t buflen, vallen, rc;
 		char *buf, *name, *val;
 		size_t namelen;
-		llong fea_size;
 		int i, pos = 0;
 
 		attr.fea_done = 1;
 
 		/* Allocate a long-lived buffer (freed at the end of rawhide_search()) */
 
-		fea_size = (attr.fea_size) ? attr.fea_size : 4 * 1024;
+		if (!attr.fea_size)
+			attr.fea_size = 4 * 1024;
 
-		if (!attr.fea && !(attr.fea = malloc(fea_size)))
+		if (!attr.fea && !(attr.fea = malloc(attr.fea_size)))
 		{
 			errorsys("out of memory");
 			attr.exit_status = EXIT_FAILURE;
@@ -1281,7 +1281,7 @@ char *get_ea(int want)
 
 			/* Add the name */
 
-			pos += cescape(attr.fea + pos, fea_size - pos, name, -1, CESCAPE_HEX | CESCAPE_EANAME);
+			pos += cescape(attr.fea + pos, attr.fea_size - pos, name, -1, CESCAPE_HEX | CESCAPE_EANAME);
 
 			/* Don't consider Linux ACL or selinux EAs to be "real" EAs (for -l) */
 
@@ -1348,8 +1348,8 @@ char *get_ea(int want)
 
 				/* Add the value (which can be binary data) */
 
-				pos += ssnprintf(attr.fea + pos, fea_size - pos, ": ");
-				pos += cescape(attr.fea + pos, fea_size - pos, val, vallen, CESCAPE_BIN);
+				pos += ssnprintf(attr.fea + pos, attr.fea_size - pos, ": ");
+				pos += cescape(attr.fea + pos, attr.fea_size - pos, val, vallen, CESCAPE_BIN);
 
 				/* Record separately for -L %Z if it's the selinux context */
 
@@ -1365,7 +1365,7 @@ char *get_ea(int want)
 
 			/* Add a newline after every attribute */
 
-			pos += ssnprintf(attr.fea + pos, fea_size - pos, "\n");
+			pos += ssnprintf(attr.fea + pos, attr.fea_size - pos, "\n");
 		}
 
 		/* Mark attr.fea as usable (being non-NULL isn't enough, as it's a long-lived buffer) */
@@ -1380,7 +1380,6 @@ char *get_ea(int want)
 		ssize_t buflen, vallen;
 		char *buf, *name, *val;
 		char *namebuf;
-		llong fea_size;
 		int ns, found = 0, pos = 0;
 		static int namespace[2] = { EXTATTR_NAMESPACE_USER, EXTATTR_NAMESPACE_SYSTEM };
 		static const char *namespace_name[2] = { "user", "system" };
@@ -1389,9 +1388,10 @@ char *get_ea(int want)
 
 		/* Allocate a long-lived buffer (freed at the end of rawhide_search()) */
 
-		fea_size = (attr.fea_size) ? attr.fea_size : 4 * 1024;
+		if (!attr.fea_size)
+			attr.fea_size = 4 * 1024;
 
-		if (!attr.fea && !(attr.fea = malloc(fea_size)))
+		if (!attr.fea && !(attr.fea = malloc(attr.fea_size)))
 		{
 			errorsys("out of memory");
 			attr.exit_status = EXIT_FAILURE;
@@ -1452,8 +1452,8 @@ char *get_ea(int want)
 			{
 				/* Add the namespace and name */
 
-				pos += ssnprintf(attr.fea + pos, fea_size - pos, "%s.", namespace_name[ns]);
-				pos += cescape(attr.fea + pos, fea_size - pos, name + 1, *name, CESCAPE_HEX | CESCAPE_EANAME);
+				pos += ssnprintf(attr.fea + pos, attr.fea_size - pos, "%s.", namespace_name[ns]);
+				pos += cescape(attr.fea + pos, attr.fea_size - pos, name + 1, *name, CESCAPE_HEX | CESCAPE_EANAME);
 
 				/* Consider all EAs to be real EAs on FreeBSD (for -l) */
 
@@ -1487,7 +1487,7 @@ char *get_ea(int want)
 
 				if (vallen == 0)
 				{
-					pos += ssnprintf(attr.fea + pos, fea_size - pos, "\n");
+					pos += ssnprintf(attr.fea + pos, attr.fea_size - pos, "\n");
 					free(namebuf);
 
 					continue;
@@ -1519,9 +1519,9 @@ char *get_ea(int want)
 
 				/* Add the value (which can be binary data) */
 
-				pos += ssnprintf(attr.fea + pos, fea_size - pos, ": ");
-				pos += cescape(attr.fea + pos, fea_size - pos, val, vallen, CESCAPE_BIN);
-				pos += ssnprintf(attr.fea + pos, fea_size - pos, "\n");
+				pos += ssnprintf(attr.fea + pos, attr.fea_size - pos, ": ");
+				pos += cescape(attr.fea + pos, attr.fea_size - pos, val, vallen, CESCAPE_BIN);
+				pos += ssnprintf(attr.fea + pos, attr.fea_size - pos, "\n");
 
 				free(val);
 				free(namebuf);
@@ -1541,7 +1541,6 @@ char *get_ea(int want)
 
 		ssize_t vallen;
 		char *val;
-		llong fea_size;
 		int pos = 0;
 		int adfd, afd;
 		DIR *dir;
@@ -1562,9 +1561,10 @@ char *get_ea(int want)
 
 		/* Allocate a long-lived buffer (freed at the end of rawhide_search()) */
 
-		fea_size = (attr.fea_size) ? attr.fea_size : 64 * 1024;
+		if (!attr.fea_size)
+			attr.fea_size = 64 * 1024;
 
-		if (!attr.fea && !(attr.fea = malloc(fea_size)))
+		if (!attr.fea && !(attr.fea = malloc(attr.fea_size)))
 		{
 			errorsys("out of memory");
 			attr.exit_status = EXIT_FAILURE;
@@ -1617,7 +1617,7 @@ char *get_ea(int want)
 
 			/* Add the name */
 
-			pos += cescape(attr.fea + pos, fea_size - pos, entry->d_name, -1, CESCAPE_HEX | CESCAPE_EANAME);
+			pos += cescape(attr.fea + pos, attr.fea_size - pos, entry->d_name, -1, CESCAPE_HEX | CESCAPE_EANAME);
 
 			/* Consider all EAs to be real EAs on Solaris (for -l) */
 
@@ -1627,7 +1627,7 @@ char *get_ea(int want)
 
 			if (statbuf->st_size == 0)
 			{
-				pos += ssnprintf(attr.fea + pos, fea_size - pos, "\n");
+				pos += ssnprintf(attr.fea + pos, attr.fea_size - pos, "\n");
 
 				continue;
 			}
@@ -1668,9 +1668,9 @@ char *get_ea(int want)
 
 			/* Add the value (which can be binary data) */
 
-			pos += ssnprintf(attr.fea + pos, fea_size - pos, ": ");
-			pos += cescape(attr.fea + pos, fea_size - pos, val, vallen, CESCAPE_BIN);
-			pos += ssnprintf(attr.fea + pos, fea_size - pos, "\n");
+			pos += ssnprintf(attr.fea + pos, attr.fea_size - pos, ": ");
+			pos += cescape(attr.fea + pos, attr.fea_size - pos, val, vallen, CESCAPE_BIN);
+			pos += ssnprintf(attr.fea + pos, attr.fea_size - pos, "\n");
 
 			free(val);
 			val = NULL;
@@ -1682,25 +1682,25 @@ char *get_ea(int want)
 				struct passwd *pwd = getpwuid(statbuf->st_uid);
 				struct group *grp = getgrgid(statbuf->st_gid);
 
-				pos += cescape(attr.fea + pos, fea_size - pos, entry->d_name, -1, CESCAPE_HEX | CESCAPE_EANAME);
-				pos += ssnprintf(attr.fea + pos, fea_size - pos, "/stat: %s %d", modestr(statbuf), (int)statbuf->st_nlink);
+				pos += cescape(attr.fea + pos, attr.fea_size - pos, entry->d_name, -1, CESCAPE_HEX | CESCAPE_EANAME);
+				pos += ssnprintf(attr.fea + pos, attr.fea_size - pos, "/stat: %s %d", modestr(statbuf), (int)statbuf->st_nlink);
 
 				if (pwd)
-					pos += ssnprintf(attr.fea + pos, fea_size - pos, " %s", pwd->pw_name);
+					pos += ssnprintf(attr.fea + pos, attr.fea_size - pos, " %s", pwd->pw_name);
 				else
-					pos += ssnprintf(attr.fea + pos, fea_size - pos, " %lld", (llong)statbuf->st_uid);
+					pos += ssnprintf(attr.fea + pos, attr.fea_size - pos, " %lld", (llong)statbuf->st_uid);
 
 				if (grp)
-					pos += ssnprintf(attr.fea + pos, fea_size - pos, " %s", grp->gr_name);
+					pos += ssnprintf(attr.fea + pos, attr.fea_size - pos, " %s", grp->gr_name);
 				else
-					pos += ssnprintf(attr.fea + pos, fea_size - pos, " %lld", (llong)statbuf->st_gid);
+					pos += ssnprintf(attr.fea + pos, attr.fea_size - pos, " %lld", (llong)statbuf->st_gid);
 
-				pos += ssnprintf(attr.fea + pos, fea_size - pos, " %lld", (llong)statbuf->st_size);
+				pos += ssnprintf(attr.fea + pos, attr.fea_size - pos, " %lld", (llong)statbuf->st_size);
 
-				pos += strftime(attr.fea + pos, fea_size - pos, " %Y-%m-%dT%H:%M:%S%z", localtime(&statbuf->st_mtime));
-				pos += strftime(attr.fea + pos, fea_size - pos, " %Y-%m-%dT%H:%M:%S%z", localtime(&statbuf->st_atime));
-				pos += strftime(attr.fea + pos, fea_size - pos, " %Y-%m-%dT%H:%M:%S%z", localtime(&statbuf->st_ctime));
-				pos += ssnprintf(attr.fea + pos, fea_size - pos, "\n");
+				pos += strftime(attr.fea + pos, attr.fea_size - pos, " %Y-%m-%dT%H:%M:%S%z", localtime(&statbuf->st_mtime));
+				pos += strftime(attr.fea + pos, attr.fea_size - pos, " %Y-%m-%dT%H:%M:%S%z", localtime(&statbuf->st_atime));
+				pos += strftime(attr.fea + pos, attr.fea_size - pos, " %Y-%m-%dT%H:%M:%S%z", localtime(&statbuf->st_ctime));
+				pos += ssnprintf(attr.fea + pos, attr.fea_size - pos, "\n");
 			}
 		}
 

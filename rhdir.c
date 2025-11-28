@@ -823,6 +823,12 @@ int rawhide_search(char *fpath)
 		attr.fea = NULL;
 	}
 
+	if (attr.fea_format)
+	{
+		free(attr.fea_format);
+		attr.fea_format = NULL;
+	}
+
 	if (attr.ttybuf)
 	{
 		free(attr.ttybuf);
@@ -3873,22 +3879,38 @@ void visitf_format(void)
 
 					case 'x': /* Extended attributes */
 					{
-						char *ea, *s;
+						char *s, *ea;
+						size_t l;
+						size_t pos;
 
-						if ((ea = get_ea(1)) && attr.fea_ok)
+						if (get_ea(1) && attr.fea_ok)
 						{
-							/* We have finished searching and can modify the buffer. */
-							/* Replace newlines with commas and remove the last one. */
+							/* We have finished searching and can modify the buffer, but we need to copy it to encode "," */
+							/* Replace commas with \x2c and replace newlines with commas and remove the last one */
 
-							for (s = ea; *s; ++s)
-								if (*s == '\n')
-									*s = ',';
+							if (!attr.fea_format && !(attr.fea_format = malloc(attr.fea_size)))
+								fatalsys("out of memory");
 
-							if (s > attr.fea && !*s && s[-1] == ',')
-								s[-1] = '\0';
+							*attr.fea_format = '\0';
+
+							for (s = attr.fea, pos = 0; *s; s += l + 1)
+							{
+								l = strcspn(s, ",\n");
+								pos += ssnprintf(attr.fea_format + pos, attr.fea_size - pos, "%.*s", l, s);
+
+								if (s[l] == ',')
+									pos += ssnprintf(attr.fea_format + pos, attr.fea_size - pos, "\\x%02x", (int)s[l]);
+								else if (s[l] == '\n')
+									pos += ssnprintf(attr.fea_format + pos, attr.fea_size - pos, ",");
+								else /* '\0' */
+									break;
+							}
+
+							if (pos && attr.fea_format[pos - 1] == ',')
+								attr.fea_format[pos - 1] = '\0';
 						}
 
-						ea = (ea && attr.fea_ok) ? attr.fea : "";
+						ea = (attr.fea_format) ? attr.fea_format : "";
 						ofmt_add_wl(width, length, ea);
 						ofmt_add('s');
 						debug_extra(("fmt %%x \"%s\", \"%s\"", ofmt, ea));
