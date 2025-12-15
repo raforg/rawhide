@@ -596,6 +596,9 @@ int main(int argc, char *argv[])
 	attr.test_readlinkat_failure = env_flag("RAWHIDE_TEST_READLINKAT_FAILURE");
 	attr.test_readlinkat_too_long_failure = env_flag("RAWHIDE_TEST_READLINKAT_TOO_LONG_FAILURE");
 	attr.test_implicit_expr_heuristic_despite_f_option = env_flag("RAWHIDE_TEST_IMPLICIT_EXPR_HEURISTIC_DESPITE_F_OPTION");
+	attr.test_malloc_fatalsys = env_flag("RAWHIDE_TEST_MALLOC_FATALSYS");
+	attr.test_malloc_errorsys = env_flag("RAWHIDE_TEST_MALLOC_ERRORSYS");
+	attr.test_realloc_fatalsys = env_flag("RAWHIDE_TEST_REALLOC_FATALSYS");
 
 	/* Parse cmdline options */
 
@@ -644,9 +647,7 @@ int main(int argc, char *argv[])
 				if (!optarg || !*optarg)
 					fatal("missing -f option argument (see %s -h for help)", prog_name);
 
-				if (!(opt_f_list = realloc(opt_f_list, ++opt_f * sizeof(*opt_f_list))))
-					fatalsys("out of memory");
-
+				opt_f_list = realloc_or_fatalsys(opt_f_list, ++opt_f * sizeof(*opt_f_list));
 				opt_f_list[opt_f - 1] = optarg;
 
 				if (!attr.test_implicit_expr_heuristic_despite_f_option)
@@ -1096,14 +1097,9 @@ int main(int argc, char *argv[])
 	max_pathlen = env_int("RAWHIDE_TEST_PATHLEN_MAX", 1, max_pathlen, max_pathlen);
 	pathbufsize = max_pathlen + 1;
 
-	if (!(initfile = malloc(pathbufsize)))
-		fatalsys("out of memory");
-
-	if (!(initdir = malloc(pathbufsize)))
-		fatalsys("out of memory");
-
-	if (!(initpattern = malloc(pathbufsize)))
-		fatalsys("out of memory");
+	initfile = malloc_or_fatalsys(pathbufsize);
+	initdir = malloc_or_fatalsys(pathbufsize);
+	initpattern = malloc_or_fatalsys(pathbufsize);
 
 	/* Load /etc/rawhide.conf and /etc/rawhide.conf.d (unless -N) */
 
@@ -1345,8 +1341,7 @@ int main(int argc, char *argv[])
 
 	/* Initialize a search stack for filesystem cycle detection */
 
-	if (!(attr.search_stack = (point_t *)calloc(attr.max_depth + 1, sizeof(point_t))))
-		fatalsys("out of memory");
+	attr.search_stack = (point_t *)malloc_or_fatalsys((attr.max_depth + 1) * sizeof(point_t));
 
 	/* Prepare to deallocate libmagic resources */
 

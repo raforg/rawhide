@@ -53,6 +53,7 @@ then
 			if [ -n "`command -v setfacl`" ]
 			then
 				setfacl -m user:root:rwx $d/acl $d/both
+				#$rh -j $d/acl | jq
 				test_rawhide "$rh    -L '%z\n' $d/none"    "user::rw-,group::r--,other::r--\n"                         "" 0 "-L %z (no acl or ea)"
 				test_rawhide "$rh    -L '%z\n' $d/acl"     "user::rw-,user:root:rwx,group::r--,mask::rwx,other::r--\n" "" 0 "-L %z (acl)"
 				test_rawhide "$rh    -L '%z\n' $d/ea"      "user::rw-,group::r--,other::r--\n"                         "" 0 "-L %z (ea)"
@@ -151,6 +152,7 @@ then
 
 		Darwin) # chmod xattr
 			chmod +a 'group:admin allow write' $d/acl $d/both
+			#$rh -j $d/acl | jq
 			test_rawhide      "$rh    -L '%z\n' $d/none" "\n"                          "" 0 "-L %z (no acl or ea)"
 			test_rawhide_grep "$rh    -L '%z\n' $d/acl"  "admin:[0-9]+:allow:write"    "" 0 "-L %z (acl)"
 			test_rawhide      "$rh    -L '%z\n' $d/ea"   "\n"                          "" 0 "-L %z (ea)"
@@ -203,6 +205,7 @@ then
 			if [ -n "`command -v setfacl`" ]
 			then
 				setfacl -a 0 user:root:rwxpaARWcCos::allow $d/acl $d/both
+				#$rh -j $d/acl | jq
 				test_rawhide "$rh    -L '%z\n' $d/none"    "            owner@:rw-p--aARWcCos:-------:allow,            group@:r-----a-R-c--s:-------:allow,         everyone@:r-----a-R-c--s:-------:allow\n"                                                 "" 0 "-L %z (no acl or ea)"
 				test_rawhide "$rh    -L '%z\n' $d/acl"     "         user:root:rwxp--aARWcCos:-------:allow,            owner@:rw-p--aARWcCos:-------:allow,            group@:r-----a-R-c--s:-------:allow,         everyone@:r-----a-R-c--s:-------:allow\n" "" 0 "-L %z (acl)"
 				test_rawhide "$rh    -L '%z\n' $d/ea"      "            owner@:rw-p--aARWcCos:-------:allow,            group@:r-----a-R-c--s:-------:allow,         everyone@:r-----a-R-c--s:-------:allow\n"                                                 "" 0 "-L %z (ea)"
@@ -269,6 +272,7 @@ then
 			if [ -n "`command -v chmod`" ]
 			then
 				chmod A+user:root:rwxpaARWcCos::allow $d/acl $d/both
+				#$rh -j $d/acl | jq
 				test_rawhide "$rh    -L '%z\n' $d/none"    "owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n"                                        "" 0 "-L %z (no acl or ea)"
 				test_rawhide "$rh    -L '%z\n' $d/acl"     "user:root:rwxp--aARWcCos:-------:allow,owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n" "" 0 "-L %z (acl)"
 				test_rawhide "$rh    -L '%z\n' $d/ea"      "owner@:rw-p--aARWcCos:-------:allow,group@:r-----a-R-c--s:-------:allow,everyone@:r-----a-R-c--s:-------:allow\n"                                        "" 0 "-L %z (ea)"
@@ -344,6 +348,7 @@ then
 				root=Administrator
 				ROOT=ADMINISTRATOR
 				setfacl -m user:$root:rwx $d/acl $d/both
+				#$rh -j $d/acl | jq
 				test_rawhide_grep "$rh    -L '%z\n' $d/none"    "user::rw-,group::r--"                "" 0 "-L %z (no acl or ea)"
 				test_rawhide_grep "$rh    -L '%z\n' $d/acl"     "user::rw-,user:$root:rwx,group::r--" "" 0 "-L %z (acl)"
 				test_rawhide_grep "$rh    -L '%z\n' $d/ea"      "user::rw-,group::r--"                "" 0 "-L %z (ea)"
@@ -406,6 +411,7 @@ then
 			if [ -n "`command -v setfattr`" ]
 			then
 				setfattr -n user.rawhide-attrtest -v "abc\012def\033ghi\177jkl\200" $d/ea $d/both
+				#$rh -j $d/ea | jq
 				# getfattr $d/ea
 				# getfattr -e text -n user.rawhide-attrtest $d/ea
 				# getfattr -e hex -n user.rawhide-attrtest $d/ea
@@ -470,8 +476,25 @@ then
 
 				test_rawhide_grep "$rh -L '%Z\n' $d/none" "^(|.*_u:.*_r:.*t:s[0-3])$" "" 0 "-L %Z"
 
-				test_rawhide_grep "$rh -L '%j\n' $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-L %j (json) with ea"
-				test_rawhide_grep "$rh -j        $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-j (json) with ea"
+				test_rawhide_grep "$rh -L '%j\n' $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":{.*\\}$"                     "" 0 "-L %j (json) with ea"
+				test_rawhide_grep "$rh -j        $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":{.*\\}$"                     "" 0 "-j (json) with ea"
+
+				touch $d/encode3
+				setfattr -n "user.rawhide-test:name: end" -v "$(printf 'a\v\a\b\t\"\n\f\r\\\200z')" $d/encode3
+				setfattr -n user.rawhide-attrtest -v "abc\012def\033ghi\177jkl\200" $d/encode3
+				#$rh -j $d/encode3 | jq
+				test_rawhide_post_hook() { sed -e 's/^.*"extended_/"extended_/' -e 's/"}*, .*$/"}, /' $stdout > $stdout.ea; mv $stdout.ea $stdout; }
+				test_rawhide "$rh -L '%j\n' $d/encode3" "\"extended_attributes\":{\"user.rawhide-test:name: end\":\"a\\\\\\\\v\\\\\\\\a\\\\\\\\b\\\\\\\\t\\\\\"\\\\\\\\n\\\\\\\\f\\\\\\\\r\\\\\\\\\\\\\\\\\\\\\\\\x80z\"}, \n" "" 0 "-L %j with lots of encoded things in ea"
+				test_rawhide_post_hook() { test_rh_sort_post_hook; }
+				rm $d/encode3
+
+				touch $d/encode4
+				setfattr -n user.rawhide-attrtestnull $d/encode4
+				#$rh -j $d/encode4 | jq
+				test_rawhide_post_hook() { sed -e 's/^.*"extended_/"extended_/' -e 's/}*, .*$/}, /' $stdout > $stdout.ea; mv $stdout.ea $stdout; }
+				test_rawhide "$rh -L '%j\n' $d/encode4" "\"extended_attributes\":{\"user.rawhide-attrtestnull\":null}, \n" "" 0 "-L %j with ea with no value (null)"
+				test_rawhide_post_hook() { test_rh_sort_post_hook; }
+				rm $d/encode4
 
 				touch $d/encode1 $d/encode2
 				setfattr -n "user.rawhide-test:name" -v "abc" $d/encode1
@@ -482,6 +505,8 @@ then
 
 				test_rawhide_grep "$rh -L '%x\n' $d/encode1" "user.rawhide-test:name: abc"        "" 0 "-L %x with unencoded ':' in name"
 				test_rawhide_grep "$rh -L '%x\n' $d/encode2" "user.rawhide-test\\\\x3a name: abc" "" 0 "-L %x with encoded ': ' in name"
+
+				test_rawhide_grep "RAWHIDE_TEST_MALLOC_ERRORSYS=1 $rh '\"notfound\".ea' $d 2>&1" "^\./rh: out of memory: .*\$" "" 1 "-f with injected malloc errorsys"
 				rm $d/encode1 $d/encode2
 			else
 				echo "$t: Skipping EA tests (setfattr not found)"
@@ -491,6 +516,7 @@ then
 
 		Darwin) # chmod xattr
 			xattr -w user.rawhide-attrtest "`printf \"abc\ndef\033ghi\177jkl\200\"`" $d/ea $d/both
+			#$rh -j $d/ea | jq
 			test_rawhide      "$rh    -L '%x\n' $d/none"    "\n"                                                              "" 0 "-L %x (no acl or ea)"
 			test_rawhide      "$rh    -L '%x\n' $d/acl"     "\n"                                                              "" 0 "-L %x (acl)"
 			test_rawhide      "$rh    -L '%x\n' $d/ea"      "user.rawhide-attrtest: abc\\\\ndef\\\\x1bghi\\\\x7fjkl\\\\x80\n" "" 0 "-L %x (ea)"
@@ -534,8 +560,16 @@ then
 				test_rawhide "$rh -Y '\"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n" "" 0 "-Y .reiea"
 			fi
 
-			test_rawhide_grep "$rh -L '%j\n' $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-L %j (json) with ea"
-			test_rawhide_grep "$rh -j        $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-j (json) with ea"
+			test_rawhide_grep "$rh -L '%j\n' $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":{.*\\}$"                     "" 0 "-L %j (json) with ea"
+			test_rawhide_grep "$rh -j        $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":{.*\\}$"                     "" 0 "-j (json) with ea"
+
+			touch $d/encode3
+			xattr -w "user.rawhide-test:name: end" "$(printf 'a\v\a\b\t\"\n\f\r\\\200z')" $d/encode3
+			#$rh -j $d/encode3 | jq
+			test_rawhide_post_hook() { sed -e 's/^.*"extended_/"extended_/' -e 's/"}, .*$/"}, /' $stdout > $stdout.ea; mv $stdout.ea $stdout; }
+			test_rawhide "$rh -L '%j\n' $d/encode3" "\"extended_attributes\":{\"user.rawhide-test:name: end\":\"a\\\\\\\\v\\\\\\\\a\\\\\\\\b\\\\\\\\t\\\\\"\\\\\\\\n\\\\\\\\f\\\\\\\\r\\\\\\\\\\\\\\\\\\\\\\\\x80z\"}, \n" "" 0 "-L %j with lots of encoded things in ea"
+			test_rawhide_post_hook() { test_rh_sort_post_hook; }
+			rm $d/encode3
 			;;
 
 		FreeBSD) # setfacl setextattr (symlinks can have their own ea here)
@@ -543,6 +577,7 @@ then
 			then
 				setextattr -h user rawhide-attrtest "`printf \"abc\012def\033ghi\177jkl\200\"`" $d/ea $d/both
 				setextattr -h user rawhide-attrtest "`printf \"abc\012def\033ghi\177jkl\200m\"`" $d/symlink
+				#$rh -j $d/ea | jq
 				# getextattr -h user rawhide-attrtest $d/ea   | od -c
 				# getextattr -h user rawhide-attrtest $d/both | od -c
 				test_rawhide "$rh    -L '%x\n' $d/none"    "\n"                                                              "" 0 "-L %x (no acl or ea)"
@@ -592,8 +627,16 @@ then
 					test_rawhide "$rh -Y '\"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"   "" 0 "-Y .reiea"
 				fi
 
-				test_rawhide_grep "$rh -L '%j\n' $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-L %j (json) with ea"
-				test_rawhide_grep "$rh -j        $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-j (json) with ea"
+				test_rawhide_grep "$rh -L '%j\n' $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":\\{.*\\}$"                     "" 0 "-L %j (json) with ea"
+				test_rawhide_grep "$rh -j        $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":\\{.*\\}$"                     "" 0 "-j (json) with ea"
+
+				touch $d/encode3
+				setextattr -h user "rawhide-test:name: end" "$(printf 'a\v\a\b\t\"\n\f\r\\\200z')" $d/encode3
+				#$rh -j $d/encode3 | jq
+				test_rawhide_post_hook() { sed -e 's/^.*"extended_/"extended_/' -e 's/"}*, .*$/"}, /' $stdout > $stdout.ea; mv $stdout.ea $stdout; }
+				test_rawhide "$rh -L '%j\n' $d/encode3" "\"extended_attributes\":{\"user.rawhide-test:name: end\":\"a\\\\\\\\v\\\\\\\\a\\\\\\\\b\\\\\\\\t\\\\\"\\\\\\\\n\\\\\\\\f\\\\\\\\r\\\\\\\\\\\\\\\\\\\\\\\\x80z\"}, \n" "" 0 "-L %j with lots of encoded things in ea"
+				test_rawhide_post_hook() { test_rh_sort_post_hook; }
+				rm $d/encode3
 			else
 				echo "$t: Skipping EA tests (setextattr not found)"
 				EA=0
@@ -607,7 +650,10 @@ then
 				runat $d/ea cp $saved_pwd/rawhide-attrtest .
 				runat $d/both cp $saved_pwd/rawhide-attrtest .
 				rm rawhide-attrtest
+				#$rh -j $d/ea | jq
+				# runat $d/ea ls -lasp
 				# runat $d/ea cat rawhide-attrtest
+				# runat $d/both ls -lasp
 				# runat $d/both cat rawhide-attrtest
 				test_rawhide      "$rh    -L '%x\n' $d/none"    "\n"                                                       "" 0 "-L %x (no acl or ea)"
 				test_rawhide      "$rh    -L '%x\n' $d/acl"     "\n"                                                       "" 0 "-L %x (acl)"
@@ -706,8 +752,31 @@ then
 					test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh '\"rawhide-attrtest/stat:\s-rw-\".reea'  $d/ea" ""          "" 0 ".reea with SUNWattr_ro/rw and /stat (rawhide-attrtest/stat)"
 				fi
 
-				test_rawhide_grep "$rh -L '%j\n' $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-L %j (json) with ea"
-				test_rawhide_grep "$rh -j        $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-j (json) with ea"
+				test_rawhide_grep "$rh -L '%j\n' $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":\\{.*\\}$"                     "" 0 "-L %j (json) with ea"
+				test_rawhide_grep "$rh -j        $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":\\{.*\\}$"                     "" 0 "-j (json) with ea"
+
+				touch $d/encode3
+				printf 'a\v\a\b\t\"\n\f\r\\\200z' > "rawhide-test:name: end"
+				runat $d/encode3 cp $saved_pwd/"rawhide-test:name:\ end" .
+				# runat $d/encode3 ls -alsp
+				# runat $d/encode3 cat 'rawhide-test:name:\ end'
+				rm "rawhide-test:name: end"
+				#$rh -j $d/encode3 | jq
+				test_rawhide_post_hook() { sed -e 's/^.*"extended_/"extended_/' -e 's/"}, .*$/"}, /' $stdout > $stdout.ea; mv $stdout.ea $stdout; }
+				test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh -L '%j\n' $d/encode3" "\"extended_attributes\":{\"rawhide-test:name: end\":\"a\\\\\\\\v\\\\\\\\a\\\\\\\\b\\\\\\\\t\\\\\"\\\\\\\\n\\\\\\\\f\\\\\\\\r\\\\\\\\\\\\\\\\\\\\\\\\x80z\"}, \n" "" 0 "-L %j with lots of encoded things in ea"
+				test_rawhide_post_hook() { test_rh_sort_post_hook; }
+				rm $d/encode3
+
+				touch $d/encode4
+				touch rawhide-attrtestnull
+				runat $d/encode4 cp $saved_pwd/rawhide-attrtestnull .
+				# runat $d/encode4 ls -alsp
+				# runat $d/encode4 cat rawhide-attrtestnull
+				#$rh -j $d/encode4 | jq
+				test_rawhide_post_hook() { sed -e 's/^.*"extended_/"extended_/' -e 's/}*, .*$/}, /' $stdout > $stdout.ea; mv $stdout.ea $stdout; }
+				test_rawhide "RAWHIDE_SOLARIS_EA_NO_SUNWATTR=1 RAWHIDE_SOLARIS_EA_NO_STATINFO=1 $rh -L '%j\n' $d/encode4" "\"extended_attributes\":{\"rawhide-attrtestnull\":null}, \n" "" 0 "-L %j with ea with no value (null)"
+				test_rawhide_post_hook() { test_rh_sort_post_hook; }
+				rm $d/encode4
 			else
 				echo "$t: Skipping EA tests (runat not found)"
 				EA=0
@@ -718,6 +787,7 @@ then
 			if [ -n "`command -v setfattr`" ]
 			then
 				setfattr -n user.rawhide-attrtest -v "abc\012def\033ghi\177jkl\200" $d/ea $d/both
+				#$rh -j $d/ea | jq
 				# getfattr $d/ea
 				# getfattr -e text -n user.rawhide-attrtest $d/ea
 				# getfattr -e hex -n user.rawhide-attrtest $d/ea
@@ -769,8 +839,18 @@ then
 					test_rawhide "$rh -Y '\"^user.rawhide-ATTRTEST:\s\".reiea' $d" "$d/both\n$d/ea\n$d/symboth\n$d/symea\n"   "" 0 "-Y .reiea"
 				fi
 
-				test_rawhide_grep "$rh -L '%j\n' $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-L %j (json) with ea"
-				test_rawhide_grep "$rh -j        $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":.*\\}$"                     "" 0 "-j (json) with ea"
+				test_rawhide_grep "$rh -L '%j\n' $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":{.*\\}$"                     "" 0 "-L %j (json) with ea"
+				test_rawhide_grep "$rh -j        $d/ea" "^\\{\"path\":\"$d/ea\", .*\"extended_attributes\":{.*\\}$"                     "" 0 "-j (json) with ea"
+
+				touch $d/encode3
+				# EA names can't contain colons here (so not the complete test)
+				setfattr -n "user.rawhide-test name  end" -v "$(printf 'a\v\a\b\t\"\n\f\r\\\200z')" $d/encode3
+				setfattr -n user.rawhide-attrtest -v "abc\012def\033ghi\177jkl\200" $d/encode3
+				#$rh -j $d/encode3 | jq
+				test_rawhide_post_hook() { sed -e 's/^.*"extended_/"extended_/' -e 's/", .*$/"}, /' $stdout > $stdout.ea; mv $stdout.ea $stdout; }
+				test_rawhide "$rh -L '%j\n' $d/encode3" "\"extended_attributes\":{\"user.rawhide-test name  end\":\"a\\\\\\\\v\\\\\\\\a\\\\\\\\b\\\\\\\\t\\\\\"\\\\\\\\n\\\\\\\\f\\\\\\\\r\\\\\\\\\\\\\\\\\\\\\\\\x80z\"}, \n" "" 0 "-L %j with lots of encoded things in ea"
+				test_rawhide_post_hook() { test_rh_sort_post_hook; }
+				rm $d/encode3
 			else
 				echo "$t: Skipping EA tests (setfattr not found)"
 				EA=0

@@ -1,10 +1,11 @@
-Ken Stauffer - Original creator, v2 1990, University of Calgary
+Ken Stauffer - Original creator (1982?), v2 1990, University of Calgary
 Guy Harris - Corrected many portability problems
 David MacKenzie - Manual revisions. Added getopt and glob pattern matching
 Norm Hutchinson - Fixed ungetit()
 raf <raf@raf.org> - New author, v3 21st century reboot, since 2021
 Tavian Barnes - Use `id -gn` in tests rather than `groups` for portability
-Stéphane Chazelas - Suggested {} strings, %s as "$1"and %S as "$2", explicit -e, ush,
-  -L \e\x\u\U, -L %#.#* as char widths, nanoseconds, and so many doc/safety fixes
+Stéphane Chazelas - Suggested {} strings, %s/%S as "$1"/"$2", explicit -e, ush,
+  -L \e\x\u\U, -L %#.#* as char widths, nanoseconds, many doc/safety fixes, dacl,
+  -L %j acl/dacl/ea as structured JSON arrays/objects
 github.com/hundertzwei - rawhide.spec for creating rpm packages
 Wolfgang Rohm - Requested that RAWHIDE_USER_SHELL support command line options

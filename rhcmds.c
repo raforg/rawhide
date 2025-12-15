@@ -612,8 +612,8 @@ char *read_symlink(void)
 
 	if (!attr.ftarget_done)
 	{
-		if (!attr.ftarget && !(attr.ftarget = malloc(attr.fpath_size)))
-			fatalsys("out of memory");
+		if (!attr.ftarget)
+			attr.ftarget = malloc_or_fatalsys(attr.fpath_size);
 
 		if (attr.test_readlinkat_failure)
 			errno = EPERM;
@@ -807,9 +807,7 @@ char *get_body(void)
 
 			if (attr.body_size < attr.statbuf->st_size + 1)
 			{
-				if (!(attr.body = realloc(attr.body, attr.statbuf->st_size + 1)))
-					fatalsys("out of memory");
-
+				attr.body = realloc_or_fatalsys(attr.body, attr.statbuf->st_size + 1);
 				attr.body_size = attr.statbuf->st_size + 1;
 			}
 
@@ -1187,13 +1185,8 @@ char *get_ea(int want)
 		if (!attr.fea_size)
 			attr.fea_size = 4 * 1024;
 
-		if (!attr.fea && !(attr.fea = malloc(attr.fea_size)))
-		{
-			errorsys("out of memory");
-			attr.exit_status = EXIT_FAILURE;
-
-			return NULL;
-		}
+		if (!attr.fea && !(attr.fea = malloc_or_errorsys(attr.fea_size)))
+			return attr.exit_status = EXIT_FAILURE, NULL;
 
 		/* Handle the extended attributes changing while we're looking */
 
@@ -1220,13 +1213,8 @@ char *get_ea(int want)
 
 			/* Allocate space for the list of names */
 
-			if (!(buf = malloc(buflen)))
-			{
-				errorsys("out of memory");
-				attr.exit_status = EXIT_FAILURE;
-
-				return NULL;
-			}
+			if (!(buf = malloc_or_errorsys(buflen)))
+				return attr.exit_status = EXIT_FAILURE, NULL;
 
 			/* Get the list of names, retry if the size got bigger */
 
@@ -1236,8 +1224,7 @@ char *get_ea(int want)
 			if ((rc = listxattr(attr.fpath, buf, (size_t)buflen, (following_symlinks()) ? 0 : XATTR_NOFOLLOW)) == -1 && errno == ERANGE)
 			#endif
 			{
-				free(buf);
-				buf = NULL;
+				free(buf), buf = NULL;
 
 				continue;
 			}
@@ -1313,14 +1300,8 @@ char *get_ea(int want)
 
 				/* Allocate space for the value */
 
-				if (!(val = malloc(vallen + 1)))
-				{
-					errorsys("out of memory");
-					attr.exit_status = EXIT_FAILURE;
-					free(buf);
-
-					return NULL;
-				}
+				if (!(val = malloc_or_errorsys(vallen + 1)))
+					return attr.exit_status = EXIT_FAILURE, free(buf), NULL;
 
 				/* Get the value, retry if the size got bigger */
 
@@ -1330,8 +1311,7 @@ char *get_ea(int want)
 				if ((rc = getxattr(attr.fpath, name, val, (size_t)vallen, 0, (following_symlinks()) ? 0 : XATTR_NOFOLLOW)) == -1 && errno == ERANGE)
 				#endif
 				{
-					free(val);
-					val = NULL;
+					free(val), val = NULL;
 
 					continue;
 				}
@@ -1391,13 +1371,8 @@ char *get_ea(int want)
 		if (!attr.fea_size)
 			attr.fea_size = 4 * 1024;
 
-		if (!attr.fea && !(attr.fea = malloc(attr.fea_size)))
-		{
-			errorsys("out of memory");
-			attr.exit_status = EXIT_FAILURE;
-
-			return NULL;
-		}
+		if (!attr.fea && !(attr.fea = malloc_or_errorsys(attr.fea_size)))
+			return attr.exit_status = EXIT_FAILURE, NULL;
 
 		/* First the unprivileged user namespace, then the privileged system namespace */
 
@@ -1427,13 +1402,8 @@ char *get_ea(int want)
 
 			/* Allocate space for the list of names */
 
-			if (!(buf = malloc(buflen)))
-			{
-				errorsys("out of memory");
-				attr.exit_status = EXIT_FAILURE;
-
-				return NULL;
-			}
+			if (!(buf = malloc_or_errorsys(buflen)))
+				return attr.exit_status = EXIT_FAILURE, NULL;
 
 			/* Get the list of names */
 
@@ -1461,14 +1431,8 @@ char *get_ea(int want)
 
 				/* Allocate space for the name */
 
-				if (!(namebuf = malloc(*name + 1)))
-				{
-					errorsys("out of memory");
-					attr.exit_status = EXIT_FAILURE;
-					free(buf);
-
-					return NULL;
-				}
+				if (!(namebuf = malloc_or_errorsys(*name + 1)))
+					return attr.exit_status = EXIT_FAILURE, free(buf), NULL;
 
 				ssnprintf(namebuf, *name + 1, "%.*s", *name, name + 1);
 
@@ -1495,15 +1459,8 @@ char *get_ea(int want)
 
 				/* Allocate space for the value */
 
-				if (!(val = malloc(vallen + 1)))
-				{
-					errorsys("out of memory");
-					attr.exit_status = EXIT_FAILURE;
-					free(namebuf);
-					free(buf);
-
-					return NULL;
-				}
+				if (!(val = malloc_or_errorsys(vallen + 1)))
+					return attr.exit_status = EXIT_FAILURE, free(namebuf), free(buf), NULL;
 
 				/* Get the value */
 
@@ -1564,13 +1521,8 @@ char *get_ea(int want)
 		if (!attr.fea_size)
 			attr.fea_size = 64 * 1024;
 
-		if (!attr.fea && !(attr.fea = malloc(attr.fea_size)))
-		{
-			errorsys("out of memory");
-			attr.exit_status = EXIT_FAILURE;
-
-			return NULL;
-		}
+		if (!attr.fea && !(attr.fea = malloc_or_errorsys(attr.fea_size)))
+			return attr.exit_status = EXIT_FAILURE, NULL;
 
 		/* Scan the extended attribute directory */
 
@@ -1644,15 +1596,8 @@ char *get_ea(int want)
 
 			vallen = statbuf->st_size;
 
-			if (!(val = malloc(vallen)))
-			{
-				errorsys("out of memory");
-				attr.exit_status = EXIT_FAILURE;
-				close(afd);
-				closedir(dir);
-
-				return NULL;
-			}
+			if (!(val = malloc_or_errorsys(vallen)))
+				return attr.exit_status = EXIT_FAILURE, close(afd), closedir(dir), NULL;
 
 			if (read(afd, val, vallen) != vallen)
 			{
@@ -1672,8 +1617,7 @@ char *get_ea(int want)
 			pos += cescape(attr.fea + pos, attr.fea_size - pos, val, vallen, CESCAPE_BIN);
 			pos += ssnprintf(attr.fea + pos, attr.fea_size - pos, "\n");
 
-			free(val);
-			val = NULL;
+			free(val), val = NULL;
 
 			/* Add an artificial stat(2) info EA about the real EA */
 

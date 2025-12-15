@@ -143,11 +143,11 @@ static void printf_sanitized(const char *format, ...)
 
 	if (attr.tty)
 	{
-		if (!attr.ttybuf && !(attr.ttybuf = malloc(CMDBUFSIZE)))
-			fatalsys("out of memory");
+		if (!attr.ttybuf)
+			attr.ttybuf = malloc_or_fatalsys(CMDBUFSIZE);
 
-		if (!attr.ttybuf_sanitized && !(attr.ttybuf_sanitized = malloc(CMDBUFSIZE)))
-			fatalsys("out of memory");
+		if (!attr.ttybuf_sanitized)
+			attr.ttybuf_sanitized = malloc_or_fatalsys(CMDBUFSIZE);
 
 		int bytes = vsnprintf(attr.ttybuf, CMDBUFSIZE, format, args);
 		printf("%s", defuse_tty(attr.ttybuf_sanitized, CMDBUFSIZE, attr.ttybuf, bytes));
@@ -614,17 +614,7 @@ static int rawhide_traverse(size_t nul_posi, int parent_fd, char *basename)
 			{
 				/* This shouldn't happen (unless we've crossed a filesystem boundary) */
 
-				char *new_fpath = realloc(attr.fpath, attr.fpath_size * 2);
-
-				if (!new_fpath)
-				{
-					closedir(dir); /* This closes pid_fd */
-
-					return error("path is too long (out of memory): %s/", ok(attr.fpath));
-				}
-
-				attr.fpath = new_fpath;
-				attr.fpath_size *= 2;
+				attr.fpath = realloc_or_fatalsys(attr.fpath, attr.fpath_size *= 2);
 			}
 
 			attr.fpath[post_slash_nul_posi++] = '/';
@@ -653,18 +643,7 @@ static int rawhide_traverse(size_t nul_posi, int parent_fd, char *basename)
 				#define max(a, b) ((a) > (b) ? (a) : (b))
 				size_t new_fpath_size = max(attr.fpath_size * 2, post_slash_nul_posi + len + 1);
 				#undef max
-				char *new_fpath = realloc(attr.fpath, new_fpath_size);
-
-				if (!new_fpath)
-				{
-					attr.fpath[post_slash_nul_posi] = '\0';
-					error("path is too long (out of memory): %s%s", ok(attr.fpath), ok2(entry->d_name));
-					rc = -1;
-
-					continue;
-				}
-
-				attr.fpath = new_fpath;
+				attr.fpath = realloc_or_fatalsys(attr.fpath, new_fpath_size);
 				attr.fpath_size = new_fpath_size;
 				remaining = attr.fpath_size - post_slash_nul_posi;
 				strlcpy(attr.fpath + post_slash_nul_posi, entry->d_name, remaining);
@@ -773,8 +752,7 @@ int rawhide_search(char *fpath)
 
 	/* Initialize state */
 
-	if (!(attr.fpath = malloc(max_pathlen + 1)))
-		return error("out of memory");
+	attr.fpath = malloc_or_fatalsys(max_pathlen + 1);
 
 	attr.search_path = fpath;
 	attr.search_path_len = strlen(fpath);
@@ -1917,10 +1895,7 @@ static const char *defused(char **buf, size_t *bufsz, const char *src)
 
 	if (size > *bufsz)
 	{
-		void *defused;
-
-		if (!(defused = realloc(*buf, size)))
-			fatalsys("out of memory");
+		void *defused = realloc_or_fatalsys(*buf, size);
 
 		*buf = defused;
 		*bufsz = size;
@@ -2050,8 +2025,7 @@ int chdir_local(int do_debug)
 
 			/* Change directory */
 
-			if (!(dir_path = malloc(attr.fpath_size)))
-				fatalsys("out of memory");
+			dir_path = malloc_or_fatalsys(attr.fpath_size);
 
 			strlcpy(dir_path, attr.fpath, slash_posp - attr.fpath + 1 + (slash_posp == attr.fpath));
 
@@ -2567,6 +2541,158 @@ static int add_field(char *buf, ssize_t sz, const char *name, const char *value)
 
 /*
 
+static int add_acl_array_field(char *buf, ssize_t sz, const char *name, const char *value);
+
+Add a JSON array field to buf (of sz bytes). Represent the multi-line value
+as an array of strings. Return the length in bytes (excluding nul).
+
+*/
+
+static int add_acl_array_field(char *buf, ssize_t sz, const char *name, const char *value)
+{
+	const char *s;
+	int pos = 0;
+	size_t l, indent;
+	int i;
+
+	pos += ssnprintf(buf + pos, sz - pos, "\"%s\":[", name);
+
+	for (i = 0, s = value; *s; ++i, s += l + (s[l] ? 1 : 0))
+	{
+		/* Solaris separates with comma, all others terminate with newline */
+		l = strcspn(s, ",\n"); /* Assume user/group names don't contain comma */
+		pos += ssnprintf(buf + pos, sz - pos, "%s\"", (i) ? ", " : "");
+		indent = strspn(s, " "); /* Skip leading spaces on FreeBSD */
+		pos += cescape(buf + pos, sz - pos, s + indent, l - indent, CESCAPE_JSON);
+		pos += ssnprintf(buf + pos, sz - pos, "\"");
+	}
+
+	pos += ssnprintf(buf + pos, sz - pos, "], ");
+
+	return pos;
+}
+
+/*
+
+static int add_ea_object_field(char *buf, ssize_t sz, const char *name, const char *value);
+
+Add a JSON object field to buf (of sz bytes). The value is the encoded text
+of extended attributes. Represent the value as an object containing the
+corresponding extended attribute names and values. The name is partly
+decoded so '\x3a ' becomes ': ' again. The names and values are encoded to
+suit JSON but retain the C-style escape sequences because JSON doesn't
+support binary data. Return the length in bytes (excluding nul).
+
+*/
+
+static int add_ea_object_field(char *buf, ssize_t sz, const char *name, const char *value)
+{
+	const char *s;
+	int pos = 0;
+	int in_name = 0;
+	int start_next = 0;
+
+	pos += ssnprintf(buf + pos, sz - pos, "\"%s\":{", name);
+
+	#define addc(c) if (sz - pos > 1) buf[pos++] = (c), buf[pos] = '\0'
+
+	for (s = value; *s; ++s)
+	{
+		/* Start of the first name */
+
+		if (s == value)
+		{
+			addc('"');
+			in_name = 1;
+		}
+
+		/* Start of a subsequent name */
+
+		else if (start_next)
+		{
+			addc(',');
+			addc(' ');
+			addc('"');
+			in_name = 1;
+			start_next = 0;
+		}
+
+		/* End of a name with no value */
+
+		if (in_name && *s == '\n')
+		{
+			addc('"');
+			addc(':');
+			addc('n');
+			addc('u');
+			addc('l');
+			addc('l');
+			start_next = 1;
+		}
+
+		/* End of a name with a value */
+
+		else if (in_name && *s == ':' && s[1] == ' ')
+		{
+			addc('"');
+			addc(':');
+			addc('"');
+			in_name = 0;
+			s += 1;
+		}
+
+		/* End of a value */
+
+		else if (!in_name && *s == '\n')
+		{
+			addc('"');
+			in_name = 1;
+			start_next = 1;
+		}
+
+		/* Convert '\x3a' in names back to ':' */
+
+		else if (in_name && *s == '\\' && s[1] == 'x' && s[2] == '3' && s[3] == 'a')
+		{
+			addc(':');
+			s += 3;
+		}
+
+		/* Convert '\' to '\\' */
+
+		else if (*s == '\\')
+		{
+			addc('\\');
+			addc('\\');
+		}
+
+		/* Convert '"' to '\"' */
+
+		else if (*s == '"')
+		{
+			addc('\\');
+			addc('"');
+		}
+
+		/* Copy everything else */
+
+		else
+		{
+			addc(*s);
+		}
+	}
+
+	addc('}');
+	addc(',');
+	addc(' ');
+
+	#undef addc
+
+	return pos;
+}
+
+/*
+
 static char *attributes(void);
 
 Return the ext2-style file attributes or BSD-style file flags or Solaris
@@ -3027,19 +3153,19 @@ static char *json(void)
 
 	if (get_acl(1))
 	{
-		pos += add_field(buf + pos, JSON_BUFSIZE - pos, "access_control_list", attr.facl);
+		pos += add_acl_array_field(buf + pos, JSON_BUFSIZE - pos, "access_control_list", attr.facl);
 
 		#if defined(HAVE_FREEBSD_ACL) || defined(HAVE_SOLARIS_ACL)
 		if (attr.facl_verbose) /* FreeBSD, Solaris */
-			pos += add_field(buf + pos, JSON_BUFSIZE - pos, "access_control_list_verbose", attr.facl_verbose);
+			pos += add_acl_array_field(buf + pos, JSON_BUFSIZE - pos, "access_control_list_verbose", attr.facl_verbose);
 		#endif
 	}
 
 	if (get_dacl() && attr.dacl)
-		pos += add_field(buf + pos, JSON_BUFSIZE - pos, "default_access_control_list", attr.dacl);
+		pos += add_acl_array_field(buf + pos, JSON_BUFSIZE - pos, "default_access_control_list", attr.dacl);
 
 	if ((ea = get_ea(1)) && attr.fea_ok)
-		pos += add_field(buf + pos, JSON_BUFSIZE - pos, "extended_attributes", ea);
+		pos += add_ea_object_field(buf + pos, JSON_BUFSIZE - pos, "extended_attributes", ea);
 
 	if ((selinux = (get_ea(1) && attr.fea_ok && attr.fea_selinux) ? attr.fea_selinux : "") && *selinux)
 		pos += add_field(buf + pos, JSON_BUFSIZE - pos, "selinux_context", selinux);
@@ -3550,8 +3676,8 @@ void visitf_format(void)
 
 						/* Output directory, or "." if local, or "" for root dir and its children */
 
-						if (!attr.formatbuf && !(attr.formatbuf = malloc(attr.fpath_size)))
-							fatalsys("out of memory");
+						if (!attr.formatbuf)
+							attr.formatbuf = malloc_or_fatalsys(attr.fpath_size);
 
 						snprintf(attr.formatbuf, attr.fpath_size, "%.*s", (local) ? 1 : (int)(e - attr.fpath), (local) ? "." : attr.fpath);
 						ofmt_add_wl(width, length, attr.formatbuf);
@@ -3888,8 +4014,8 @@ void visitf_format(void)
 							/* We have finished searching and can modify the buffer, but we need to copy it to encode "," */
 							/* Replace commas with \x2c and replace newlines with commas and remove the last one */
 
-							if (!attr.fea_format && !(attr.fea_format = malloc(attr.fea_size)))
-								fatalsys("out of memory");
+							if (!attr.fea_format)
+								attr.fea_format = malloc_or_fatalsys(attr.fea_size);
 
 							*attr.fea_format = '\0';
 
@@ -3984,8 +4110,8 @@ void visitf_format(void)
 								z = attr.facl_verbose;
 							#endif
 
-							if (!attr.formatbuf && !(attr.formatbuf = malloc(attr.fpath_size)))
-								fatalsys("out of memory");
+							if (!attr.formatbuf)
+								attr.formatbuf = malloc_or_fatalsys(attr.fpath_size);
 
 							snprintf(attr.formatbuf, attr.fpath_size, "%s", z);
 
@@ -4015,8 +4141,8 @@ void visitf_format(void)
 
 						if ((z = get_dacl()))
 						{
-							if (!attr.formatbuf && !(attr.formatbuf = malloc(attr.fpath_size)))
-								fatalsys("out of memory");
+							if (!attr.formatbuf)
+								attr.formatbuf = malloc_or_fatalsys(attr.fpath_size);
 
 							snprintf(attr.formatbuf, attr.fpath_size, "%s", z);
 

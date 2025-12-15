@@ -131,4 +131,40 @@ void fatalsys(const char *format, ...)
 	exit(EXIT_FAILURE);
 }
 
+/* Malloc that does fatalsys() on error */
+
+void *malloc_or_fatalsys(size_t size)
+{
+	void *mem = malloc(size);
+
+	if (!mem || (attr.test_malloc_fatalsys && (free(mem), mem = NULL, 1)))
+		fatalsys("out of memory");
+
+	return mem;
+}
+
+/* Malloc that does fatalsys() on error */
+
+void *malloc_or_errorsys(size_t size)
+{
+	void *mem = malloc(size);
+
+	if (!mem || attr.test_malloc_errorsys)
+		errorsys("out of memory"), attr.test_malloc_errorsys = 0, free(mem), mem = NULL;
+
+	return mem;
+}
+
+/* Realloc that does fatalsys() on error */
+
+void *realloc_or_fatalsys(void *ptr, size_t size)
+{
+	void *mem = realloc(ptr, size);
+
+	if (!mem || (attr.test_realloc_fatalsys && (free(mem), mem = NULL, 1)))
+		fatalsys("out of memory");
+
+	return mem;
+}
+
 /* vi:set ts=4 sw=4: */

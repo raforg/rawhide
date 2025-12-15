@@ -124,6 +124,9 @@ rh="$default_rh"
 blockdev="$($rh -e blk /dev 2>/dev/null | head -1)"
 [ -n "$blockdev" ] && test_rawhide "$rh -f \"$blockdev\" $d" "" "./rh: invalid -f option argument: $blockdev (not a file or directory)\n" 1 "-f with non-file-or-directory"
 
+test_rawhide_grep "RAWHIDE_TEST_MALLOC_FATALSYS=1 $rh $d 2>&1" "^\./rh: out of memory: .*\$" "" 1 "-f with injected malloc fatalsys"
+test_rawhide_grep "RAWHIDE_TEST_REALLOC_FATALSYS=1 $rh $d 2>&1" "^\./rh: out of memory: .*\$" "" 1 "-f with injected realloc fatalsys"
+
 finish
 
 exit $errors

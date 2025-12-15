@@ -1387,7 +1387,7 @@ present, but there is an I<selinux(8)> context, this is a dot character
 =item C<%j>
 
 All of the file information in I<JSON> format, representing an object with
-the following possible attributes:
+the following possible members:
 
 =over 4
 
@@ -1473,13 +1473,13 @@ the following possible attributes:
 
 =item C<generation> (integer) (same as C<%I>) (only if available)
 
-=item C<access_control_list> (string) (like C<%z> without the C<-v> option, but not reformatted as a comma-separated list) (only if present)
+=item C<access_control_list> (array of string) (like C<%z> without the C<-v> option, but as an array of items, not as a comma-separated list) (only if present)
 
-=item C<access_control_list_verbose> (string) (like C<%z> with the C<-v> option, but not reformatted as a comma-separated list) (only if present)
+=item C<access_control_list_verbose> (array of string) (like C<%z> with the C<-v> option, but as an array of items, not as a comma-separated list) (only if present)
 
-=item C<default_access_control_list> (string) (like C<%L>, but not reformatted as a comma-separated list) (only if present)
+=item C<default_access_control_list> (array of string) (like C<%L>, but as an array of items, not as a comma-separated list) (only if present)
 
-=item C<extended_attributes> (string) (like C<%x>, but not reformatted as a comma-separated list) (only if present)
+=item C<extended_attributes> (object whose member elements are string or C<null>) (like C<%x>, but as a structured object, not as a comma-separated list) (only if present)
 
 =item C<selinux_context> (string) (same as C<%Z>) (only if present)
 
@@ -1487,18 +1487,32 @@ the following possible attributes:
 
 =back
 
-Note that any extended attributes are formatted and encoded as described for
-the C<ea> pattern modifier (see I<rawhide.conf(5)>), before being encoded
-again as a I<JSON> string literal.
+Note that this only works in locales that use I<UTF-8>.
 
-Also note that C<%j> should not be used in conjunction with other format
-conversions, especially C<%x>. If C<%x> appears before C<%j> in the C<-L>
-I<format> argument, the C<extended_attributes> value will be reformatted as
-a comma-separated list. But this is unlikely to be a problem. The C<%j>
-format conversion probably needs to be used by itself if the output is to be
-interpreted as valid I<JSON> by other software.
+Also note that C<%j> should usually not be used in conjunction with other
+format conversions if the output is to be interpreted as valid I<JSON> by
+other software (such as I<jq>) because such software expects all of its
+input to be I<JSON>.
 
-Also note that this only works in locales that use I<UTF-8>.
+Also note that any C<extended_attributes> member values are encoded as
+described for the C<ea> pattern modifier (see I<rawhide.conf(5)>). So, if
+you need to extract the raw value of an extended attribute, you will need to
+decode it. Here is an example showing one way to do this:
+
+    $ rh -j | \
+      jq -r '.extended_attributes["name"]' | \
+      perl -pe '
+        BEGIN { $e="0vabtnfr\\\\"; $c="\0\013\a\b\t\n\f\r\\"; }
+        s/\\([$e])/substr($c,index($e,$1),1)/eg;
+        s/\\x([0-9a-f]{2})/pack("H2",$1)/eg;
+        chomp;
+      '
+
+The I<perl> command above is available as a standalone script in I<rh>'s
+source distribution in the C<samples/rhea-decode> file. With it installed,
+the above becomes:
+
+    $ rh -j | jq -r '.extended_attributes["name"]' | rhea-decode
 
 =back
 

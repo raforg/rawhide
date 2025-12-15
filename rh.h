@@ -350,6 +350,9 @@ struct runtime_t
 	int test_readlinkat_failure;
 	int test_readlinkat_too_long_failure;
 	int test_implicit_expr_heuristic_despite_f_option;
+	int test_malloc_fatalsys;
+	int test_malloc_errorsys;
+	int test_realloc_fatalsys;
 };
 
 /* Structure of a reference file */

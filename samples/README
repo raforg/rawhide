@@ -39,7 +39,14 @@ use with "cmd".ush. Perl doesn't match the standard login shell invocation
 convention, but this script does, so it can be used by rawhide as a user
 shell.
 
-	sudo cp -p samples/perlsh /usr/local/bin
-	RAWHIDE_USER_SHELL=/usr/local/bin/perlsh
-	export RAWHIDE_USER_SHELL
+    sudo cp -p samples/perlsh /usr/local/bin
+    RAWHIDE_USER_SHELL=/usr/local/bin/perlsh
+    export RAWHIDE_USER_SHELL
+
+rhea-decode
+-----------
+This is the standalone script mentioned in rh(1) that decodes extended
+attribute values in rh -j output as extracted by jq -r, e.g.:
+
+    rh -j | jq -r '.extended_attributes["name"]' | rhea-decode
 

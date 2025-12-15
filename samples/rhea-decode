@@ -1,0 +1,62 @@
+#!/usr/bin/perl -p
+
+# rawhide - find files using pretty C expressions
+# https://raf.org/rawhide
+# https://github.com/raforg/rawhide
+# https://codeberg.org/raforg/rawhide
+#
+# Copyright (C) 1990 Ken Stauffer, 2022-2023 raf <raf@raf.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+# 20231013 raf <raf@raf.org>
+
+# rhea-decode - Decode rh json extended attribute values
+
+# usage: rh -j | jq -r '.extended_attributes["name"]' | rhea-decode
+
+# List the single-char escapes and their corresponding bytes
+
+BEGIN { $e = "0vabtnfr\\\\"; $c="\0\013\a\b\t\n\f\r\\"; }
+
+# Replace single-char escapes with their corresponding bytes
+
+s/\\([$e])/substr($c,index($e,$1),1)/eg;
+
+# Replace hexadecimal escapes with their corresponding bytes
+
+s/\\x([0-9a-f]{2})/pack("H2",$1)/eg;
+
+# Remove the trailing newline that was appended by jq
+
+chomp;
+
+__DATA__
+
+To test on Linux:
+
+touch TEST
+
+setfattr -n user.rawhide-attrtest -v "z\0s\\v\013a\007b\010t\011n\012f\014r\015q\"e\033d\1778\200z\015" TEST
+
+getfattr --only-values -n user.rawhide-attrtest TEST | od -c
+0000000   z  \0   s   \   v  \v   a  \a   b  \b   t  \t   n  \n   f  \f
+0000020   r  \r   q   "   e 033   d 177   8 200   z  \r
+
+./rh -j TEST | jq -r '.extended_attributes["user.rawhide-attrtest"]' | samples/rhea-decode | od -c
+0000000   z  \0   s   \   v  \v   a  \a   b  \b   t  \t   n  \n   f  \f
+0000020   r  \r   q   "   e 033   d 177   8 200   z  \r
+
+rm TEST
+

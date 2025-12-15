@@ -29,5 +29,8 @@ int error(const char *format, ...);
 int errorsys(const char *format, ...);
 void fatal(const char *format, ...);
 void fatalsys(const char *format, ...);
+void *malloc_or_fatalsys(size_t size);
+void *malloc_or_errorsys(size_t size);
+void *realloc_or_fatalsys(void *ptr, size_t size);
 
 #endif
