@@ -4,7 +4,7 @@
 * https://github.com/raforg/rawhide
 * https://codeberg.org/raforg/rawhide
 *
-# Copyright (C) 1990 Ken Stauffer, 2022-2023 raf <raf@raf.org>
+* Copyright (C) 1990 Ken Stauffer, 2022-2023 raf <raf@raf.org>
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -46,6 +46,7 @@
 #include "rhstr.h"
 #include "rherr.h"
 #include "rhfnmatch.h"
+#include "rhgetopt.h"
 
 #ifdef HAVE_ACL
 #include <sys/acl.h>
@@ -971,7 +972,7 @@ int main(int argc, char *argv[])
 			{
 				/* Invalid options are reported with '?' and optopt set */
 
-				if (optopt && optopt != '?') /* macOS puts ? in optopt even though it's in optstring */
+				if (optopt && optopt != '?') /* Default optopt can be ? but we use ? so that's ok */
 					fatal("invalid option: -%c (see %s -h for help)", optopt, prog_name);
 
 				/* Otherwise, the ? option was supplied */
@@ -1007,11 +1008,6 @@ int main(int argc, char *argv[])
 			case ':':
 			{
 				fatal("missing -%c option argument (see %s -h for help)", optopt, prog_name);
-			}
-
-			default: /* Can't happen */
-			{
-				fatal("command line error (see %s -h for help)", prog_name);
 			}
 		}
 	}

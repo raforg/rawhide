@@ -127,6 +127,11 @@ blockdev="$($rh -e blk /dev 2>/dev/null | head -1)"
 test_rawhide_grep "RAWHIDE_TEST_MALLOC_FATALSYS=1 $rh $d 2>&1" "^\./rh: out of memory: .*\$" "" 1 "-f with injected malloc fatalsys"
 test_rawhide_grep "RAWHIDE_TEST_REALLOC_FATALSYS=1 $rh $d 2>&1" "^\./rh: out of memory: .*\$" "" 1 "-f with injected realloc fatalsys"
 
+test_rawhide "$rh $d -e1"       "$d\n$d/abc\n"                         "" 0 "permute nonopt opt (getopt coverage)"
+test_rawhide "$rh $d --"        "$d\n$d/abc\n"                         "" 0 "permute nonopt -- (getopt coverage)"
+test_rawhide "$rh $d $d -e1 $d" "$d\n$d/abc\n$d\n$d/abc\n$d\n$d/abc\n" "" 0 "permute nonopt nonopt opt nonopt (getopt coverage)"
+test_rawhide "$rh $d $d -- $d"  "$d\n$d/abc\n$d\n$d/abc\n$d\n$d/abc\n" "" 0 "permute nonopt nonopt -- nonopt (getopt coverage)"
+
 finish
 
 exit $errors

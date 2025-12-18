@@ -385,17 +385,17 @@ and/or after the file test expression. e.g.:
 
 The C<-e> option only really needs to be explicitly included when the file
 test expression might happen to be the same as an existing filesystem entry
-relative to the current working directory (e.g., S<C<touch file; rh -e
-'file' path>>), or (less likely) when the expression starts with a minus
-sign (C<"-">), and would otherwise be mistaken for a command line option.
+relative to the current working directory (e.g.,
+S<C<touch file; rh -e 'file' path>>), or (less likely) when the expression
+starts with a minus sign (C<"-">), and would otherwise be mistaken for a
+command line option.
 
-You can also need an explicit C<-e> option if you want the file test
-expression to appear to the left of any command line options on (most)
-systems where all non-option command line arguments must appear to the right
-of all command line options and their arguments (e.g.,
-S<C<rh -e '>I<expr>C<' -X '>I<cmd>C< %S' >I<dir>>). This doesn't apply to
-I<Linux> with S<I<GNU glibc>>, which provides more flexible command line
-option parsing.
+Note that an explicit C<-e> option (and any other options) can appear
+anywhere on the command line, even to the right of non-option command line
+arguments (i.e., search paths). This is non-standard behaviour that is
+normal on I<Linux> with S<I<GNU glibc>>, but not on other systems. It
+provides for greater flexibility, so I<rh> adopts this behaviour on all
+supported systems.
 
 If no file test expression is supplied anywhere, the default file test
 expression is C<1>, which matches all filesystem entries.
@@ -2098,7 +2098,7 @@ as part of the search criteria expression.
 The same, but for a single filesystem only (shorter, less slow, but still
 very slow, and still unsafe):
 
-    # rh -1 -e 'f && nlink > 1' -X 'rh -1e "ino == \"$2\".ino" /; echo' /
+    # rh / -1 -e 'f && nlink > 1' -X 'rh -1e "ino == \"$2\".ino" /; echo'
 
 Find 32-bit ELF executables:
 
@@ -2605,8 +2605,7 @@ I<rawhide.conf(5)> for details.
 
 For ease of comparison, the following I<rh> examples assume that the
 environment variable C<RAWHIDE_ALLOW_IMPLICIT_EXPR_HEURISTIC=1>. By default,
-any C<-e> option would have to be explicit, and on systems other than
-I<Linux>, search paths would have to appear after all command line options.
+any C<-e> option would have to be explicit.
 
 =head2 Simple `find | xargs` approach
 
@@ -3132,22 +3131,24 @@ I<rawhide.conf(5)>), and the S<C<-L %x>> format conversion (see above).
 Setting the environment variable C<RAWHIDE_ALLOW_IMPLICIT_EXPR_HEURISTIC=1>
 enables the heuristic that identifies implicit search criteria expressions
 in normal non-option command line arguments, rather than requiring an
-explicit C<-e> option (see above). This saves keystrokes, and makes it
-possible to specify search criteria and search paths in any order (not just
-on I<Linux>). B<Warning:> This is only safe when there is no search path
-argument or when there are only literal search path arguments. This is
-unsafe when non-literal search path arguments are used (i.e., from shell
-globbing, environment variables, and shell parameters). Non-literal search
-paths could include malicious file names that, if maliciously deleted at
-just the right moment, could trigger an arbitrary code execution security
-vulnerability. To eliminate this risk when using non-literal search paths,
-you must promise to supply an explicit C<-e> option (even if it's just
-C<-e1>) and C<--> before any non-literal search path arguments. When all of
-the search paths are literal, that isn't necessary. Note that this
-environment variable is ignored when the C<-f> option is supplied (see
-above). This is to make it convenient to use any default search criteria in
-the specified file without the risk that a non-literal search path might be
-interpreted as an overriding search criteria expression.
+explicit C<-e> option (see above). This saves keystrokes, and with earlier
+versions of I<rh>, it made it possible to specify search criteria and search
+paths in any order (not just on I<Linux>), but that is now possible on all
+supported systems, even with explicit C<-e> options. B<Warning:> This is
+only safe when there is no search path argument or when there are only
+literal search path arguments. This is unsafe when non-literal search path
+arguments are used (i.e., from shell globbing, environment variables, and
+shell parameters). Non-literal search paths could include malicious file
+names that, if maliciously deleted at just the right moment, could trigger
+an arbitrary code execution security vulnerability. To eliminate this risk
+when using non-literal search paths, you must promise to supply an explicit
+C<-e> option (even if it's just C<-e1>) and C<--> before any non-literal
+search path arguments. When all of the search paths are literal, that isn't
+necessary. Note that this environment variable is ignored when the C<-f>
+option is supplied (see above). This is to make it convenient to use any
+default search criteria in the specified file without the risk that a
+non-literal search path might be interpreted as an overriding search
+criteria expression.
 
 The environment variable C<RAWHIDE_USER_SHELL> can be set to the absolute
 path to an alternative shell to be used by the C<">I<cmd>C<".ush> "pattern"

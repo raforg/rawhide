@@ -22,6 +22,11 @@ Copyright: 2005-2020 Rich Felker, et al.
            1990 Ken Stauffer, 2022-2023 raf <raf@raf.org>
 License: GPL-3.0-or-later and MIT
 
+Files: rhgetopt.c
+Copyright: Copyright (C) 1987-1999 Free Software Foundation, Inc.
+           1990 Ken Stauffer, 2022-2023 raf <raf@raf.org>
+License: GPL-3.0-or-later
+
 #License: LicenseRef-BSD-3-Clause-Almost
 #Redistribution and use in source and binary forms, with or without
 #modification, are permitted provided that the following conditions

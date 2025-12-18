@@ -1616,7 +1616,7 @@ void visitf_long(void)
 
 /*
 
-static char *init_posix_shell();
+static char *init_posix_shell(void);
 
 Call this the first time we need to interpolate a command to be executed via
 the system POSIX shell (/bin/sh on most systems, /usr/xpg4/bin/sh on
@@ -1624,7 +1624,7 @@ Solaris).
 
 */
 
-static char *init_posix_shell()
+static char *init_posix_shell(void)
 {
 	struct stat statbuf[1];
 
@@ -1633,21 +1633,21 @@ static char *init_posix_shell()
 
 /*
 
-static char *posix_shell();
+static char *posix_shell(void);
 
 Call this when we need to interpolate a command to be executed via the
 system POSIX shell (/bin/sh on most systems, /usr/xpg4/bin/sh on Solaris).
 
 */
 
-static char *posix_shell()
+static char *posix_shell(void)
 {
 	return (attr.posix_shell) ? attr.posix_shell : init_posix_shell();
 }
 
 /*
 
-static void init_user_shell();
+static void init_user_shell(void);
 
 Call this the first time we need to interpolate a command to be executed
 via the user's login shell (or $RAWHIDE_USER_SHELL). It determines what
@@ -1656,7 +1656,7 @@ execute commands.
 
 */
 
-static void init_user_shell()
+static void init_user_shell(void)
 {
 	/* Obtain and store the user shell, and any options */
 

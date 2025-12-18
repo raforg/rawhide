@@ -149,7 +149,7 @@ RAWHIDE_DEFINES = \
 #DEBUG_DEFINES = -DNDEBUG
 
 # Test coverage (gcov): Uncomment this, run tests (as non-root and as root),
-# then run gcov *.c then examine *.c.gcov or run gcov_summary (98.69% on Linux)
+# then run gcov *.c then examine *.c.gcov or run gcov_summary (98.75% on Linux)
 #GCOV_CFLAGS = -fprofile-arcs -ftest-coverage
 
 # Undefined behaviour sanitizer: Uncomment this, run tests (as non-root and as root)
@@ -175,14 +175,14 @@ ALL_CPPFLAGS = $(CPPFLAGS) $(RAWHIDE_DEFINES) $(PCRE2_DEFINES) $(ACL_DEFINES) $(
 ALL_CFLAGS = -O3 -g -Wall -pedantic $(CFLAGS) $(ALL_CPPFLAGS) $(PCRE2_CFLAGS) $(ACL_CFLAGS) $(EA_CFLAGS) $(ATTR_CFLAGS) $(FLAG_CFLAGS) $(SOLARIS_ATTR_CFLAGS) $(MAGIC_CFLAGS) $(GCOV_CFLAGS) $(UBSAN_CFLAGS) $(ASAN_CFLAGS) $(SAN_CFLAGS)
 ALL_LDFLAGS = $(LDFLAGS) $(PCRE2_LDFLAGS) $(ACL_LDFLAGS) $(EA_LDLAGS) $(ATTR_LDFLAGS) $(FLAG_LDFLAGS) $(SOLARIS_ATTR_LDFLAGS) $(MAGIC_LDFLAGS) $(UBSAN_LDFLAGS) $(ASAN_LDFLAGS) $(SAN_LDFLAGS)
 
-OBJS = rhcmds.o rh.o rhparse.o rhdir.o rhdata.o rhstr.o rherr.o rhfnmatch.o
+OBJS = rhcmds.o rh.o rhparse.o rhdir.o rhdata.o rhstr.o rherr.o rhfnmatch.o rhgetopt.o
 
 all: $(RAWHIDE_PROG_NAME)
 
 $(RAWHIDE_PROG_NAME): Makefile $(OBJS)
 	$(CC) $(ALL_CFLAGS) -o $(RAWHIDE_PROG_NAME) $(OBJS) $(ALL_LDFLAGS)
 
-rh.o: Makefile rh.c rh.h rhparse.h rhdata.h rhdir.h rhstr.h rherr.h rhfnmatch.h
+rh.o: Makefile rh.c rh.h rhparse.h rhdata.h rhdir.h rhstr.h rherr.h rhfnmatch.h rhgetopt.h
 	$(CC) $(ALL_CFLAGS) -c rh.c
 
 rhcmds.o: Makefile rhcmds.c rh.h rhdir.h rherr.h rhstr.h
@@ -206,8 +206,11 @@ rhstr.o: Makefile rhstr.c rh.h rhstr.h
 rhfnmatch.o: Makefile rhfnmatch.c rhfnmatch.h
 	$(CC) $(ALL_CFLAGS) -c rhfnmatch.c
 
+rhgetopt.o: Makefile rhgetopt.c rhgetopt.h
+	$(CC) $(ALL_CFLAGS) -c rhgetopt.c
+
 clean:
-	rm -f $(RAWHIDE_PROG_NAME) $(OBJS) tags $(RAWHIDE_APP_MANFILE).html $(RAWHIDE_FMT_MANFILE).html README.html CONTRIBUTING.html
+	rm -rf $(RAWHIDE_PROG_NAME) $(OBJS) tags $(RAWHIDE_APP_MANFILE).html $(RAWHIDE_FMT_MANFILE).html README.html CONTRIBUTING.html tests/.t[0-9][0-9]*
 	@rm -f valgrind.out *.gcda *.gcno *.gcov
 
 clobber: clean
@@ -322,8 +325,8 @@ README.html: README.md
 CONTRIBUTING.html: CONTRIBUTING.md
 	./md2html CONTRIBUTING.md $@ '$(RAWHIDE_ID) - CONTRIBUTING'
 
-tags:     Makefile rh.h rh.c rhcmds.h rhcmds.c rhdata.h rhdata.c rhdir.h rhdir.c rhparse.h rhparse.c rherr.h rherr.c rhstr.h rhstr.c rhfnmatch.h rhfnmatch.c
-	ctags Makefile rh.h rh.c rhcmds.h rhcmds.c rhdata.h rhdata.c rhdir.h rhdir.c rhparse.h rhparse.c rherr.h rherr.c rhstr.h rhstr.c rhfnmatch.h rhfnmatch.c
+tags:     Makefile rh.h rh.c rhcmds.h rhcmds.c rhdata.h rhdata.c rhdir.h rhdir.c rhparse.h rhparse.c rherr.h rherr.c rhstr.h rhstr.c rhfnmatch.h rhfnmatch.c rhgetopt.h rhgetopt.c
+	ctags Makefile rh.h rh.c rhcmds.h rhcmds.c rhdata.h rhdata.c rhdir.h rhdir.c rhparse.h rhparse.c rherr.h rherr.c rhstr.h rhstr.c rhfnmatch.h rhfnmatch.c rhgetopt.h rhgetopt.c
 
 test: $(RAWHIDE_PROG_NAME)
 	./runtests
@@ -361,10 +364,10 @@ help:
 	@echo
 	@echo "  make test         - Run tests with just one line per test suite"
 	@echo "  make quiet=0 test - Run tests showing every test (thousands)"
-	@echo "  make vg=1 test    - Run tests and produce valgrind.out analysis (~40m)"
+	@echo "  make vg=1 test    - Run tests and produce valgrind.out analysis (~2h)"
 	@echo "  vim valgrind.out  - Examine the results (delete the noise, check the rest)"
 	@echo
-	@echo "To run tests for test coverage analysis (98.69% on Linux):"
+	@echo "To run tests for test coverage analysis (98.75% on Linux):"
 	@echo
 	@echo "  ./configure --enable-gcov"
 	@echo "  make"
